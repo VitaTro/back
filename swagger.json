@@ -1,0 +1,451 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "description": "This is a simple API",
+    "version": "2.0.0",
+    "title": "Simple Inventory API",
+    "contact": {
+      "email": "you@your-company.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "servers": [
+    {
+      "description": "SwaggerHub API Auto Mocking",
+      "url": "https://virtserver.swaggerhub.com/VITYLJATROJAN/nika-gold/2.0.0"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Products",
+      "description": "Operations related to products"
+    },
+    {
+      "name": "Auth",
+      "description": "User authentication"
+    },
+    {
+      "name": "Upload",
+      "description": "Operations related to file uploads"
+    },
+    {
+      "name": "Images",
+      "description": "Operations related to images"
+    }
+  ],
+  "paths": {
+    "/api/products/{type}": {
+      "get": {
+        "summary": "Отримати продукти за типом",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "type",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Тип продукту"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список продуктів за типом",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      }
+    },
+    "/api/products": {
+      "post": {
+        "summary": "Додавання нового продукту",
+        "tags": ["Products"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Product"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Продукт додано",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      }
+    },
+    "/api/products/{id}": {
+      "patch": {
+        "summary": "Оновлення продукту",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Ідентифікатор продукту"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Product"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Продукт оновлено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Продукт не знайдено"
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Видалити продукт",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Ідентифікатор продукту"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Продукт видалено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Продукт не знайдено"
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      }
+    },
+    "/api/auth/check-admin": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Перевірка першого адміністратора",
+        "responses": {
+          "200": {
+            "description": "Перевірка наявності першого адміністратора",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isFirstAdmin": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register/user": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Реєстрація нового користувача",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Користувача зареєстровано"
+          },
+          "400": {
+            "description": "Невірний запит"
+          }
+        }
+      }
+    },
+    "/api/auth/register/admin": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Реєстрація нового адміністратора",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Адміністратора зареєстровано"
+          },
+          "400": {
+            "description": "Невірний запит"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Вхід користувача",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Користувача увійшов"
+          },
+          "400": {
+            "description": "Невірний запит"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Вихід користувача",
+        "responses": {
+          "200": {
+            "description": "Користувача вийшов"
+          }
+        }
+      }
+    },
+    "/api/upload": {
+      "post": {
+        "tags": ["Upload"],
+        "summary": "Завантаження зображення",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Зображення завантажено успішно",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "description": "URL завантаженого зображення"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невірний запит"
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      }
+    },
+    "/api/delete-image": {
+      "delete": {
+        "tags": ["Images"],
+        "summary": "Видалення зображення",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Зображення видалено успішно",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Image deleted successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невірний запит"
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "NewUser": {
+        "type": "object",
+        "required": ["username", "password", "email"],
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "johndoe"
+          },
+          "password": {
+            "type": "string",
+            "example": "secretpassword"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "johndoe@example.com"
+          }
+        }
+      },
+      "LoginUser": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "johndoe"
+          },
+          "password": {
+            "type": "string",
+            "example": "secretpassword"
+          }
+        }
+      }
+    }
+  }
+}

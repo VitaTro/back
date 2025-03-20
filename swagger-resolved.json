@@ -1,0 +1,585 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Simple Inventory API",
+    "description": "This is a simple API",
+    "contact": {
+      "email": "you@your-company.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "2.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://virtserver.swaggerhub.com/VITYLJATROJAN/nika-gold/2.0.0",
+      "description": "SwaggerHub API Auto Mocking"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Products",
+      "description": "Operations related to products"
+    },
+    {
+      "name": "Auth",
+      "description": "User authentication"
+    },
+    {
+      "name": "User",
+      "description": "User operations"
+    },
+    {
+      "name": "Subscription",
+      "description": "Operations related to user subscriptions"
+    }
+  ],
+  "paths": {
+    "/api/products": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Отримати всі продукти",
+        "responses": {
+          "200": {
+            "description": "Список всіх продуктів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Products"],
+        "summary": "Додавання нового продукту",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Product"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Продукт додано",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      }
+    },
+    "/api/products/{type}": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Отримати продукти за типом",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "description": "Тип продукту",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список продуктів за типом",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      }
+    },
+    "/api/products/{id}": {
+      "delete": {
+        "tags": ["Products"],
+        "summary": "Видалити продукт",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Ідентифікатор продукту",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Продукт видалено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Продукт не знайдено"
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Products"],
+        "summary": "Оновлення продукту",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Ідентифікатор продукту",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Product"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Продукт оновлено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Продукт не знайдено"
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      }
+    },
+    "/api/auth/check-admin": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Перевірка першого адміністратора",
+        "responses": {
+          "200": {
+            "description": "Перевірка наявності першого адміністратора",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/inline_response_200"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register/user": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Реєстрація нового користувача",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Auth"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Користувача зареєстровано"
+          },
+          "400": {
+            "description": "Невірний запит"
+          }
+        }
+      }
+    },
+    "/api/auth/register/admin": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Реєстрація нового адміністратора",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Auth"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Адміністратора зареєстровано"
+          },
+          "400": {
+            "description": "Невірний запит"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Вхід користувача",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Auth"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Користувача увійшов"
+          },
+          "400": {
+            "description": "Невірний запит"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Вихід користувача",
+        "responses": {
+          "200": {
+            "description": "Користувача вийшов"
+          }
+        }
+      }
+    },
+    "/api/user/profile": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Отримати профіль користувача",
+        "responses": {
+          "200": {
+            "description": "Профіль користувача отримано",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      },
+      "put": {
+        "tags": ["User"],
+        "summary": "Оновити профіль користувача",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserProfile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Профіль користувача оновлено"
+          },
+          "400": {
+            "description": "Невірний запит"
+          },
+          "401": {
+            "description": "Неавторизований запит"
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      }
+    },
+    "/api/subscribe": {
+      "post": {
+        "tags": ["Subscription"],
+        "summary": "Підписка на нові товари",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Subscription"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Підписка оформлена"
+          },
+          "400": {
+            "description": "Невірний запит"
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      }
+    },
+    "/api/unsubscribe": {
+      "post": {
+        "tags": ["Subscription"],
+        "summary": "Відписка від нових товарів",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Unsubscription"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Відписка успішна"
+          },
+          "400": {
+            "description": "Невірний запит"
+          },
+          "404": {
+            "description": "Електронну пошту не знайдено"
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Subscription": {
+        "required": ["email"],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Електронна пошта для підписки",
+            "format": "email"
+          },
+          "preferences": {
+            "type": "array",
+            "description": "Список категорій, на які користувач хоче підписатися",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Unsubscription": {
+        "required": ["email"],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Електронна пошта для відписки",
+            "format": "email"
+          }
+        }
+      },
+      "UserProfile": {
+        "required": ["email", "username"],
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Ім'я користувача"
+          },
+          "email": {
+            "type": "string",
+            "description": "Електронна пошта користувача",
+            "format": "email"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "URL аватара користувача"
+          },
+          "basket": {
+            "type": "array",
+            "description": "Кошик користувача",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Дата створення аккаунту",
+            "format": "date-time"
+          }
+        }
+      },
+      "Product": {
+        "required": [
+          "category",
+          "description",
+          "name",
+          "photoUrl",
+          "price",
+          "size",
+          "subcategory"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Назва товару"
+          },
+          "category": {
+            "type": "string",
+            "description": "Категорія товару"
+          },
+          "subcategory": {
+            "type": "string",
+            "description": "Підкатегорія товару"
+          },
+          "price": {
+            "type": "number",
+            "description": "Ціна товару"
+          },
+          "description": {
+            "type": "string",
+            "description": "Опис товару"
+          },
+          "photoUrl": {
+            "type": "string",
+            "description": "URL фотографії товару"
+          },
+          "size": {
+            "type": "string",
+            "description": "Розмір товару"
+          },
+          "inStock": {
+            "type": "boolean",
+            "description": "Наявність на складі",
+            "default": true
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "Видимість товару",
+            "default": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Дата створення товару",
+            "format": "date-time"
+          }
+        }
+      },
+      "Auth": {
+        "required": ["email", "password", "username"],
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Ім'я користувача"
+          },
+          "email": {
+            "type": "string",
+            "description": "Електронна пошта користувача",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "description": "Пароль користувача",
+            "format": "password"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "URL аватара користувача"
+          },
+          "basket": {
+            "type": "array",
+            "description": "Кошик користувача",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Дата створення аккаунту",
+            "format": "date-time"
+          }
+        }
+      },
+      "inline_response_200": {
+        "type": "object",
+        "properties": {
+          "isFirstAdmin": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}
