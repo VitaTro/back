@@ -24,6 +24,7 @@ app.get("/test", (req, res) => {
 });
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 // Маршрут для завантаження зображень
 app.post("/upload", upload.single("photo"), (req, res) => {
   cloudinary.uploader.upload(req.file.path, (error, result) => {
