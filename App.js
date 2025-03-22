@@ -9,7 +9,24 @@ const ProductRouter = require("./src/routes/productRouter");
 const AuthRouter = require("./src/routes/authRouter");
 const UserRouter = require("./src/routes/userRouter");
 const app = express();
-app.use(cors({ origin: "https://nika-gold.netlify.app" }));
+const allowedOrigins = [
+  "https://nika-gold.netlify.app",
+  "http://localhost:3000",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      console.log("CORS Origin:", origin); // Додано для перевірки
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+  })
+);
+// app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Зробити папку з файлами доступною
 
