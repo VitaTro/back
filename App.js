@@ -9,7 +9,7 @@ const ProductRouter = require("./src/routes/productRouter");
 const AuthRouter = require("./src/routes/authRouter");
 const UserRouter = require("./src/routes/userRouter");
 const app = express();
-app.use(cors());
+app.use(cors({ origin: "https://nika-gold.netlify.app" }));
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Зробити папку з файлами доступною
 
