@@ -23,6 +23,9 @@ app.get("/test", (req, res) => {
   res.send("This is a test route");
 });
 
+app.get("/api/test", (req, res) => {
+  res.json({ message: "This is a test route", success: true });
+});
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Маршрут для завантаження зображень
