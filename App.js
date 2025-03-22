@@ -6,7 +6,8 @@ const swaggerDocument = require("./swagger.json");
 const upload = require("./src/middleware/uploadMiddleware");
 const { cloudinary, storage } = require("./src/config/cloudinary");
 const ProductRouter = require("./src/routes/productRouter");
-
+const AuthRouter = require("./src/routes/authRouter");
+const UserRouter = require("./src/routes/userRouter");
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -27,7 +28,8 @@ app.get("/test", (req, res) => {
 
 // Routes
 app.use("/api/products", ProductRouter);
-
+app.use("/api/auth", AuthRouter);
+app.use("/api/user", UserRouter);
 app.get("/api/test", (req, res) => {
   res.json({ message: "This is a test route", success: true });
 });
