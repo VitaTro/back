@@ -5,11 +5,13 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./swagger.json");
 const upload = require("./src/middleware/uploadMiddleware");
 const { cloudinary, storage } = require("./src/config/cloudinary");
+const ProductRouter = require("./src/routes/productRouter");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Зробити папку з файлами доступною
+
 app.use(
   "/favicon.ico",
   express.static(path.join(__dirname, "public", "favicon.ico"))
@@ -22,6 +24,9 @@ app.get("/", (req, res) => {
 app.get("/test", (req, res) => {
   res.send("This is a test route");
 });
+
+// Routes
+app.use("/api/products", ProductRouter);
 
 app.get("/api/test", (req, res) => {
   res.json({ message: "This is a test route", success: true });
