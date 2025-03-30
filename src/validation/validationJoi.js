@@ -27,4 +27,14 @@ const userNameSchema = Joi.object({
     .pattern(/^[a-zA-Z\s]+$/)
     .required(),
 });
-module.exports = { registerSchema, loginSchema, userNameSchema };
+const userValidationSchema = Joi.object({
+  name: Joi.string().required(),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(6).required(),
+});
+module.exports = {
+  registerSchema,
+  loginSchema,
+  userNameSchema,
+  userValidationSchema,
+};

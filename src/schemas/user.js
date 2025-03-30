@@ -30,6 +30,10 @@ const userSchema = new Schema({
     type: String,
     default: null,
   },
+  subscription: {
+    type: Boolean,
+    default: false,
+  },
   basket: [
     {
       type: mongoose.Schema.Types.ObjectId,
