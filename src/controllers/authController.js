@@ -1,6 +1,14 @@
-const User = require("../schemas/user");
-const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+require("dotenv").config();
+const User = require("../schemas/user");
+const authService = require("../services/authService");
+const { registerSchema, loginSchema } = require("../validation/validationJoi");
+const bcrypt = require("bcryptjs");
+
+const generateToken = (user) => {
+  const payload = { id: user._id, role: user.role };
+  return jwt.sign(payload, process.env.SECRET, { expiresIn: "1h" });
+};
 
 // Перевірка першого адміністратора
 exports.checkFirstAdmin = async (req, res) => {
@@ -13,67 +21,92 @@ exports.checkFirstAdmin = async (req, res) => {
 };
 
 // Реєстрація користувача
-exports.register = async (req, res) => {
-  try {
-    const { username, email, password, role } = req.body;
-    const hashedPassword = bcrypt.hashSync(password, 8);
+exports.registerUser = async (req, res) => {
+  const { error } = registerSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
 
+  const { name, email, password } = req.body;
+
+  try {
+    const existingUser = await authService.checkEmailAddress(email);
+    if (existingUser) {
+      return res.status(409).json({ message: "Email in use" });
+    }
+
+    const hashedPassword = bcrypt.hashSync(password, bcrypt.genSaltSync(6));
     const newUser = new User({
-      username,
+      username: name,
       email,
       password: hashedPassword,
-      role,
+      role: "user",
     });
 
     await newUser.save();
-    res.status(201).send(newUser);
+
+    const token = generateToken(newUser);
+
+    res.status(201).json({
+      token,
+      user: {
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+      },
+    });
   } catch (error) {
-    res.status(400).send(error);
+    res.status(500).json({ message: error.message });
   }
 };
 
 // Логін користувача
-exports.login = async (req, res) => {
+exports.loginUser = async (req, res) => {
+  const { error } = loginSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
+  const { email, password } = req.body;
+
   try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(404).send("User not found");
+    const user = await authService.checkEmailAddress(email);
+    if (!user || !bcrypt.compareSync(password, user.password)) {
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const isPasswordValid = bcrypt.compareSync(password, user.password);
+    const token = generateToken(user);
 
-    if (!isPasswordValid) {
-      return res.status(401).send("Invalid password");
-    }
-
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.SECRET,
-      {
-        expiresIn: "1h",
-      }
-    );
-
-    res.status(200).send({ auth: true, token });
+    res.status(200).json({
+      token,
+      user: { username: user.username, email: user.email, role: user.role },
+    });
   } catch (error) {
-    res.status(400).send(error);
+    res.status(500).json({ message: error.message });
   }
 };
 
 // Логаут користувача
-exports.logout = (req, res) => {
-  res.status(200).send({ auth: false, token: null });
-};
+exports.logoutUser = async (req, res) => {
+  try {
+    const user = await authService.getCurrentUser(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
+    user.jwtToken = null;
+    await user.save();
+    res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 // Реєстрація адміністратора (один раз)
 exports.registerAdmin = async (req, res) => {
   try {
-    const existingAdmin = await User.findOne({ role: "admin" });
-
-    if (existingAdmin) {
-      return res.status(403).send("Admin already exists");
+    const adminCount = await User.countDocuments({ role: "admin" });
+    if (adminCount > 0) {
+      return res.status(403).json({ message: "Admin already exists" });
     }
 
     const { username, email, password } = req.body;
