@@ -22,7 +22,6 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-
 // Отримання URL
 const publicId = "products/image1";
 try {
