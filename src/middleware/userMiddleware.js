@@ -1,7 +1,5 @@
 const jwt = require("jsonwebtoken");
-const dotenv = require("dotenv");
-
-dotenv.config({ path: "/etc/secrets/.env" });
+require("../../config");
 
 const authMiddleware = (req, res, next) => {
   const token = req.header("Authorization").replace("Bearer ", "");

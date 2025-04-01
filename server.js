@@ -1,10 +1,9 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const dotenv = require("dotenv");
+require("./config");
 const app = require("./App");
 const { cloudinary } = require("./src/config/cloudinary");
 
-require("dotenv").config({ path: "/etc/secrets/.env" });
 const PORT = process.env.PORT || 5000;
 
 mongoose

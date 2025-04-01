@@ -1,4 +1,4 @@
-require("dotenv").config({ path: "/etc/secrets/.env" });
+require("../../config");
 const nodemailer = require("nodemailer");
 const { EMAIL_USER, EMAIL_PASS } = process.env;
 
