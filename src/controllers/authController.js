@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-require("dotenv").config();
+require("dotenv").config({ path: "/etc/secrets/.env" });
 const User = require("../schemas/user");
 const authService = require("../services/authService");
 const { registerSchema, loginSchema } = require("../validation/validationJoi");
