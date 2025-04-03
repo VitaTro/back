@@ -39,9 +39,7 @@
   "paths": {
     "/api/products": {
       "get": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "summary": "Отримати всі продукти",
         "responses": {
           "200": {
@@ -62,11 +60,11 @@
           }
         }
       },
+
       "post": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "summary": "Додавання нового продукту",
+
         "requestBody": {
           "content": {
             "application/json": {
@@ -96,9 +94,7 @@
     },
     "/api/products/{type}": {
       "get": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "summary": "Отримати продукти за типом",
         "parameters": [
           {
@@ -135,9 +131,7 @@
     },
     "/api/products/{id}": {
       "delete": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "summary": "Видалити продукт",
         "parameters": [
           {
@@ -172,9 +166,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "summary": "Оновлення продукту",
         "parameters": [
           {
@@ -221,9 +213,7 @@
     },
     "/api/auth/check-admin": {
       "get": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Перевірка першого адміністратора",
         "responses": {
           "200": {
@@ -241,9 +231,7 @@
     },
     "/api/auth/register/user": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Реєстрація нового користувача",
         "requestBody": {
           "content": {
@@ -267,9 +255,7 @@
     },
     "/api/auth/register/admin": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Реєстрація нового адміністратора",
         "requestBody": {
           "content": {
@@ -293,9 +279,7 @@
     },
     "/api/auth/login": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Вхід користувача",
         "requestBody": {
           "content": {
@@ -319,9 +303,7 @@
     },
     "/api/auth/logout": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Вихід користувача",
         "responses": {
           "200": {
@@ -332,9 +314,7 @@
     },
     "/api/user/profile": {
       "get": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Отримати профіль користувача",
         "responses": {
           "200": {
@@ -353,9 +333,7 @@
         }
       },
       "put": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Оновити профіль користувача",
         "requestBody": {
           "content": {
@@ -385,9 +363,7 @@
     },
     "/api/subscribe": {
       "post": {
-        "tags": [
-          "Subscription"
-        ],
+        "tags": ["Subscription"],
         "summary": "Підписка на нові товари",
         "requestBody": {
           "content": {
@@ -414,9 +390,7 @@
     },
     "/api/unsubscribe": {
       "post": {
-        "tags": [
-          "Subscription"
-        ],
+        "tags": ["Subscription"],
         "summary": "Відписка від нових товарів",
         "requestBody": {
           "content": {
@@ -448,10 +422,9 @@
   "components": {
     "schemas": {
       "Subscription": {
-        "required": [
-          "email"
-        ],
+        "required": ["email"],
         "type": "object",
+
         "properties": {
           "email": {
             "type": "string",
@@ -468,9 +441,7 @@
         }
       },
       "Unsubscription": {
-        "required": [
-          "email"
-        ],
+        "required": ["email"],
         "type": "object",
         "properties": {
           "email": {
@@ -481,10 +452,7 @@
         }
       },
       "UserProfile": {
-        "required": [
-          "email",
-          "username"
-        ],
+        "required": ["email", "username"],
         "type": "object",
         "properties": {
           "username": {
@@ -572,12 +540,9 @@
         }
       },
       "Auth": {
-        "required": [
-          "email",
-          "password",
-          "username"
-        ],
+        "required": ["email", "password", "username"],
         "type": "object",
+
         "properties": {
           "username": {
             "type": "string",
