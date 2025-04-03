@@ -8,8 +8,8 @@ router.get("/", async (req, res) => {
   try {
     const products = await Product.find({});
     res.json(products);
-  } catch {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
@@ -19,8 +19,8 @@ router.get("/:type", async (req, res) => {
     const type = req.params.type;
     const products = await Product.find({ category: type });
     res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 

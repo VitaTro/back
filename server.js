@@ -4,7 +4,7 @@ const dotenv = require("dotenv");
 const { cloudinary } = require("./src/config/cloudinary");
 const app = require("./App");
 
-dotenv.config();
+require("dotenv").config();
 const PORT = process.env.PORT || 5000;
 
 mongoose
