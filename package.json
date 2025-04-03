@@ -9,7 +9,7 @@
   },
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "https://back-fcdq.onrender.com",
   "dependencies": {
     "axios": "^1.8.4",
     "bcryptjs": "^3.0.2",
