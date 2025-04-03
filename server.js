@@ -3,7 +3,8 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const app = require("./App");
 // const { cloudinary } = require("./src/config/cloudinary");
-dotenv.config();
+require("dotenv").config();
+
 const PORT = process.env.PORT || 5000;
 
 mongoose
@@ -14,7 +15,10 @@ mongoose
   .catch((error) => {
     console.error("Connection error", error);
   });
-
+if (!process.env.MONGODB_URI || !process.env.CLOUDINARY_CLOUD_NAME) {
+  console.error("Environment variables are missing");
+  process.exit(1);
+}
 // Налаштування Cloudinary
 // cloudinary.config({
 //   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
