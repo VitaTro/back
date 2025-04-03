@@ -1,13 +1,13 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
-const fs = require("fs");
+
 const { cloudinary } = require("./src/config/cloudinary");
 const app = require("./App");
 
 require("dotenv").config();
 const PORT = process.env.PORT || 5000;
-const MONGODB_URI = fs.readFileSync("/etc/secrets/<filename>", "utf8").trim();
+
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
