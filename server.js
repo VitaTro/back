@@ -13,7 +13,7 @@ mongoose
     console.log("Connected to MongoDB Atlas");
   })
   .catch((error) => {
-    console.error("Connection error", error);
+    console.error("Connection error", error.message);
   });
 
 // try {
