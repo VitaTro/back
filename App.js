@@ -26,12 +26,21 @@ app.get("/test", (req, res) => {
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.post("/upload", upload.single("photo"), (req, res) => {
-  cloudinary.uploader.upload(req.file.path, (error, result) => {
-    if (error) {
-      res.status(500).json({ error: "Failed to upload image" });
-    } else {
-      res.json({ url: result.secure_url });
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
     }
-  });
+    cloudinary.uploader.upload(req.file.path, (error, result) => {
+      if (error) {
+        return res.status(500).json({ error: "Failed to upload image" });
+      }
+      res.json({ url: result.secure_url });
+    });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ error: "An unexpected error occurred", details: err.message });
+  }
 });
+
 module.exports = app;
