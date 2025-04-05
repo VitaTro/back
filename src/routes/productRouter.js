@@ -25,7 +25,7 @@ router.get("/:type", async (req, res) => {
 });
 
 // Маршрут для додавання нового продукту
-router.post("/", upload.single("photo"), async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const {
       name,
@@ -33,17 +33,18 @@ router.post("/", upload.single("photo"), async (req, res) => {
       subcategory,
       price,
       description,
+      photoUrl,
       size,
       inStock,
       visible,
       createdAt,
     } = req.body;
-    console.log("Uploaded file:", req.file);
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-    const result = await cloudinary.uploader.upload(req.file.path);
-    const photoUrl = result.secure_url;
+    // console.log("Uploaded file:", req.file);
+    // if (!req.file) {
+    //   return res.status(400).json({ error: "No file uploaded" });
+    // }
+    // const result = await cloudinary.uploader.upload(req.file.path);
+    // const photoUrl = result.secure_url;
 
     const newProduct = new Product({
       name,
