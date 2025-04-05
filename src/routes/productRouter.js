@@ -19,8 +19,8 @@ router.get("/:type", async (req, res) => {
     const type = req.params.type;
     const products = await Product.find({ category: type });
     res.json(products);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -39,8 +39,8 @@ router.post("/", async (req, res) => {
       createdAt,
     } = req.body;
 
-    // const result = await cloudinary.uploader.upload(req.file.path);
-    // const photoUrl = result.secure_url;
+    const result = await cloudinary.uploader.upload(req.file.path);
+    const photoUrl = result.secure_url;
 
     const newProduct = new Product({
       name,
