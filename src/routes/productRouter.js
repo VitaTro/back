@@ -25,7 +25,7 @@ router.get("/:type", async (req, res) => {
 });
 
 // Маршрут для додавання нового продукту
-router.post("/", upload.single("photo"), async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const {
       name,
