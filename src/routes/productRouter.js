@@ -25,7 +25,7 @@ router.get("/:type", async (req, res) => {
 });
 
 // Маршрут для додавання нового продукту
-router.post("/", async (req, res) => {
+router.post("/", upload.single("photo"), async (req, res) => {
   try {
     const {
       name,
@@ -38,6 +38,9 @@ router.post("/", async (req, res) => {
       visible,
       createdAt,
     } = req.body;
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
     const result = await cloudinary.uploader.upload(req.file.path);
     const photoUrl = result.secure_url;
 
@@ -57,7 +60,10 @@ router.post("/", async (req, res) => {
     await newProduct.save();
     res.status(201).send(newProduct);
   } catch (error) {
-    res.status(500).send(error);
+    console.error("Error:", error.message); // Додано для логування помилки
+    res
+      .status(500)
+      .send({ error: "Internal server error", details: error.message });
   }
 });
 
