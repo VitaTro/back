@@ -24,7 +24,7 @@ userSchema.methods.setPassword = function (password) {
 };
 // валідність паролю
 userSchema.methods.validPassword = function (password) {
-  return bcrypt.compareSync(password.this.password);
+  return bcrypt.compareSync(password, this.password);
 };
 
 const User = mongoose.model("User", userSchema);

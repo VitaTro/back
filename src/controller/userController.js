@@ -1,6 +1,6 @@
 const User = require("../schemas/user");
 const userValidationSchema = require("../validation/userJoi");
-
+const bcrypt = require("bcrypt");
 // перевірка, чи є перший адмін
 const checkAdmin = async (req, res) => {
   try {
@@ -20,26 +20,47 @@ const registerAdmin = async (req, res) => {
   if (error) {
     return res.status(400).json({ message: error.details[0].message });
   }
+
   try {
     const { username, email, password, adminSecret } = req.body;
-    const admins = await User.find({ role: "admin" });
-    if (admins.length === 0 && !adminSecret) {
-      return res
-        .status(400)
-        .json({ message: "Admin secret is required for the first admin." });
-    }
-    const newAdmin = new User({
-      username,
-      email,
-      role: "admin",
-    });
-    newAdmin.setPassword(password);
-    newAdmin.adminSecret = adminSecret;
-    await newAdmin.save();
 
-    res.status(201).json({ message: "Admin registered successfully!" });
+    // Перевірка, чи є адміністратор
+    const admins = await User.find({ role: "admin" });
+    if (admins.length === 0) {
+      if (!adminSecret) {
+        return res.status(400).json({
+          message: "Admin secret is required for the first admin.",
+        });
+      }
+
+      // Хешування adminSecret, якщо він є
+      const hashedAdminSecret = bcrypt.hashSync(
+        adminSecret,
+        bcrypt.genSaltSync(10)
+      );
+
+      // Створюємо першого адміністратора
+      const newAdmin = new User({
+        username,
+        email,
+        role: "admin",
+        adminSecret: hashedAdminSecret,
+      });
+      newAdmin.setPassword(password);
+
+      await newAdmin.save();
+      return res
+        .status(201)
+        .json({ message: "First admin registered successfully!" });
+    }
+
+    // Якщо адміністратор уже існує
+    return res.status(400).json({ message: "Admin already exists." });
   } catch (error) {
-    res.status(500).json({ error: "Failed to register admin." });
+    res.status(500).json({
+      error: "Failed to register admin.",
+      details: error.message,
+    });
   }
 };
 
