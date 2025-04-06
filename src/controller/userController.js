@@ -1,3 +1,4 @@
+require("dotenv").config();
 const User = require("../schemas/user");
 const userValidationSchema = require("../validation/userJoi");
 const bcrypt = require("bcrypt");
@@ -38,7 +39,9 @@ const registerAdmin = async (req, res) => {
         adminSecret,
         bcrypt.genSaltSync(10)
       );
-
+      if (adminSecret !== process.env.ADMIN_SECRET_KEY) {
+        return res.status(403).send("Access Denied! Invalid Admin Key.");
+      }
       // Створюємо першого адміністратора
       const newAdmin = new User({
         username,
