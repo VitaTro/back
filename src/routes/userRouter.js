@@ -33,7 +33,13 @@ router.post(
 router.get("/protected-route", authenticateJWT, (req, res) => {
   res.json({ message: "You have access!", user: req.user });
 });
+
 router.get("/dashboard", authenticateJWT, (req, res) => {
-  res.json({ message: `Welcome, ${req.user.email}!` });
+  console.log("Authenticated User:", req.user);
+  if (req.user.role !== "admin") {
+    console.log("Access denied. Role is:", req.user.role);
+    return res.status(403).json({ message: "Access denied. Admins only." });
+  }
+  res.json({ message: `Welcome to the dashboard, ${req.user.email}!` });
 });
 module.exports = router;
