@@ -1,4 +1,5 @@
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 const User = require("../schemas/user");
 const {
   userValidationSchema,
@@ -86,4 +87,39 @@ const registerUser = async (req, res) => {
   }
 };
 
-module.exports = { checkAdmin, registerAdmin, registerUser };
+const generateJWT = (user) => {
+  const payload = {
+    id: user._id,
+    email: user.email,
+    role: user.role,
+  };
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
+};
+// логін користувача
+const loginUser = async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isPasswordValid = user.validPassword(password);
+    if (!isPasswordValid) {
+      return res.status(403).json({ message: "Invalid password" });
+    }
+
+    // Перевірка ролі для адміністратора
+    if (req.isAdmin && user.role !== "admin") {
+      return res.status(403).json({ message: "Not authorized as admin" });
+    }
+
+    // Генерація токена (JWT)
+    const token = generateJWT(user); // Функція для створення JWT (наприклад, через jsonwebtoken)
+    res.json({ message: "Login successful!", token });
+  } catch (error) {
+    res.status(500).json({ message: "Login failed", error: error.message });
+  }
+};
+
+module.exports = { checkAdmin, registerAdmin, registerUser, loginUser };
