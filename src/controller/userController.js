@@ -25,6 +25,8 @@ const registerAdmin = async (req, res) => {
   try {
     const { username, email, password, adminSecret } = req.body;
 
+    console.log("Received adminSecret:", adminSecret);
+    console.log("Expected Admin Key:", process.env.ADMIN_SECRET_KEY);
     // Перевірка, чи є адміністратор
     const admins = await User.find({ role: "admin" });
     if (admins.length === 0) {
@@ -34,20 +36,15 @@ const registerAdmin = async (req, res) => {
         });
       }
 
-      // Хешування adminSecret, якщо він є
-      const hashedAdminSecret = bcrypt.hashSync(
-        adminSecret,
-        bcrypt.genSaltSync(10)
-      );
       if (adminSecret !== process.env.ADMIN_SECRET_KEY) {
         return res.status(403).send("Access Denied! Invalid Admin Key.");
       }
+
       // Створюємо першого адміністратора
       const newAdmin = new User({
         username,
         email,
         role: "admin",
-        adminSecret: hashedAdminSecret,
       });
       newAdmin.setPassword(password);
 
