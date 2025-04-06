@@ -6,6 +6,7 @@ const swaggerDocument = require("./swagger.json");
 const { cloudinary, storage, upload } = require("./src/config/cloudinary");
 const { error } = require("console");
 const ProductRouter = require("./src/routes/productRouter");
+const AuthRouter = require("./src/routes/userRouter");
 const app = express();
 // app.use(cors());
 
@@ -44,7 +45,7 @@ app.get("/test", (req, res) => {
 
 // Route
 app.use("/api/products", ProductRouter);
-
+app.use("/api/auth", AuthRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.post("/upload", upload.single("photo"), (req, res) => {
