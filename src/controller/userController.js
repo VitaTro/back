@@ -1,6 +1,9 @@
 require("dotenv").config();
 const User = require("../schemas/user");
-const userValidationSchema = require("../validation/userJoi");
+const {
+  userValidationSchema,
+  adminValidationSchema,
+} = require("../validation/userJoi");
 const bcrypt = require("bcrypt");
 // перевірка, чи є перший адмін
 const checkAdmin = async (req, res) => {
@@ -17,7 +20,7 @@ const checkAdmin = async (req, res) => {
 
 // реєстрація адміна
 const registerAdmin = async (req, res) => {
-  const { error } = userValidationSchema.validate(req.body);
+  const { error } = adminValidationSchema.validate(req.body);
   if (error) {
     return res.status(400).json({ message: error.details[0].message });
   }

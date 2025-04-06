@@ -5,4 +5,12 @@ const userValidationSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(10).required(),
 });
-module.exports = userValidationSchema;
+
+const adminValidationSchema = Joi.object({
+  username: Joi.string().required(),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(10).required(),
+  adminSecret: Joi.string().required(), // Тут обов'язково для адміна
+});
+
+module.exports = { userValidationSchema, adminValidationSchema };
