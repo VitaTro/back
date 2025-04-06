@@ -6,7 +6,7 @@ const {
 } = require("../controller/userController");
 const router = express.Router();
 
-router.get("/auth/check-admin", checkAdmin);
-router.post("/auth/register/admin", registerAdmin);
-router.post("/auth/register/user", registerUser);
+router.get("/check-admin", checkAdmin);
+router.post("/register/admin", registerAdmin);
+router.post("/register/user", registerUser);
 module.exports = router;
