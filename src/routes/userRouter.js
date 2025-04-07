@@ -5,8 +5,12 @@ const {
   registerUser,
   loginUser,
 } = require("../controller/userController");
-const authenticateJWT = require("../middleware/authMiddleware");
+const {
+  authenticateJWT,
+  isAuthenticated,
+} = require("../middleware/authMiddleware");
 const adminSecretKey = require("../../generateAdminKey");
+
 const router = express.Router();
 
 router.get("/check-admin", checkAdmin);
@@ -29,6 +33,25 @@ router.post(
   },
   loginUser
 );
+router.get("/main", isAuthenticated, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password"); // Дані юзера
+    const products = await Product.find(); // Наприклад, всі продукти для юзера
+    res.status(200).json({
+      message: "Welcome to the main page",
+      user: {
+        id: user._id,
+        name: user.username,
+        role: user.role,
+      },
+      preferences: user.preferences,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to load user data" });
+  }
+});
+
 // Захищені маршрути (приклад)
 router.get("/protected-route", authenticateJWT, (req, res) => {
   res.json({ message: "You have access!", user: req.user });

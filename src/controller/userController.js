@@ -1,17 +1,16 @@
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 const User = require("../schemas/user");
 const {
   userValidationSchema,
   adminValidationSchema,
 } = require("../validation/userJoi");
-const bcrypt = require("bcrypt");
-// перевірка, чи є перший адмін
+
+// Перевірка, чи є перший адмін
 const checkAdmin = async (req, res) => {
   try {
-    const admins = await User.find({
-      role: "admin",
-    });
+    const admins = await User.find({ role: "admin" });
     const isFirstAdmin = admins.length === 0;
     res.json({ isFirstAdmin });
   } catch (error) {
@@ -19,7 +18,17 @@ const checkAdmin = async (req, res) => {
   }
 };
 
-// реєстрація адміна
+// Генерація JWT
+const generateJWT = (user) => {
+  const payload = {
+    id: user._id,
+    email: user.email,
+    role: user.role,
+  };
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
+};
+
+// Реєстрація адміністратора
 const registerAdmin = async (req, res) => {
   const { error } = adminValidationSchema.validate(req.body);
   if (error) {
@@ -29,46 +38,29 @@ const registerAdmin = async (req, res) => {
   try {
     const { username, email, password, adminSecret } = req.body;
 
-    console.log("Received adminSecret:", adminSecret);
-    console.log("Expected Admin Key:", process.env.ADMIN_SECRET_KEY);
-    // Перевірка, чи є адміністратор
-    const admins = await User.find({ role: "admin" });
-    if (admins.length === 0) {
-      if (!adminSecret) {
-        return res.status(400).json({
-          message: "Admin secret is required for the first admin.",
-        });
-      }
-
-      if (adminSecret !== process.env.ADMIN_SECRET_KEY) {
-        return res.status(403).send("Access Denied! Invalid Admin Key.");
-      }
-
-      // Створюємо першого адміністратора
-      const newAdmin = new User({
-        username,
-        email,
-        role: "admin",
-      });
-      newAdmin.setPassword(password);
-
-      await newAdmin.save();
-      return res
-        .status(201)
-        .json({ message: "First admin registered successfully!" });
+    // Перевірка ключа адміністратора
+    if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET_KEY) {
+      return res.status(403).json({ message: "Invalid Admin Secret Key" });
     }
 
-    // Якщо адміністратор уже існує
-    return res.status(400).json({ message: "Admin already exists." });
-  } catch (error) {
-    res.status(500).json({
-      error: "Failed to register admin.",
-      details: error.message,
+    // Створення адміністратора
+    const newAdmin = new User({
+      username,
+      email,
+      role: "admin",
     });
+    newAdmin.setPassword(password);
+    await newAdmin.save();
+
+    res.status(201).json({ message: "Admin registered successfully!" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Failed to register admin.", details: error.message });
   }
 };
 
-// реєстрація звичайного користувача
+// Реєстрація користувача
 const registerUser = async (req, res) => {
   const { error } = userValidationSchema.validate(req.body);
   if (error) {
@@ -77,7 +69,7 @@ const registerUser = async (req, res) => {
 
   try {
     const { username, email, password } = req.body;
-    const newUser = new User({ username, email });
+    const newUser = new User({ username, email, role: "user" });
     newUser.setPassword(password);
     await newUser.save();
 
@@ -87,17 +79,11 @@ const registerUser = async (req, res) => {
   }
 };
 
-const generateJWT = (user) => {
-  const payload = {
-    id: user._id,
-    email: user.email,
-    role: user.role,
-  };
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
-};
-// логін користувача
+// Логін користувача або адміністратора
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
+  const isAdmin = req.isAdmin; // Визначення ролі
+
   try {
     const user = await User.findOne({ email });
     if (!user) {
@@ -109,17 +95,30 @@ const loginUser = async (req, res) => {
       return res.status(403).json({ message: "Invalid password" });
     }
 
-    // Перевірка ролі для адміністратора
-    if (req.isAdmin && user.role !== "admin") {
+    // Перевірка ролі
+    if (isAdmin && user.role !== "admin") {
       return res.status(403).json({ message: "Not authorized as admin" });
     }
 
-    // Генерація токена (JWT)
-    const token = generateJWT(user); // Функція для створення JWT (наприклад, через jsonwebtoken)
-    res.json({ message: "Login successful!", token });
+    const token = generateJWT(user); // Генерація токена
+    const route = user.role === "admin" ? "/admin/dashboard" : "/main"; // Визначення маршруту
+
+    res.json({
+      message: "Login successful!",
+      token,
+      user: {
+        id: user._id,
+        name: user.username,
+        email: user.email,
+        role: user.role,
+        photo: user.photo || "",
+      },
+      redirectTo: route, // Маршрут для перенаправлення
+    });
   } catch (error) {
     res.status(500).json({ message: "Login failed", error: error.message });
   }
 };
 
+// Експорт функцій
 module.exports = { checkAdmin, registerAdmin, registerUser, loginUser };
