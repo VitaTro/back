@@ -33,6 +33,10 @@ router.post(
   },
   loginUser
 );
+router.get("/api/user/profile", isAuthenticated, async (req, res) => {
+  const user = await User.findById(req.user.id).select("-password");
+  res.json(user);
+});
 router.get("/main", isAuthenticated, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password"); // Дані юзера
@@ -57,12 +61,21 @@ router.get("/protected-route", authenticateJWT, (req, res) => {
   res.json({ message: "You have access!", user: req.user });
 });
 
-router.get("/dashboard", authenticateJWT, (req, res) => {
+router.get("/dashboard", authenticateJWT, async (req, res) => {
   console.log("Authenticated User:", req.user);
   if (req.user.role !== "admin") {
     console.log("Access denied. Role is:", req.user.role);
     return res.status(403).json({ message: "Access denied. Admins only." });
   }
-  res.json({ message: `Welcome to the dashboard, ${req.user.email}!` });
+  const stats = {
+    totalUsers: await User.countDocuments(),
+    totalProducts: await Product.countDocuments(),
+  };
+  const users = await User.find().select("-password");
+  res.json({
+    message: `Welcome to the dashboard, ${req.user.email}!`,
+    stats,
+    users,
+  });
 });
 module.exports = router;
