@@ -4,11 +4,12 @@ const path = require("path");
 const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./swagger.json");
 const { cloudinary, storage, upload } = require("./src/config/cloudinary");
-const { error } = require("console");
 const ProductRouter = require("./src/routes/productRouter");
 const AuthRouter = require("./src/routes/userRouter");
+const ShoppingCartRouter = require("./src/routes/shoppingCartRouter");
+const WishlistRouter = require("./src/routes/wishlistRouter");
+
 const app = express();
-// app.use(cors());
 
 const allowedOrigins = [
   "https://nika-gold.netlify.app",
@@ -43,9 +44,11 @@ app.get("/test", (req, res) => {
   res.send("This is a test route");
 });
 
-// Route
+// Routes
 app.use("/api/products", ProductRouter);
 app.use("/api/auth", AuthRouter);
+app.use("/api/shopping-cart", ShoppingCartRouter);
+app.use("/api/wishlist", WishlistRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.post("/upload", upload.single("photo"), (req, res) => {

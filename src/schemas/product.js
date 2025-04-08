@@ -41,6 +41,21 @@ const productSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  rating: {
+    type: Number,
+    default: 0,
+    description: "Середній рейтинг продукту",
+  },
+  discount: {
+    type: Number,
+    default: 0,
+    description: "Знижка на продукт (у відсотках)",
+  },
+  popularity: {
+    type: Number,
+    default: 0,
+    description: "Популярність продукту",
+  },
 });
 
 const Product = mongoose.model("Product", productSchema);

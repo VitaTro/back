@@ -1,81 +1,51 @@
 const express = require("express");
 const {
-  checkAdmin,
-  registerAdmin,
-  registerUser,
-  loginUser,
+  getUserProfile,
+  getUserMainData,
+  protectedRoute,
+  updateAvatar,
+  getWishlist,
+  addToWishlist,
+  removeFromWishlist,
+  updatePreferences,
+  getShoppingCart,
+  addToShoppingCart,
+  removeFromShoppingCart,
+  getPurchaseHistory,
 } = require("../controller/userController");
 const {
-  authenticateJWT,
   isAuthenticated,
+  authenticateJWT,
 } = require("../middleware/authMiddleware");
-const adminSecretKey = require("../../generateAdminKey");
 
 const router = express.Router();
 
-router.get("/check-admin", checkAdmin);
-router.post("/register/admin", registerAdmin);
-router.post("/register/user", registerUser);
-router.post(
-  "/login/admin",
-  (req, res, next) => {
-    req.isAdmin = true; // Помітити запит як адміністратора
-    next();
-  },
-  loginUser
+// Профіль користувача
+router.get("/profile", isAuthenticated, getUserProfile);
+router.get("/main", isAuthenticated, getUserMainData);
+router.get("/protected-route", authenticateJWT, protectedRoute);
+
+// Аватар
+router.post("/avatar", isAuthenticated, updateAvatar);
+
+// Список бажань (wishlist)
+router.get("/wishlist", isAuthenticated, getWishlist);
+router.post("/wishlist/add", isAuthenticated, addToWishlist);
+router.delete("/wishlist/remove/:id", isAuthenticated, removeFromWishlist);
+
+// Налаштування користувача (preferences)
+router.post("/preferences", isAuthenticated, updatePreferences);
+
+// Корзина покупок (shopping cart)
+router.get("/shopping-cart", isAuthenticated, getShoppingCart);
+router.post("/shopping-cart/add", isAuthenticated, addToShoppingCart);
+router.delete(
+  "/shopping-cart/remove/:id",
+  isAuthenticated,
+  removeFromShoppingCart
 );
 
-router.post(
-  "/login/user",
-  (req, res, next) => {
-    req.isAdmin = false; // Помітити запит як звичайного користувача
-    next();
-  },
-  loginUser
-);
-router.get("/api/user/profile", isAuthenticated, async (req, res) => {
-  const user = await User.findById(req.user.id).select("-password");
-  res.json(user);
-});
-router.get("/main", isAuthenticated, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select("-password"); // Дані юзера
-    const products = await Product.find(); // Наприклад, всі продукти для юзера
-    res.status(200).json({
-      message: "Welcome to the main page",
-      user: {
-        id: user._id,
-        name: user.username,
-        role: user.role,
-      },
-      preferences: user.preferences,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Failed to load user data" });
-  }
-});
+// Історія покупок (purchase history)
+router.get("/purchase-history", isAuthenticated, getPurchaseHistory);
 
-// Захищені маршрути (приклад)
-router.get("/protected-route", authenticateJWT, (req, res) => {
-  res.json({ message: "You have access!", user: req.user });
-});
-
-router.get("/dashboard", authenticateJWT, async (req, res) => {
-  console.log("Authenticated User:", req.user);
-  if (req.user.role !== "admin") {
-    console.log("Access denied. Role is:", req.user.role);
-    return res.status(403).json({ message: "Access denied. Admins only." });
-  }
-  const stats = {
-    totalUsers: await User.countDocuments(),
-    totalProducts: await Product.countDocuments(),
-  };
-  const users = await User.find().select("-password");
-  res.json({
-    message: `Welcome to the dashboard, ${req.user.email}!`,
-    stats,
-    users,
-  });
-});
 module.exports = router;

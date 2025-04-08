@@ -100,4 +100,61 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+router.get("/popular", async (req, res) => {
+  try {
+    const popularProducts = await Product.find({})
+      .sort({ popularity: -1 })
+      .limit(10);
+
+    if (popularProducts.length === 0) {
+      return res.status(404).json({ message: "No popular products found" });
+    }
+
+    res.json({ products: popularProducts });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch popular products" });
+  }
+});
+
+// Search for products
+router.get("/search", async (req, res) => {
+  try {
+    const query = req.query.q;
+    const products = await Product.find({
+      $or: [
+        { name: { $regex: query, $options: "i" } },
+        { description: { $regex: query, $options: "i" } },
+      ],
+    });
+    res.json({ results: products, query });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to search products" });
+  }
+});
+
+// Apply filters to products
+router.post("/filters", async (req, res) => {
+  try {
+    const { priceRange, categories, materials } = req.body;
+    const query = {};
+
+    if (priceRange && priceRange.min && priceRange.max) {
+      query.price = { $gte: priceRange.min, $lte: priceRange.max };
+    }
+
+    if (categories && categories.length > 0) {
+      query.category = { $in: categories };
+    }
+
+    if (materials && materials.length > 0) {
+      query.material = { $in: materials };
+    }
+
+    const filteredProducts = await Product.find(query);
+    res.json({ products: filteredProducts });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to filter products" });
+  }
+});
+
 module.exports = router;
