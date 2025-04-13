@@ -57,7 +57,7 @@ const productSchema = new mongoose.Schema({
     description: "Популярність продукту",
   },
 });
-
+productSchema.index({ name: "text", description: "text" });
 const Product = mongoose.model("Product", productSchema);
 
 module.exports = Product;
