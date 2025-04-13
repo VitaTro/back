@@ -120,14 +120,24 @@ router.get("/popular", async (req, res) => {
 router.get("/search", async (req, res) => {
   try {
     const query = req.query.q;
+    if (!query) {
+      return res.status(400).json({ error: "Query parameter is required" });
+    }
+
     const products = await Product.find({
       $or: [
         { name: { $regex: query, $options: "i" } },
         { description: { $regex: query, $options: "i" } },
       ],
     });
+
+    if (products.length === 0) {
+      return res.status(404).json({ results: [], query });
+    }
+
     res.json({ results: products, query });
   } catch (error) {
+    console.error("Error in search route:", error);
     res.status(500).json({ error: "Failed to search products" });
   }
 });
