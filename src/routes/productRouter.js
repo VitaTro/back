@@ -121,7 +121,6 @@ router.get("/popular", async (req, res) => {
 router.get("/search", async (req, res) => {
   try {
     const { keyword } = req.query;
-
     if (!keyword) {
       return res.status(400).json({
         status: "error",
@@ -131,10 +130,7 @@ router.get("/search", async (req, res) => {
     }
 
     const products = await Product.find({
-      $or: [
-        { name: { $regex: keyword, $options: "i" } },
-        { description: { $regex: keyword, $options: "i" } },
-      ],
+      name: { $regex: keyword, $options: "i" }, // Пошук нечутливий до регістру
     });
 
     if (products.length === 0) {
