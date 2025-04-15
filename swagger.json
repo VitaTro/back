@@ -261,12 +261,12 @@
     "/api/products/search": {
       "get": {
         "tags": ["Products"],
-        "summary": "Пошук продуктів за ключовими словами",
+        "summary": "Search for products by keyword",
         "parameters": [
           {
-            "name": "query",
+            "name": "keyword",
             "in": "query",
-            "description": "Ключове слово для пошуку.",
+            "description": "The keyword to search for in product names or descriptions.",
             "required": true,
             "schema": {
               "type": "string"
@@ -275,7 +275,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Результати пошуку отримано успішно.",
+            "description": "Search results retrieved successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -287,11 +287,14 @@
               }
             }
           },
+          "400": {
+            "description": "Missing keyword query parameter."
+          },
           "404": {
-            "description": "Жодного продукту не знайдено."
+            "description": "No products found matching the keyword."
           },
           "500": {
-            "description": "Внутрішня помилка сервера."
+            "description": "Internal server error."
           }
         }
       }

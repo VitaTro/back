@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Product = require("../schemas/product");
 const { cloudinary, upload } = require("../config/cloudinary");
+const searchController = require("../controller/searchController");
 
 // Маршрут для отримання всіх продуктів
 router.get("/", async (req, res) => {
@@ -119,26 +120,43 @@ router.get("/popular", async (req, res) => {
 // Search for products
 router.get("/search", async (req, res) => {
   try {
-    const query = req.query.q;
-    if (!query) {
-      return res.status(400).json({ error: "Query parameter is required" });
+    const { keyword } = req.query;
+
+    if (!keyword) {
+      return res.status(400).json({
+        status: "error",
+        message: 'Query parameter "keyword" is required',
+        data: null,
+      });
     }
 
     const products = await Product.find({
       $or: [
-        { name: { $regex: query, $options: "i" } },
-        { description: { $regex: query, $options: "i" } },
+        { name: { $regex: keyword, $options: "i" } },
+        { description: { $regex: keyword, $options: "i" } },
       ],
     });
 
     if (products.length === 0) {
-      return res.status(404).json({ results: [], query });
+      return res.status(404).json({
+        status: "error",
+        message: "No products found matching the keyword",
+        data: [],
+      });
     }
 
-    res.json({ results: products, query });
+    res.status(200).json({
+      status: "success",
+      message: "Products fetched successfully",
+      data: products,
+    });
   } catch (error) {
     console.error("Error in search route:", error);
-    res.status(500).json({ error: "Failed to search products" });
+    res.status(500).json({
+      status: "error",
+      message: "Failed to fetch products",
+      data: null,
+    });
   }
 });
 
