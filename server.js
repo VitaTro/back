@@ -7,7 +7,9 @@ const app = require("./App");
 const PORT = process.env.PORT || 5000;
 
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGO_URI, {
+    dbName: "nika",
+  })
 
   .then(() => {
     console.log("Connected to MongoDB Atlas");
