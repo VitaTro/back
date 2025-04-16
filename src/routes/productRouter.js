@@ -122,23 +122,18 @@ router.get("/search", async (req, res) => {
   console.log("Route /search was hit");
 
   try {
-    // Перевіряємо, чи параметр `query` присутній
-    const { query } = req.query;
+    const query = req.query.query || req.query.q || "";
     console.log("Received query parameter:", query);
 
     if (!query) {
       console.log("Query parameter is missing");
       return res.status(400).json({
         status: "error",
-        message: 'Query parameter "query" is required',
+        message: 'Query parameter "query" or "q" is required',
         data: null,
       });
     }
 
-    // Додатковий лог MongoDB URI для перевірки
-    console.log("MongoDB URI:", process.env.MONGO_URI);
-
-    // Пошук за допомогою `$regex`
     console.log("Performing search with regex:", query);
     const products = await Product.find({
       $or: [
@@ -150,7 +145,6 @@ router.get("/search", async (req, res) => {
     });
     console.log("Search results:", products);
 
-    // Якщо жодного результату не знайдено
     if (products.length === 0) {
       console.log(`No products found for query: "${query}"`);
       return res.status(404).json({
@@ -160,7 +154,6 @@ router.get("/search", async (req, res) => {
       });
     }
 
-    // Успішна відповідь
     console.log("Returning matched products...");
     return res.status(200).json({
       status: "success",
@@ -168,7 +161,6 @@ router.get("/search", async (req, res) => {
       data: products,
     });
   } catch (error) {
-    // Логування помилок
     console.error("Error in search route:", error);
     return res.status(500).json({
       status: "error",
