@@ -119,64 +119,18 @@ router.get("/popular", async (req, res) => {
 
 // Search for products
 router.get("/search", async (req, res) => {
-  // Лог на самому початку, щоб переконатися, що маршрут викликається
   console.log("Route /search was hit");
 
   try {
-    const { query } = req.query;
+    const allProducts = await Product.find({});
+    console.log("All products:", allProducts);
 
-    // Лог вхідного параметра `query`
-    console.log("Received query parameter:", query);
-
-    if (!query) {
-      // Логування у випадку відсутності параметра `query`
-      console.log("Query parameter is missing");
-      return res.status(400).json({
-        status: "error",
-        message: 'Query parameter "query" is required',
-        data: null,
-      });
-    }
-    console.log("Performing text search with query:", query);
-    // Лог перед виконанням MongoDB пошуку
-    const products = await Product.find({ $text: { $search: query } });
-    console.log("Text search results:", products);
-    // const products = await Product.find({
-    //   $or: [
-    //     { name: { $regex: query, $options: "i" } },
-    //     { description: { $regex: query, $options: "i" } },
-    //     { category: { $regex: query, $options: "i" } },
-    //     { subcategory: { $regex: query, $options: "i" } },
-    //   ],
-    // });
-
-    console.log("Search results:", products);
-    // Лог перед перевіркою пустого масиву
-    if (products.length === 0) {
-      console.log(`No products found for query: "${query}"`);
-      return res.status(404).json({
-        status: "error",
-        message: "No products found matching the query",
-        data: [],
-      });
-    }
-
-    // Лог перед поверненням успішної відповіді
-    console.log("Preparing response with products:", products);
-
-    // Повернення успішної відповіді
-    return res.status(200).json({
-      status: "success",
-      message: "Products fetched successfully",
-      data: products,
-    });
+    res.status(200).json(allProducts);
   } catch (error) {
-    // Лог помилок
-    console.error("Error in search route:", error);
-    return res.status(500).json({
+    console.error("Error in /search route:", error);
+    res.status(500).json({
       status: "error",
       message: "Failed to fetch products",
-      data: null,
     });
   }
 });
