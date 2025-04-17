@@ -72,9 +72,18 @@
                 "$ref": "#/components/schemas/Product"
               },
               "example": {
-                "name": "Example Product",
-                "price": 99.99,
-                "description": "This is an example product"
+                "name": "Rose red box",
+                "category": "box",
+                "subcategory": "box",
+                "price": 30,
+                "description": "Beautiful red rose in a box",
+                "photoUrl": "https://example.com/photo.jpg",
+                "size": "rose red",
+                "width": 100,
+                "length": 150,
+                "color": "red",
+                "inStock": true,
+                "visible": true
               }
             }
           },
@@ -1337,68 +1346,101 @@
       },
       "Product": {
         "required": [
-          "category",
-          "description",
           "name",
-          "photoUrl",
+          "category",
+          "subcategory",
           "price",
+          "description",
+          "photoUrl",
           "size",
-          "subcategory"
+          "width",
+          "length",
+          "color",
+          "inStock",
+          "visible"
         ],
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
-            "description": "Назва товару"
+            "description": "Назва продукту",
+            "example": "Rose red box"
           },
           "category": {
             "type": "string",
-            "description": "Категорія товару"
+            "description": "Категорія продукту",
+            "example": "box"
           },
           "subcategory": {
             "type": "string",
-            "description": "Підкатегорія товару"
+            "description": "Підкатегорія продукту",
+            "example": "box"
           },
           "price": {
             "type": "number",
-            "description": "Ціна товару"
+            "description": "Ціна продукту",
+            "example": 30
           },
           "description": {
             "type": "string",
-            "description": "Опис товару"
+            "description": "Опис продукту",
+            "example": "Beautiful red rose in a box"
           },
           "photoUrl": {
             "type": "string",
-            "description": "URL фотографії товару"
+            "description": "Посилання на фото продукту",
+            "example": "https://example.com/photo.jpg"
           },
           "size": {
             "type": "string",
-            "description": "Розмір товару"
+            "description": "Розмір продукту",
+            "example": "rose red"
+          },
+          "width": {
+            "type": "number",
+            "description": "Ширина продукту в мм",
+            "example": 100
+          },
+          "length": {
+            "type": "number",
+            "description": "Довжина продукту в см",
+            "example": 150
+          },
+          "color": {
+            "type": "string",
+            "description": "Колір продукту",
+            "example": "red"
           },
           "inStock": {
             "type": "boolean",
-            "description": "Наявність на складі",
-            "default": true
+            "description": "Чи є продукт в наявності",
+            "example": true
           },
           "visible": {
             "type": "boolean",
-            "description": "Видимість товару",
-            "default": true
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "Дата створення товару",
-            "format": "date-time"
-          },
-          "discount": {
-            "type": "number",
-            "description": "Розмір знижки на товар.",
-            "example": 10
+            "description": "Чи видимий продукт",
+            "example": true
           },
           "rating": {
             "type": "number",
-            "description": "Середній рейтинг товару.",
+            "description": "Середній рейтинг продукту",
             "example": 4.5
+          },
+          "discount": {
+            "type": "number",
+            "description": "Знижка на продукт",
+            "example": 10
+          },
+          "popularity": {
+            "type": "number",
+            "description": "Популярність продукту",
+            "example": 100
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата створення продукту",
+            "example": "2025-04-05T16:08:53.968Z"
           }
         }
       },

@@ -27,8 +27,20 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
     size: {
-      type: String, // Можна також використовувати Number, залежно від типу розміру
+      type: String, // залишаємо для старих розмірів, якщо вони текстового типу
       required: true,
+    },
+    width: {
+      type: Number, // ширина в мм
+      required: false,
+    },
+    length: {
+      type: Number, // довжина в см
+      required: false,
+    },
+    color: {
+      type: String, // кольори, наприклад "red", "white", "green"
+      required: false,
     },
     inStock: {
       type: Boolean,
@@ -60,7 +72,10 @@ const productSchema = new mongoose.Schema(
   },
   { collection: "products" }
 );
+
+// Індекс для пошуку по тексту
 productSchema.index({ name: "text", description: "text" });
+
 const Product = mongoose.model("Product", productSchema);
 
 module.exports = Product;
