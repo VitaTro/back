@@ -258,47 +258,7 @@
         }
       }
     },
-    "/api/products/search": {
-      "get": {
-        "tags": ["Products"],
-        "summary": "Search for products by keyword",
-        "parameters": [
-          {
-            "name": "keyword",
-            "in": "query",
-            "description": "The keyword to search for in product names or descriptions.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Search results retrieved successfully.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Product"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Missing keyword query parameter."
-          },
-          "404": {
-            "description": "No products found matching the keyword."
-          },
-          "500": {
-            "description": "Internal server error."
-          }
-        }
-      }
-    },
+
     "/api/products/filters": {
       "post": {
         "tags": ["Products"],
@@ -377,7 +337,47 @@
         }
       }
     },
-
+    "/api/search": {
+      "get": {
+        "tags": ["Search"],
+        "summary": "Search for products by query",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "description": "The query to search for in product names or descriptions.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing query parameter."
+          },
+          "404": {
+            "description": "No products found matching the query."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        }
+      }
+    },
     "/api/auth/check-admin": {
       "get": {
         "tags": ["Auth"],

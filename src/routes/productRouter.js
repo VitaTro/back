@@ -118,57 +118,57 @@ router.get("/popular", async (req, res) => {
 });
 
 // Search for products
-router.get("/search", async (req, res) => {
-  console.log("Route /search was hit");
+// router.get("/search", async (req, res) => {
+//   console.log("Route /search was hit");
 
-  try {
-    const query = req.query.query || req.query.q || "";
-    console.log("Received query parameter:", query);
+//   try {
+//     const query = req.query.query || req.query.q || "";
+//     console.log("Received query parameter:", query);
 
-    if (!query) {
-      console.log("Query parameter is missing");
-      return res.status(400).json({
-        status: "error",
-        message: 'Query parameter "query" or "q" is required',
-        data: null,
-      });
-    }
+//     if (!query) {
+//       console.log("Query parameter is missing");
+//       return res.status(400).json({
+//         status: "error",
+//         message: 'Query parameter "query" or "q" is required',
+//         data: null,
+//       });
+//     }
 
-    console.log("Performing search with regex:", query);
-    const products = await Product.find({
-      $or: [
-        { name: { $regex: query, $options: "i" } },
-        { description: { $regex: query, $options: "i" } },
-        { category: { $regex: query, $options: "i" } },
-        { subcategory: { $regex: query, $options: "i" } },
-      ],
-    });
-    console.log("Search results:", products);
+//     console.log("Performing search with regex:", query);
+//     const products = await Product.find({
+//       $or: [
+//         { name: { $regex: query, $options: "i" } },
+//         { description: { $regex: query, $options: "i" } },
+//         { category: { $regex: query, $options: "i" } },
+//         { subcategory: { $regex: query, $options: "i" } },
+//       ],
+//     });
+//     console.log("Search results:", products);
 
-    if (products.length === 0) {
-      console.log(`No products found for query: "${query}"`);
-      return res.status(404).json({
-        status: "error",
-        message: "No products found matching the query",
-        data: [],
-      });
-    }
+//     if (products.length === 0) {
+//       console.log(`No products found for query: "${query}"`);
+//       return res.status(404).json({
+//         status: "error",
+//         message: "No products found matching the query",
+//         data: [],
+//       });
+//     }
 
-    console.log("Returning matched products...");
-    return res.status(200).json({
-      status: "success",
-      message: "Products fetched successfully",
-      data: products,
-    });
-  } catch (error) {
-    console.error("Error in search route:", error);
-    return res.status(500).json({
-      status: "error",
-      message: "Failed to fetch products",
-      data: null,
-    });
-  }
-});
+//     console.log("Returning matched products...");
+//     return res.status(200).json({
+//       status: "success",
+//       message: "Products fetched successfully",
+//       data: products,
+//     });
+//   } catch (error) {
+//     console.error("Error in search route:", error);
+//     return res.status(500).json({
+//       status: "error",
+//       message: "Failed to fetch products",
+//       data: null,
+//     });
+//   }
+// });
 
 // Apply filters to products
 router.post("/filters", async (req, res) => {
