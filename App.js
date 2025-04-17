@@ -9,6 +9,7 @@ const AuthRouter = require("./src/routes/userRouter");
 const ShoppingCartRouter = require("./src/routes/shoppingCartRouter");
 const WishlistRouter = require("./src/routes/wishlistRouter");
 const SearchRouter = require("./src/routes/searchRouter");
+const FilterRouter = require("./src/routes/filterRouter");
 
 const app = express();
 
@@ -52,6 +53,7 @@ app.use("/api/shopping-cart", ShoppingCartRouter);
 app.use("/api/wishlist", WishlistRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api", SearchRouter);
+app.use("/api/products", FilterRouter);
 
 app.post("/upload", upload.single("photo"), (req, res) => {
   try {

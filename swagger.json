@@ -289,8 +289,11 @@
               },
               "example": {
                 "priceRange": { "min": 10, "max": 100 },
-                "categories": ["jewelry", "rings"],
-                "materials": ["gold", "silver"]
+                "categories": ["bracelets", "chains"],
+                "materials": ["gold", "silver"],
+                "subcategory": ["box", "rings"],
+                "color": ["red", "white"],
+                "inStock": true
               }
             }
           }

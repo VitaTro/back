@@ -171,28 +171,28 @@ router.get("/popular", async (req, res) => {
 // });
 
 // Apply filters to products
-router.post("/filters", async (req, res) => {
-  try {
-    const { priceRange, categories, materials } = req.body;
-    const query = {};
+// router.post("/filters", async (req, res) => {
+//   try {
+//     const { priceRange, categories, materials } = req.body;
+//     const query = {};
 
-    if (priceRange && priceRange.min && priceRange.max) {
-      query.price = { $gte: priceRange.min, $lte: priceRange.max };
-    }
+//     if (priceRange && priceRange.min && priceRange.max) {
+//       query.price = { $gte: priceRange.min, $lte: priceRange.max };
+//     }
 
-    if (categories && categories.length > 0) {
-      query.category = { $in: categories };
-    }
+//     if (categories && categories.length > 0) {
+//       query.category = { $in: categories };
+//     }
 
-    if (materials && materials.length > 0) {
-      query.material = { $in: materials };
-    }
+//     if (materials && materials.length > 0) {
+//       query.material = { $in: materials };
+//     }
 
-    const filteredProducts = await Product.find(query);
-    res.json({ products: filteredProducts });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to filter products" });
-  }
-});
+//     const filteredProducts = await Product.find(query);
+//     res.json({ products: filteredProducts });
+//   } catch (error) {
+//     res.status(500).json({ error: "Failed to filter products" });
+//   }
+// });
 
 module.exports = router;
