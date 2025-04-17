@@ -30,6 +30,11 @@ router.get("/search", async (req, res) => {
 
     const products = externalResponse.data;
 
+    const filteredProducts = products.filter(
+      (product) =>
+        product.name.toLowerCase().includes(query.toLowerCase()) ||
+        product.description.toLowerCase().includes(query.toLowerCase())
+    );
     // Перевірка результатів
     if (!products.length) {
       console.log(`No products found for query: "${query}"`);
@@ -44,7 +49,7 @@ router.get("/search", async (req, res) => {
     return res.status(200).json({
       status: "success",
       message: "Products fetched successfully",
-      data: products,
+      data: filteredProducts,
     });
   } catch (error) {
     console.error("Error in search route:", error);
