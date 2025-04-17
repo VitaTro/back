@@ -13,8 +13,8 @@ router.post("/filters", async (req, res) => {
       };
     }
 
-    if (req.body.categories) {
-      filters.category = { $in: req.body.category };
+    if (req.body.category) {
+      filters.category = { $eq: req.body.category }; // Примусово застосувати точний збіг
     }
 
     if (req.body.subcategory) {
