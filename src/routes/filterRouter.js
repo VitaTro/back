@@ -2,7 +2,7 @@ const express = require("express");
 const Product = require("../schemas/product");
 const router = express.Router();
 
-router.post("/api/products/filters", async (req, res) => {
+router.post("/filters", async (req, res) => {
   try {
     const filters = {};
 
