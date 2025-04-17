@@ -14,11 +14,7 @@ router.post("/filters", async (req, res) => {
     }
 
     if (req.body.categories) {
-      filters.category = { $in: req.body.categories };
-    }
-
-    if (req.body.materials) {
-      filters.material = { $in: req.body.materials };
+      filters.category = { $in: req.body.category };
     }
 
     if (req.body.subcategory) {
@@ -36,6 +32,7 @@ router.post("/filters", async (req, res) => {
     console.log("Applied Filters:", filters); // Для дебагу
 
     const products = await Product.find(filters);
+    console.log("Filtered products:", products);
 
     res.status(200).json(products);
   } catch (error) {
