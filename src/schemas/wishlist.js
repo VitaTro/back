@@ -36,6 +36,10 @@ const WishlistSchema = new mongoose.Schema({
     ref: "User",
     required: false,
   },
+  addedAt: {
+    type: Date,
+    default: Date.now, // Час додавання елемента
+  },
 });
 const Wishlist = mongoose.model("Wishlist", WishlistSchema);
 module.exports = Wishlist;
