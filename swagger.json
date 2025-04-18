@@ -954,7 +954,7 @@
         }
       }
     },
-    "/api/user/wishlist": {
+    "/api/wishlist": {
       "get": {
         "tags": ["User"],
         "summary": "Отримати список бажань користувача",
@@ -976,7 +976,7 @@
         }
       }
     },
-    "/api/user/wishlist/add": {
+    "/api/wishlist/add": {
       "post": {
         "tags": ["User"],
         "summary": "Додати товар до списку бажань",
@@ -1005,7 +1005,7 @@
         }
       }
     },
-    "/api/user/wishlist/remove/{id}": {
+    "/api/wishlist/remove/{id}": {
       "delete": {
         "tags": ["User"],
         "summary": "Видалити товар зі списку бажань",
