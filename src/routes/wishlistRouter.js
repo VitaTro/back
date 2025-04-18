@@ -1,35 +1,67 @@
 const express = require("express");
-const wishlistRouter = express.Router();
-
+const Wishlist = require("../schemas/wishlist");
+const router = express.Router();
+const Product = require("../schemas/product");
 // Get all wishlist items
-wishlistRouter.get("/", async (req, res) => {
+router.get("/", async (req, res) => {
   try {
-    const wishlist = await WishlistModel.find(); // Отримання з MongoDB
+    const userId = req.user._id;
+    const wishlist = await Wishlist.find({ userId }).populate("productId"); // Заповнюємо дані про продукт
     res.json({ wishlist });
   } catch (error) {
+    console.error("Error fetching wishlist:", error.message);
     res.status(500).json({ error: "Failed to retrieve wishlist items" });
   }
 });
 
-wishlistRouter.post("/add", async (req, res) => {
+router.post("/add", async (req, res) => {
   try {
-    const newItem = new WishlistModel(req.body); // Створення нового елемента
-    await newItem.save(); // Збереження в базу даних
-    res.json({ message: "Item added to wishlist", item: newItem, wishlist });
+    const userId = req.user._id;
+    const { productId, quantity } = req.body;
+
+    // Знаходимо продукт у базі
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    // Додаємо товар у список бажань
+    const newItem = new Wishlist({
+      userId,
+      productId,
+      name: product.name,
+      photoUrl: product.photoUrl,
+      color: product.color || "default",
+      price: product.price,
+      quantity: quantity || 1,
+      inStock: product.inStock,
+    });
+
+    await newItem.save();
+    res.json({ message: "Item added to wishlist", item: newItem });
   } catch (error) {
+    console.error("Error adding item to wishlist:", error.message);
     res.status(500).json({ error: "Failed to add item to wishlist" });
   }
 });
 
-wishlistRouter.delete("/remove/:id", async (req, res) => {
+router.delete("/remove/:id", async (req, res) => {
   try {
+    const userId = req.user._id;
     const itemId = req.params.id;
-    await WishlistModel.findByIdAndDelete(itemId); // Видалення з бази
-    const wishlist = await WishlistModel.find();
+
+    const item = await Wishlist.findOneAndDelete({ _id: itemId, userId });
+    if (!item) {
+      return res
+        .status(404)
+        .json({ error: "Item not found or does not belong to user" });
+    }
+
     res.json({ message: `Item with ID ${itemId} removed from wishlist` });
   } catch (error) {
+    console.error("Error removing from wishlist:", error.message);
     res.status(500).json({ error: "Failed to remove item from wishlist" });
   }
 });
 
-module.exports = wishlistRouter;
+module.exports = router;
