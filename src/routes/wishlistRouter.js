@@ -2,11 +2,11 @@ const express = require("express");
 const Wishlist = require("../schemas/wishlist");
 const router = express.Router();
 const Product = require("../schemas/product");
-// Get all wishlist items
+
 router.get("/", async (req, res) => {
   try {
-    const userId = req.user._id;
-    const wishlist = await Wishlist.find({ userId }).populate("productId"); // Заповнюємо дані про продукт
+    // const userId = req.user._id;
+    const wishlist = await Wishlist.find().populate("productId"); // Заповнюємо дані про продукт
     res.json({ wishlist });
   } catch (error) {
     console.error("Error fetching wishlist:", error.message);
@@ -16,7 +16,7 @@ router.get("/", async (req, res) => {
 
 router.post("/add", async (req, res) => {
   try {
-    const userId = req.user._id;
+    // const userId = req.user._id;
     const { productId, quantity } = req.body;
 
     // Знаходимо продукт у базі
@@ -27,7 +27,7 @@ router.post("/add", async (req, res) => {
 
     // Додаємо товар у список бажань
     const newItem = new Wishlist({
-      userId,
+      // userId,
       productId,
       name: product.name,
       photoUrl: product.photoUrl,
@@ -47,10 +47,10 @@ router.post("/add", async (req, res) => {
 
 router.delete("/remove/:id", async (req, res) => {
   try {
-    const userId = req.user._id;
+    // const userId = req.user._id;
     const itemId = req.params.id;
 
-    const item = await Wishlist.findOneAndDelete({ _id: itemId, userId });
+    const item = await Wishlist.findOneAndDelete({ _id: itemId });
     if (!item) {
       return res
         .status(404)
