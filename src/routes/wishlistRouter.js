@@ -16,18 +16,21 @@ router.get("/", async (req, res) => {
 
 router.post("/add", async (req, res) => {
   try {
+    // Тимчасово відключимо userId
     // const userId = req.user._id;
     const { productId, quantity } = req.body;
 
-    // Знаходимо продукт у базі
+    console.log("Request body:", req.body); // Логування запиту
+
     const product = await Product.findById(productId);
     if (!product) {
+      console.error("Product not found:", productId);
       return res.status(404).json({ error: "Product not found" });
     }
 
     // Додаємо товар у список бажань
     const newItem = new Wishlist({
-      // userId,
+      // userId, // Закоментовано для тестування без userId
       productId,
       name: product.name,
       photoUrl: product.photoUrl,
@@ -38,28 +41,29 @@ router.post("/add", async (req, res) => {
     });
 
     await newItem.save();
+    console.log("New wishlist item added:", newItem); // Логування нового об'єкта
     res.json({ message: "Item added to wishlist", item: newItem });
   } catch (error) {
-    console.error("Error adding item to wishlist:", error.message);
+    console.error("Error adding item to wishlist:", error.message); // Логування помилки
     res.status(500).json({ error: "Failed to add item to wishlist" });
   }
 });
 
 router.delete("/remove/:id", async (req, res) => {
   try {
-    // const userId = req.user._id;
+    // const userId = req.user._id; // Тимчасово закоментовано
     const itemId = req.params.id;
+    console.log("Deleting item with ID:", itemId); // Логування ID
 
-    const item = await Wishlist.findOneAndDelete({ _id: itemId });
+    const item = await Wishlist.findOneAndDelete({ _id: itemId }); // Без userId
     if (!item) {
-      return res
-        .status(404)
-        .json({ error: "Item not found or does not belong to user" });
+      console.error("Item not found for deletion:", itemId);
+      return res.status(404).json({ error: "Item not found" });
     }
 
     res.json({ message: `Item with ID ${itemId} removed from wishlist` });
   } catch (error) {
-    console.error("Error removing from wishlist:", error.message);
+    console.error("Error removing from wishlist:", error.message); // Логування помилки
     res.status(500).json({ error: "Failed to remove item from wishlist" });
   }
 });
