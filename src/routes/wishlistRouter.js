@@ -17,7 +17,7 @@ router.get("/", async (req, res) => {
 router.post("/add", async (req, res) => {
   try {
     // const userId = req.user._id;
-    const { productId, quantity } = req.body;
+    const { productId } = req.body;
 
     console.log("Request body:", req.body); // Логування запиту
 
@@ -37,12 +37,7 @@ router.post("/add", async (req, res) => {
     // Додаємо товар у список бажань
     const newItem = new Wishlist({
       productId,
-      name: product.name,
-      photoUrl: product.photoUrl,
-      color: product.color || "default",
-      price: product.price,
-      quantity: quantity || 1,
-      inStock: product.inStock,
+      addedAt: new Date(),
     });
 
     await newItem.save();
@@ -54,21 +49,16 @@ router.post("/add", async (req, res) => {
   }
 });
 
-router.delete("/remove/:id", async (req, res) => {
+router.delete("/remove/:productId", async (req, res) => {
   try {
-    // const userId = req.user._id; // Тимчасово закоментовано
-    const itemId = req.params.id;
-    console.log("Deleting item with ID:", itemId); // Логування ID
-
-    const item = await Wishlist.findOneAndDelete({ _id: itemId }); // Без userId
+    const { productId } = req.params;
+    const item = await Wishlist.findOneAndDelete({ productId });
     if (!item) {
-      console.error("Item not found for deletion:", itemId);
-      return res.status(404).json({ error: "Item not found" });
+      return res.status(404).json({ error: "Product not found" });
     }
-
-    res.json({ message: `Item with ID ${itemId} removed from wishlist` });
+    res.json({ message: `Product with ID ${productId} removed from wishlist` });
   } catch (error) {
-    console.error("Error removing from wishlist:", error.message); // Логування помилки
+    console.error(error.message);
     res.status(500).json({ error: "Failed to remove item from wishlist" });
   }
 });
