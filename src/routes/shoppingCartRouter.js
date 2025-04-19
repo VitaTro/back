@@ -1,11 +1,11 @@
 const express = require("express");
-const shopping = require("../schemas/shopping");
+const Shopping = require("../schemas/shopping");
 const router = express.Router();
 const Product = require("../schemas/product");
 
 router.get("/", async (req, res) => {
   try {
-    const cartItems = await ShoppingCart.find().populate("productId");
+    const cartItems = await Shopping.find().populate("productId");
     res.json({ cart: cartItems });
   } catch (error) {
     res.status(500).json({ error: "Failed to retrieve shopping cart items" });
@@ -14,13 +14,14 @@ router.get("/", async (req, res) => {
 
 router.post("/add", async (req, res) => {
   try {
+    console.log("Request body:", req.body); // Додати лог
     const { productId, quantity } = req.body;
 
     if (!productId) {
       return res.status(400).json({ error: "Product ID is required" });
     }
 
-    const existingItem = await ShoppingCart.findOne({ productId });
+    const existingItem = await Shopping.findOne({ productId });
     if (existingItem) {
       existingItem.quantity += quantity || 1;
       await existingItem.save();
@@ -35,7 +36,7 @@ router.post("/add", async (req, res) => {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    const newItem = new ShoppingCart({
+    const newItem = new Shopping({
       productId,
       name: product.name,
       photoUrl: product.photoUrl,
@@ -60,7 +61,7 @@ router.patch("/update/:id", async (req, res) => {
       return res.status(400).json({ error: "Invalid quantity" });
     }
 
-    const item = await ShoppingCart.findById(itemId);
+    const item = await Shopping.findById(itemId);
     if (!item) {
       return res.status(404).json({ error: "Item not found in cart" });
     }
