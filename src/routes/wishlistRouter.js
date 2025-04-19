@@ -5,9 +5,9 @@ const Product = require("../schemas/product");
 
 router.get("/", async (req, res) => {
   try {
-    // const userId = req.user._id;
-    const wishlist = await Wishlist.find().populate("productId"); // Заповнюємо дані про продукт
-    res.json({ wishlist });
+    const wishlist = await Wishlist.find().populate("productId");
+    const sanitizedWishlist = wishlist.filter((item) => item.productId); // Видаляємо записи без продуктів
+    res.json({ wishlist: sanitizedWishlist });
   } catch (error) {
     console.error("Error fetching wishlist:", error.message);
     res.status(500).json({ error: "Failed to retrieve wishlist items" });
