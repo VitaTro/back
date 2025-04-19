@@ -1064,9 +1064,9 @@
         }
       }
     },
-    "/api/user/shopping-cart": {
+    "/api/shopping-cart": {
       "get": {
-        "tags": ["User"],
+        "tags": ["Shopping"],
         "summary": "Отримати список товарів у корзині",
         "responses": {
           "200": {
@@ -1086,9 +1086,9 @@
         }
       }
     },
-    "/api/user/shopping-cart/add": {
+    "/api/shopping-cart/add": {
       "post": {
-        "tags": ["User"],
+        "tags": ["Shopping"],
         "summary": "Додати товар до корзини",
         "requestBody": {
           "required": true,
@@ -1120,9 +1120,9 @@
         }
       }
     },
-    "/api/user/shopping-cart/update/{productId}": {
+    "/api/shopping-cart/update/{id}": {
       "patch": {
-        "tags": ["User"],
+        "tags": ["Shopping"],
         "summary": "Оновити кількість товару у корзині",
         "parameters": [
           {
@@ -1168,7 +1168,54 @@
         }
       }
     },
-
+    "/api/shopping-cart/remove/{id}": {
+      "delete": {
+        "tags": ["Shopping"],
+        "summary": "Видалити товар з корзини",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID товару для видалення.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "quantity": {
+                    "type": "integer",
+                    "description": "Нова кількість товару у корзині.",
+                    "example": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Товар успішно видалено з корзини."
+          },
+          "400": {
+            "description": "Некоректний запит."
+          },
+          "404": {
+            "description": "Товар не знайдено."
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера."
+          }
+        }
+      }
+    },
     "/api/user/purchase-history": {
       "get": {
         "tags": ["User"],
