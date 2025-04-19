@@ -16,7 +16,6 @@ router.get("/", async (req, res) => {
 
 router.post("/add", async (req, res) => {
   try {
-    // Тимчасово відключимо userId
     // const userId = req.user._id;
     const { productId, quantity } = req.body;
 
@@ -28,9 +27,15 @@ router.post("/add", async (req, res) => {
       return res.status(404).json({ error: "Product not found" });
     }
 
+    // Перевіряємо, чи товар уже є в списку бажань
+    const exists = await Wishlist.findOne({ productId });
+    if (exists) {
+      console.log("Product already in wishlist:", productId);
+      return res.status(400).json({ error: "Product is already in wishlist" });
+    }
+
     // Додаємо товар у список бажань
     const newItem = new Wishlist({
-      // userId, // Закоментовано для тестування без userId
       productId,
       name: product.name,
       photoUrl: product.photoUrl,
