@@ -1,9 +1,12 @@
-const WishlistSchema = new mongoose.Schema({
+const mongoose = require("mongoose");
+const User = require("./user");
+const Product = require("./product");
+
+const wishlistSchema = new mongoose.Schema({
   _id: {
     type: mongoose.Schema.Types.ObjectId, // Використовуємо `_id` продукту
     ref: "Product",
     required: true,
-    unique: true, // Один продукт лише раз у списку
   },
   name: {
     type: String,
@@ -38,3 +41,7 @@ const WishlistSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
+const Wishlist = mongoose.model("Wishlist", wishlistSchema);
+
+module.exports = Wishlist;
