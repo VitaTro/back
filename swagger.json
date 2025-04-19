@@ -987,7 +987,7 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "productId": {
+                  "_id": {
                     "type": "string",
                     "description": "ID товару."
                   }
