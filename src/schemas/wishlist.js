@@ -3,10 +3,11 @@ const User = require("./user");
 const Product = require("./product");
 
 const wishlistSchema = new mongoose.Schema({
-  _id: {
+  productId: {
     type: mongoose.Schema.Types.ObjectId, // Використовуємо `_id` продукту
     ref: "Product",
     required: true,
+    unique: true,
   },
   name: {
     type: String,

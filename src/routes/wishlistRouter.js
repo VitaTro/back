@@ -5,7 +5,7 @@ const Product = require("../schemas/product");
 
 router.get("/", async (req, res) => {
   try {
-    const wishlist = await Wishlist.find().populate("_id");
+    const wishlist = await Wishlist.find().populate("productId");
     res.json({ wishlist });
   } catch (error) {
     console.error("Error fetching wishlist:", error.message);
@@ -15,22 +15,26 @@ router.get("/", async (req, res) => {
 
 router.post("/add", async (req, res) => {
   try {
-    const { _id, quantity } = req.body;
+    const { productId, quantity } = req.body;
+    if (!productId) {
+      return res
+        .status(400)
+        .json({ error: "Product ID (productId) is required" });
+    }
 
-    console.log("Request body:", req.body);
-
-    const product = await Product.findById(_id);
+    const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    const exists = await Wishlist.findById(_id);
+    // Перевірка, чи продукт вже є у списку бажань
+    const exists = await Wishlist.findOne({ productId });
     if (exists) {
       return res.status(400).json({ error: "Product is already in wishlist" });
     }
 
     const newItem = new Wishlist({
-      _id, // Використовуємо `_id` продукту
+      productId,
       name: product.name,
       photoUrl: product.photoUrl,
       color: product.color || "default",
@@ -42,7 +46,6 @@ router.post("/add", async (req, res) => {
     await newItem.save();
     res.status(201).json({ message: "Item added to wishlist", item: newItem });
   } catch (error) {
-    console.error("Error adding item to wishlist:", error.message);
     res.status(500).json({ error: "Failed to add item to wishlist" });
   }
 });
