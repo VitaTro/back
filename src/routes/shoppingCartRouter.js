@@ -1,39 +1,93 @@
 const express = require("express");
-const shoppingCartRouter = express.Router();
+const shopping = require("../schemas/shopping");
+const router = express.Router();
+const Product = require("../schemas/product");
 
-// Get all items in the shopping cart
-shoppingCartRouter.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   try {
-    // Replace with logic to retrieve shopping cart items
-    const cartItems = [
-      { id: 1, name: "Item A", quantity: 2 },
-      { id: 2, name: "Item B", quantity: 1 },
-    ];
+    const cartItems = await ShoppingCart.find().populate("productId");
     res.json({ cart: cartItems });
   } catch (error) {
     res.status(500).json({ error: "Failed to retrieve shopping cart items" });
   }
 });
 
-// Add an item to the shopping cart
-shoppingCartRouter.post("/add", (req, res) => {
+router.post("/add", async (req, res) => {
   try {
-    // Logic for adding an item
-    const newItem = req.body; // Assuming item details are sent in the request body
-    res.json({ message: "Item added to cart", item: newItem });
+    const { productId, quantity } = req.body;
+
+    if (!productId) {
+      return res.status(400).json({ error: "Product ID is required" });
+    }
+
+    const existingItem = await ShoppingCart.findOne({ productId });
+    if (existingItem) {
+      existingItem.quantity += quantity || 1;
+      await existingItem.save();
+      return res.json({
+        message: "Item quantity updated in cart",
+        item: existingItem,
+      });
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    const newItem = new ShoppingCart({
+      productId,
+      name: product.name,
+      photoUrl: product.photoUrl,
+      price: product.price,
+      quantity: quantity || 1,
+      inStock: product.inStock,
+    });
+
+    await newItem.save();
+    res.status(201).json({ message: "Item added to cart", item: newItem });
   } catch (error) {
     res.status(500).json({ error: "Failed to add item to cart" });
   }
 });
 
-// Delete an item from the shopping cart
-shoppingCartRouter.delete("/delete/:id", (req, res) => {
+router.patch("/update/:id", async (req, res) => {
   try {
-    const itemId = req.params.id; // Assuming item ID is passed as a parameter
-    res.json({ message: `Item with ID ${itemId} deleted from cart` });
+    const itemId = req.params.id; // ID товару
+    const { quantity } = req.body; // Нова кількість
+
+    if (!quantity || quantity < 1) {
+      return res.status(400).json({ error: "Invalid quantity" });
+    }
+
+    const item = await ShoppingCart.findById(itemId);
+    if (!item) {
+      return res.status(404).json({ error: "Item not found in cart" });
+    }
+
+    item.quantity = quantity;
+    await item.save();
+
+    res.json({ message: "Item quantity updated", item });
+  } catch (error) {
+    console.error("Error updating item quantity:", error.message);
+    res.status(500).json({ error: "Failed to update item quantity" });
+  }
+});
+
+router.delete("/delete/:id", async (req, res) => {
+  try {
+    const itemId = req.params.id;
+
+    const deletedItem = await ShoppingCart.findByIdAndDelete(itemId);
+    if (!deletedItem) {
+      return res.status(404).json({ error: "Item not found in cart" });
+    }
+
+    res.json({ message: `Item with ID ${itemId} removed from cart` });
   } catch (error) {
     res.status(500).json({ error: "Failed to delete item from cart" });
   }
 });
 
-module.exports = shoppingCartRouter;
+module.exports = router;

@@ -1120,30 +1120,55 @@
         }
       }
     },
-    "/api/user/shopping-cart/remove/{id}": {
-      "delete": {
+    "/api/user/shopping-cart/update/{productId}": {
+      "patch": {
         "tags": ["User"],
-        "summary": "Видалити товар з корзини",
+        "summary": "Оновити кількість товару у корзині",
         "parameters": [
           {
-            "name": "id",
+            "name": "productId",
             "in": "path",
-            "description": "ID товару для видалення.",
+            "description": "ID товару для оновлення кількості.",
             "required": true,
             "schema": {
               "type": "string"
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "quantity": {
+                    "type": "integer",
+                    "description": "Нова кількість товару у корзині.",
+                    "example": 2
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "Товар успішно видалено з корзини."
+            "description": "Кількість товару успішно оновлено."
           },
-          "404": { "description": "Товар не знайдено." },
-          "500": { "description": "Внутрішня помилка сервера." }
+          "400": {
+            "description": "Некоректний запит."
+          },
+          "404": {
+            "description": "Товар не знайдено."
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера."
+          }
         }
       }
     },
+
     "/api/user/purchase-history": {
       "get": {
         "tags": ["User"],

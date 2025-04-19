@@ -49,7 +49,7 @@ app.get("/test", (req, res) => {
 // Routes
 app.use("/api/products", ProductRouter);
 app.use("/api/auth", AuthRouter);
-app.use("/api/shopping-cart", ShoppingCartRouter);
+app.use("/api/user/shopping-cart", ShoppingCartRouter);
 app.use("/api/wishlist", WishlistRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api", SearchRouter);
