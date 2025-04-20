@@ -3,7 +3,7 @@ const ShoppingCart = require("../schemas/shopping");
 const router = express.Router();
 const Product = require("../schemas/product");
 const mongoose = require("mongoose");
-
+const Wishlist = require("../schemas/wishlist");
 router.get("/", async (req, res) => {
   try {
     const cartItems = await ShoppingCart.find().populate("productId");
@@ -100,6 +100,37 @@ router.delete("/remove/:id", async (req, res) => {
     res
       .status(500)
       .json({ error: "Internal server error", details: error.message });
+  }
+});
+
+router.post("/move-to-wishlist/:id", async (req, res) => {
+  try {
+    const itemId = req.params.id;
+
+    // Знаходимо елемент у кошику
+    const cartItem = await ShoppingCart.findById(itemId);
+    if (!cartItem) {
+      return res.status(404).json({ error: "Item not found in cart" });
+    }
+
+    // Додаємо елемент до списку бажань
+    const newWishlistItem = new Wishlist({
+      productId: cartItem.productId,
+      name: cartItem.name,
+      photoUrl: cartItem.photoUrl,
+      price: cartItem.price,
+      inStock: cartItem.inStock,
+      addedAt: new Date(),
+    });
+    await newWishlistItem.save();
+
+    // Видаляємо елемент із кошика
+    await ShoppingCart.findByIdAndDelete(itemId);
+
+    res.json({ message: "Item moved to wishlist", item: newWishlistItem });
+  } catch (error) {
+    console.error("Failed to move item to wishlist:", error.message);
+    res.status(500).json({ error: "Failed to move item to wishlist" });
   }
 });
 

@@ -1029,6 +1029,49 @@
         }
       }
     },
+    "/api/wishlist/move-to-cart/{id}": {
+      "post": {
+        "tags": ["Wishlist"],
+        "summary": "Перемістити товар зі списку бажань до кошика",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID товару зі списку бажань, який потрібно перемістити.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Товар успішно переміщено до кошика."
+          },
+          "400": {
+            "description": "Некоректний запит."
+          },
+          "404": {
+            "description": "Товар не знайдено у списку бажань."
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера."
+          }
+        }
+      }
+    },
+
     "/api/user/preferences": {
       "post": {
         "tags": ["User"],
@@ -1209,6 +1252,48 @@
           },
           "404": {
             "description": "Товар не знайдено."
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера."
+          }
+        }
+      }
+    },
+    "/api/shopping-cart/move-to-wishlist/{id}": {
+      "post": {
+        "tags": ["Shopping"],
+        "summary": "Перемістити товар з корзини до списку бажань",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID товару у корзині, який потрібно перемістити.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Товар успішно переміщено до списку бажань."
+          },
+          "400": {
+            "description": "Некоректний запит."
+          },
+          "404": {
+            "description": "Товар не знайдено у корзині."
           },
           "500": {
             "description": "Внутрішня помилка сервера."

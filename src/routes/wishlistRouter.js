@@ -2,7 +2,7 @@ const express = require("express");
 const Wishlist = require("../schemas/wishlist");
 const router = express.Router();
 const Product = require("../schemas/product");
-
+const ShoppingCart = require("../schemas/shopping");
 router.get("/", async (req, res) => {
   try {
     const wishlist = await Wishlist.find().populate("productId");
@@ -65,6 +65,38 @@ router.delete("/remove/:id", async (req, res) => {
   } catch (error) {
     console.error("Error removing from wishlist:", error.message);
     res.status(500).json({ error: "Failed to remove item from wishlist" });
+  }
+});
+
+router.post("/move-to-cart/:id", async (req, res) => {
+  try {
+    const wishlistItemId = req.params.id;
+
+    // Знаходимо елемент у списку бажань
+    const wishlistItem = await Wishlist.findById(wishlistItemId);
+    if (!wishlistItem) {
+      return res.status(404).json({ error: "Item not found in wishlist" });
+    }
+
+    // Додаємо елемент до кошика
+    const newCartItem = new ShoppingCart({
+      productId: wishlistItem.productId,
+      name: wishlistItem.name,
+      photoUrl: wishlistItem.photoUrl,
+      price: wishlistItem.price,
+      quantity: 1, // Можна встановити кількість за замовчуванням
+      inStock: wishlistItem.inStock,
+      addedAt: new Date(),
+    });
+    await newCartItem.save();
+
+    // Видаляємо елемент зі списку бажань
+    await Wishlist.findByIdAndDelete(wishlistItemId);
+
+    res.json({ message: "Item moved to shopping cart", item: newCartItem });
+  } catch (error) {
+    console.error("Failed to move item to shopping cart:", error.message);
+    res.status(500).json({ error: "Failed to move item to shopping cart" });
   }
 });
 
