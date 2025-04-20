@@ -93,6 +93,7 @@ router.delete("/remove/:id", async (req, res) => {
 
     res.json({ message: `Item with ID ${itemId} removed from cart` });
   } catch (error) {
+    console.error("Detailed error:", error);
     res.status(500).json({ error: "Failed to delete item from cart" });
   }
 });
