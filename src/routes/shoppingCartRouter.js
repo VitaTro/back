@@ -1,12 +1,12 @@
 const express = require("express");
-const Shopping = require("../schemas/shopping");
+const ShoppingCart = require("../schemas/shopping");
 const router = express.Router();
 const Product = require("../schemas/product");
 const mongoose = require("mongoose");
 
 router.get("/", async (req, res) => {
   try {
-    const cartItems = await Shopping.find().populate("productId");
+    const cartItems = await ShoppingCart.find().populate("productId");
     res.json({ cart: cartItems });
   } catch (error) {
     res.status(500).json({ error: "Failed to retrieve shopping cart items" });
@@ -22,7 +22,7 @@ router.post("/add", async (req, res) => {
       return res.status(400).json({ error: "Product ID is required" });
     }
 
-    const existingItem = await Shopping.findOne({ productId });
+    const existingItem = await ShoppingCart.findOne({ productId });
     if (existingItem) {
       existingItem.quantity += quantity || 1;
       await existingItem.save();
@@ -37,7 +37,7 @@ router.post("/add", async (req, res) => {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    const newItem = new Shopping({
+    const newItem = new ShoppingCart({
       productId,
       name: product.name,
       photoUrl: product.photoUrl,
@@ -62,7 +62,7 @@ router.patch("/update/:id", async (req, res) => {
       return res.status(400).json({ error: "Invalid quantity" });
     }
 
-    const item = await Shopping.findById(itemId);
+    const item = await ShoppingCart.findById(itemId);
     if (!item) {
       return res.status(404).json({ error: "Item not found in cart" });
     }
@@ -81,6 +81,9 @@ router.delete("/remove/:id", async (req, res) => {
   console.log("Incoming DELETE request for ID:", req.params.id);
 
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
     const itemId = new mongoose.Types.ObjectId(req.params.id);
     console.log("Converted ID:", itemId); // Логування для перевірки
 
@@ -93,8 +96,10 @@ router.delete("/remove/:id", async (req, res) => {
 
     res.json({ message: `Item with ID ${itemId} removed from cart` });
   } catch (error) {
-    console.error("Detailed error:", error);
-    res.status(500).json({ error: "Failed to delete item from cart" });
+    console.error("Failed to delete item:", error.message);
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: error.message });
   }
 });
 
