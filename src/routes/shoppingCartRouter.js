@@ -81,7 +81,7 @@ router.delete("/remove/:id", async (req, res) => {
   console.log("Incoming DELETE request for ID:", req.params.id);
 
   try {
-    const itemId = mongoose.Types.ObjectId(req.params.id);
+    const itemId = new mongoose.Types.ObjectId(req.params.id);
     console.log("Converted ID:", itemId); // Логування для перевірки
 
     const deletedItem = await ShoppingCart.findByIdAndDelete(itemId);
