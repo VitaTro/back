@@ -769,58 +769,178 @@
       "get": {
         "tags": ["Admin"],
         "summary": "Адмінська панель",
-        "description": "Цей маршрут надає доступ до адмінської панелі. Доступний лише для користувачів з роллю 'admin'.",
+        "description": "Надає доступ до адмінської панелі, доступної лише для користувачів з роллю 'admin'. Повертає загальні дані про стан системи, включаючи статистику користувачів, продукти, фінансові показники та популярність товарів.",
         "parameters": [
           {
             "name": "Authorization",
             "in": "header",
             "required": true,
-            "description": "Bearer-токен для авторизації",
-            "schema": { "type": "string" }
+            "description": "Bearer-токен для авторизації. Дозволяє доступ лише авторизованим адміністраторам.",
+            "schema": {
+              "type": "string",
+              "example": "Bearer eyJhbGciOiJI..."
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Доступ надано. Повернено дані адмін-панелі.",
+            "description": "Дані адмін-панелі успішно отримано.",
             "content": {
               "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "Привітання з інформацією про адміністратора."
+                    },
+                    "stats": {
+                      "type": "object",
+                      "description": "Загальна статистика системи.",
+                      "properties": {
+                        "totalUsers": {
+                          "type": "integer",
+                          "description": "Загальна кількість користувачів у системі."
+                        },
+                        "totalProducts": {
+                          "type": "integer",
+                          "description": "Загальна кількість товарів у базі даних."
+                        },
+                        "activeUsers": {
+                          "type": "integer",
+                          "description": "Кількість користувачів, які були активними за останній період."
+                        },
+                        "salesCount": {
+                          "type": "integer",
+                          "description": "Кількість проданих товарів за визначений період."
+                        },
+                        "netProfit": {
+                          "type": "number",
+                          "description": "Чистий дохід, отриманий від продажів."
+                        }
+                      }
+                    },
+                    "productsOverview": {
+                      "type": "object",
+                      "description": "Детальний огляд продуктів.",
+                      "properties": {
+                        "lowStockItems": {
+                          "type": "array",
+                          "description": "Список товарів, що мають низькі залишки.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string" },
+                              "remainingStock": { "type": "integer" }
+                            }
+                          }
+                        },
+                        "popularItems": {
+                          "type": "array",
+                          "description": "Найбільш популярні товари на основі продажів та бажань.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string" },
+                              "popularity": { "type": "integer" }
+                            }
+                          }
+                        },
+                        "wishlistOverview": {
+                          "type": "array",
+                          "description": "Список товарів у списках бажань користувачів.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string" },
+                              "count": { "type": "integer" }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "financialOverview": {
+                      "type": "object",
+                      "description": "Фінансова статистика продуктів.",
+                      "properties": {
+                        "purchasePrices": {
+                          "type": "array",
+                          "description": "Закупівельна ціна товарів.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string" },
+                              "purchasePrice": { "type": "number" }
+                            }
+                          }
+                        },
+                        "markupOverview": {
+                          "type": "array",
+                          "description": "Націнка на товари.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string" },
+                              "markup": { "type": "number" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
                 "examples": {
                   "success": {
+                    "summary": "Успішна відповідь",
                     "value": {
                       "message": "Welcome to the dashboard, admin@example.com!",
                       "stats": {
                         "totalUsers": 123,
-                        "totalProducts": 456
+                        "totalProducts": 456,
+                        "activeUsers": 100,
+                        "salesCount": 200,
+                        "netProfit": 15000.5
                       },
-                      "users": [
-                        {
-                          "id": "1",
-                          "name": "User 1",
-                          "email": "user1@example.com",
-                          "role": "user"
-                        },
-                        {
-                          "id": "2",
-                          "name": "User 2",
-                          "email": "user2@example.com",
-                          "role": "user"
-                        }
-                      ]
+                      "productsOverview": {
+                        "lowStockItems": [
+                          { "name": "Rose Box", "remainingStock": 5 },
+                          { "name": "Gold Cross", "remainingStock": 2 }
+                        ],
+                        "popularItems": [
+                          { "name": "Gold Necklace", "popularity": 95 },
+                          { "name": "Silver Bracelet", "popularity": 88 }
+                        ],
+                        "wishlistOverview": [
+                          { "name": "Diamond Earrings", "count": 30 },
+                          { "name": "Gold Ring", "count": 25 }
+                        ]
+                      },
+                      "financialOverview": {
+                        "purchasePrices": [
+                          { "name": "Gold Cross", "purchasePrice": 100 },
+                          { "name": "Silver Bracelet", "purchasePrice": 50 }
+                        ],
+                        "markupOverview": [
+                          { "name": "Gold Cross", "markup": 50 },
+                          { "name": "Silver Bracelet", "markup": 30 }
+                        ]
+                      }
                     }
                   }
                 }
               }
             }
           },
-          "403": {
-            "description": "Доступ заборонено. Тільки для адмінів."
-          },
           "401": {
-            "description": "Неавторизований. Токен відсутній або недійсний."
+            "description": "Помилка авторизації. Токен відсутній або недійсний."
+          },
+          "403": {
+            "description": "Доступ заборонено. Цей маршрут доступний лише адміністраторам."
           }
         }
       }
     },
+
     "/api/user/main": {
       "get": {
         "tags": ["User"],
@@ -1777,31 +1897,33 @@
           },
           "DashboardStats": {
             "type": "object",
-            "description": "Статистика адмін-панелі",
+            "description": "Статистика адмін-панелі, яка включає загальні дані про користувачів та продукти.",
             "properties": {
               "totalUsers": {
                 "type": "integer",
-                "description": "Загальна кількість користувачів"
+                "description": "Загальна кількість зареєстрованих користувачів у системі."
               },
               "totalProducts": {
                 "type": "integer",
-                "description": "Загальна кількість продуктів"
+                "description": "Загальна кількість товарів, доступних у системі."
               }
             }
           },
           "AdminDashboard": {
             "type": "object",
+            "description": "Дані для адміністративної панелі, яка надає загальну статистику та інформацію про користувачів.",
             "properties": {
               "message": {
                 "type": "string",
-                "description": "Привітання в адмін-панелі"
+                "description": "Привітання, яке включає ім'я або електронну адресу адміністратора."
               },
               "stats": {
-                "$ref": "#/components/schemas/DashboardStats"
+                "$ref": "#/components/schemas/DashboardStats",
+                "description": "Об'єкт, який містить загальну статистику системи."
               },
               "users": {
                 "type": "array",
-                "description": "Список користувачів",
+                "description": "Список користувачів з базовою інформацією про них.",
                 "items": {
                   "$ref": "#/components/schemas/UserProfile"
                 }
