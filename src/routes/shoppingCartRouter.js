@@ -2,6 +2,7 @@ const express = require("express");
 const Shopping = require("../schemas/shopping");
 const router = express.Router();
 const Product = require("../schemas/product");
+const { default: mongoose } = require("mongoose");
 
 router.get("/", async (req, res) => {
   try {
@@ -77,10 +78,12 @@ router.patch("/update/:id", async (req, res) => {
 });
 
 router.delete("/remove/:id", async (req, res) => {
+  console.log("Incoming DELETE request for ID:", req.params.id);
   try {
-    const itemId = req.params.id;
+    const itemId = mongoose.Types.ObjectId(req.params.id);
+    console.log("Converted ID:", itemId); // Логування для перевірки
 
-    const deletedItem = await ShoppingCart.findByIdAndDelete(itemId);
+    const deletedItem = await ShoppingCart.findByIdAndDelete(req.params.id);
     if (!deletedItem) {
       return res.status(404).json({ error: "Item not found in cart" });
     }
