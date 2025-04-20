@@ -76,7 +76,7 @@ router.patch("/update/:id", async (req, res) => {
   }
 });
 
-router.delete("/delete/:id", async (req, res) => {
+router.delete("/remove/:id", async (req, res) => {
   try {
     const itemId = req.params.id;
 
