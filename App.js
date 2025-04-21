@@ -10,7 +10,7 @@ const ShoppingCartRouter = require("./src/routes/shoppingCartRouter");
 const WishlistRouter = require("./src/routes/wishlistRouter");
 const SearchRouter = require("./src/routes/searchRouter");
 const FilterRouter = require("./src/routes/filterRouter");
-
+const AdminRouter = require("./src/routes/adminRouter");
 const app = express();
 
 const allowedOrigins = [
@@ -54,6 +54,7 @@ app.use("/api/wishlist", WishlistRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api", SearchRouter);
 app.use("/api/products", FilterRouter);
+app.use("/api/admin", AdminRouter);
 
 app.post("/upload", upload.single("photo"), (req, res) => {
   try {
