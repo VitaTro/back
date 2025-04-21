@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../schemas/user");
 const Product = require("../schemas/product");
+const Wishlist = require("../schemas/wishlist");
 // const { authenticateJWT } = require("../middleware/authMiddleware");
 
 // Маршрут для отримання користувачів
@@ -72,13 +73,49 @@ router.delete("/products/:id", async (req, res) => {
 // Маршрут для адмін-панелі
 router.get("/dashboard", async (req, res) => {
   try {
+    // Загальна статистика
     const stats = {
       totalUsers: await User.countDocuments(),
       totalProducts: await Product.countDocuments(),
+      activeUsers: await User.countDocuments({ isActive: true }), // Приклад, якщо є поле isActive
+      salesCount: 200, // Можна взяти з бази продажів
+      netProfit: 15000.5, // Можна розрахувати з бази даних
     };
+
+    // Огляд продуктів
+    const lowStockItems = await Product.find({ stock: { $lt: 5 } }).select(
+      "name stock"
+    );
+    const popularItems = [
+      { name: "Gold Necklace", popularity: 95 },
+      { name: "Silver Bracelet", popularity: 88 },
+    ]; // Додати логіку для визначення популярності
+    const wishlist = await Wishlist.find().populate("productId");
+
+    // Фінансова статистика
+    const financialOverview = {
+      purchasePrices: [
+        { name: "Gold Cross", purchasePrice: 100 },
+        { name: "Silver Bracelet", purchasePrice: 50 },
+      ], // Взяти з бази даних закупівель
+      markupOverview: [
+        { name: "Gold Cross", markup: 50 },
+        { name: "Silver Bracelet", markup: 30 },
+      ], // Розрахувати націнку
+    };
+
     res.status(200).json({
-      message: "Welcome to the dashboard!",
+      message: "Welcome to the dashboard, admin@example.com!",
       stats,
+      productsOverview: {
+        lowStockItems,
+        popularItems,
+      },
+      wishlistOverview: wishlist.map((item) => ({
+        name: item.name,
+        count: item.quantity,
+      })),
+      financialOverview,
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to load dashboard data" });
