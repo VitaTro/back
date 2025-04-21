@@ -694,20 +694,108 @@
       }
     },
     "/api/admin/products": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Отримати список всіх продуктів",
+        "description": "Повертає список всіх продуктів з бази даних.",
+        "responses": {
+          "200": {
+            "description": "Список продуктів успішно отримано.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "string" },
+                      "name": { "type": "string" },
+                      "category": { "type": "string" },
+                      "subcategory": { "type": "string" },
+                      "price": { "type": "number" },
+                      "description": { "type": "string" },
+                      "photoUrl": { "type": "string" },
+                      "size": { "type": "string" },
+                      "width": { "type": "integer" },
+                      "length": { "type": "integer" },
+                      "color": { "type": "string" },
+                      "quantity": { "type": "integer" },
+                      "index": { "type": "string" },
+                      "purchasePrice": { "type": "number" },
+                      "inStock": { "type": "boolean" },
+                      "visible": { "type": "boolean" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Помилка сервера при отриманні продуктів."
+          }
+        }
+      },
       "post": {
         "tags": ["Admin"],
         "summary": "Додати новий продукт",
+        "description": "Додає новий продукт до бази даних.",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/Product" }
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "Rose Box" },
+                  "category": { "type": "string", "example": "Box" },
+                  "subcategory": { "type": "string", "example": "Gift" },
+                  "price": { "type": "number", "example": 30 },
+                  "description": {
+                    "type": "string",
+                    "example": "Beautiful rose in a box"
+                  },
+                  "photoUrl": {
+                    "type": "string",
+                    "example": "https://example.com/photo.jpg"
+                  },
+                  "size": { "type": "string", "example": "Medium" },
+                  "width": { "type": "integer", "example": 100 },
+                  "length": { "type": "integer", "example": 150 },
+                  "color": { "type": "string", "example": "Red" },
+                  "quantity": { "type": "integer", "example": 10 },
+                  "index": { "type": "string", "example": "RBX-123" },
+                  "purchasePrice": { "type": "number", "example": 20 },
+                  "inStock": { "type": "boolean", "example": true },
+                  "visible": { "type": "boolean", "example": true }
+                },
+                "required": ["name", "category", "price", "description"]
+              }
             }
           }
         },
         "responses": {
-          "201": { "description": "Продукт додано" },
-          "500": { "description": "Внутрішня помилка сервера" }
+          "201": {
+            "description": "Продукт успішно додано.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "message": {
+                      "type": "string",
+                      "example": "Product added successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Некоректні дані у запиті."
+          },
+          "500": {
+            "description": "Помилка сервера."
+          }
         }
       }
     },
