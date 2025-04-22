@@ -14,6 +14,21 @@ const salesSchema = new mongoose.Schema({
   quantity: { type: Number, required: true }, // Кількість проданих одиниць
   salePrice: { type: Number, required: true }, // Ціна за одиницю
   totalAmount: { type: Number, required: true }, // Загальна сума продажу
+  discount: {
+    type: Number,
+    default: 0,
+    description: "Знижка на продаж в процентах",
+  },
+  status: {
+    type: String,
+    enum: ["confirmed", "pending", "rejected"],
+    default: "pending",
+  },
+  deliveryDetails: {
+    type: String,
+    description: "Додаткові деталі доставки",
+  },
+
   paymentMethod: {
     type: String,
     enum: ["Credit Card", "Cash", "Online"],

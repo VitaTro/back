@@ -18,6 +18,10 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    purchasePrice: {
+      type: Number,
+      required: true, // Закупівельна ціна
+    },
     description: {
       type: String,
       required: true,
@@ -27,7 +31,7 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
     size: {
-      type: String, // залишаємо для старих розмірів, якщо вони текстового типу
+      type: String, // Залишаємо для старих типів розмірів
       required: true,
     },
     width: {
@@ -42,6 +46,11 @@ const productSchema = new mongoose.Schema(
       type: String, // кольори, наприклад "red", "white", "green"
       required: false,
     },
+    quantity: {
+      type: Number, // Кількість товару в наявності
+      required: true,
+      default: 0,
+    },
     inStock: {
       type: Boolean,
       default: true,
@@ -49,6 +58,10 @@ const productSchema = new mongoose.Schema(
     visible: {
       type: Boolean,
       default: true,
+    },
+    index: {
+      type: String, // Може використовуватись для категоризації чи позиції
+      required: false,
     },
     createdAt: {
       type: Date,

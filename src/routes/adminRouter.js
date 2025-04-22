@@ -6,6 +6,7 @@ const Wishlist = require("../schemas/wishlist");
 const Order = require("../schemas/order");
 const Sale = require("../schemas/sale");
 const orderValidationSchema = require("../validation/ordersJoi");
+const { validate } = require("../middleware/validateMiddleware");
 // const { authenticateJWT } = require("../middleware/authMiddleware");
 
 // Маршрут для отримання користувачів
@@ -185,7 +186,7 @@ router.get("/finance", async (req, res) => {
   }
 });
 
-router.get("/orders", async (req, res) => {
+router.get("/finance/orders", async (req, res) => {
   try {
     const orders = await Order.find().populate("productId").populate("userId");
     res.status(200).json(orders);
@@ -195,39 +196,91 @@ router.get("/orders", async (req, res) => {
   }
 });
 
-router.post("/api/admin/orders/:id", async (req, res) => {
-  try {
-    const { id } = req.params; // ID продукту
-    const { paymentMethod } = req.body; // Спосіб оплати (готівка чи карта)
+router.post(
+  "/finance/orders",
+  validate(orderValidationSchema),
+  async (req, res) => {
+    try {
+      const { products, paymentMethod, deliveryAddress, notes } = req.body;
 
-    if (!["cash", "card"].includes(paymentMethod)) {
-      return res.status(400).json({ error: "Invalid payment method" });
+      if (!products || !Array.isArray(products) || products.length === 0) {
+        return res
+          .status(400)
+          .json({ error: "Products list is required and must not be empty." });
+      }
+
+      if (!["cash", "card"].includes(paymentMethod)) {
+        return res
+          .status(400)
+          .json({ error: "Invalid payment method. Use 'cash' or 'card'." });
+      }
+
+      // Ініціалізуємо загальні показники
+      let totalPrice = 0;
+      const orderProducts = [];
+
+      // Перевіряємо доступність товарів і розраховуємо загальну ціну
+      for (const product of products) {
+        const { productId, quantity } = product;
+
+        if (!productId || !quantity || quantity <= 0) {
+          return res.status(400).json({
+            error:
+              "Each product must have a valid productId and positive quantity.",
+          });
+        }
+
+        const dbProduct = await Product.findById(productId);
+
+        if (!dbProduct) {
+          return res
+            .status(404)
+            .json({ error: `Product with ID ${productId} not found.` });
+        }
+
+        if (dbProduct.quantity < quantity) {
+          return res.status(400).json({
+            error: `Not enough stock for product: ${dbProduct.name}. Available: ${dbProduct.quantity}, Requested: ${quantity}.`,
+          });
+        }
+
+        // Додаємо продукт до списку замовлення
+        totalPrice += dbProduct.price * quantity;
+        orderProducts.push({
+          productId: dbProduct._id,
+          name: dbProduct.name,
+          price: dbProduct.price,
+          quantity,
+          photoUrl: dbProduct.photoUrl,
+        });
+
+        // Оновлюємо кількість товару на складі
+        dbProduct.quantity -= quantity;
+        await dbProduct.save();
+      }
+
+      // Створюємо нове замовлення
+      const newOrder = new Order({
+        products: orderProducts,
+        totalPrice,
+        paymentMethod,
+        deliveryAddress,
+        notes,
+        status: "new",
+      });
+
+      await newOrder.save();
+      res
+        .status(201)
+        .json({ message: "Order created successfully", order: newOrder });
+    } catch (error) {
+      console.error("Error in creating order:", error);
+      res.status(500).json({ error: "Failed to create order" });
     }
-
-    // Знаходимо продукт за ID
-    const product = await Product.findById(id).select("name price photo");
-    if (!product) {
-      return res.status(404).json({ error: "Product not found" });
-    }
-
-    // Створення замовлення з використанням MongoDB `_id`
-    const newOrder = new Order({
-      productId: id,
-      name: product.name,
-      price: product.price,
-      photo: product.photo,
-      paymentMethod,
-    });
-
-    await newOrder.save();
-    res.status(201).json(newOrder); // Повертаємо створене замовлення
-  } catch (error) {
-    console.error("Error in creating admin order:", error);
-    res.status(500).json({ error: "Failed to create admin order" });
   }
-});
+);
 
-router.get("/api/admin/orders/:id", async (req, res) => {
+router.get("/finance/orders/:id", async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate("productId")
@@ -242,29 +295,111 @@ router.get("/api/admin/orders/:id", async (req, res) => {
   }
 });
 
-router.patch("/api/admin/orders/:id", async (req, res) => {
+router.patch(
+  "/finance/orders/:id",
+  validate(orderValidationSchema),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!["new", "completed", "cancelled"].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+
+      const updatedOrder = await Order.findByIdAndUpdate(
+        id,
+        { status },
+        { new: true }
+      );
+
+      if (!updatedOrder) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      res.status(200).json(updatedOrder); // Повертаємо оновлене замовлення
+    } catch (error) {
+      console.error("Error in updating order:", error);
+      res.status(500).json({ error: "Failed to update order" });
+    }
+  }
+);
+
+// Отримати всі продажі
+router.get("/finance/sale", async (req, res) => {
+  try {
+    const sales = await Sale.find();
+    res.status(200).json(sales);
+  } catch (error) {
+    console.error("Error in fetching sales:", error);
+    res.status(500).json({ error: "Failed to fetch sales" });
+  }
+});
+
+// Додати новий запис продажу
+router.post("/finance/sale", async (req, res) => {
+  try {
+    const { productId, quantity, salePrice } = req.body;
+
+    if (!productId || !quantity || quantity <= 0) {
+      return res
+        .status(400)
+        .json({ error: "Product ID and positive quantity are required." });
+    }
+
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found." });
+    }
+
+    if (product.quantity < quantity) {
+      return res.status(400).json({
+        error: `Not enough stock for product: ${product.name}. Available: ${product.quantity}, Requested: ${quantity}.`,
+      });
+    }
+
+    // Розраховуємо підсумкову ціну
+    const totalAmount = product.price * quantity;
+
+    // Створюємо новий продаж
+    const newSale = new Sale({
+      productId,
+      quantity,
+      salePrice,
+      totalAmount,
+    });
+
+    // Оновлюємо кількість товару на складі
+    product.quantity -= quantity;
+    await product.save();
+
+    await newSale.save();
+    res
+      .status(201)
+      .json({ message: "Sale recorded successfully", sale: newSale });
+  } catch (error) {
+    console.error("Error in recording sale:", error);
+    res.status(500).json({ error: "Failed to record sale" });
+  }
+});
+
+// Оновити інформацію про продаж
+router.patch("/finance/sale/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const updatedData = req.body;
 
-    if (!["new", "completed", "cancelled"].includes(status)) {
-      return res.status(400).json({ error: "Invalid status" });
+    const sale = await Sale.findByIdAndUpdate(id, updatedData, { new: true });
+
+    if (!sale) {
+      return res.status(404).json({ error: "Sale not found." });
     }
 
-    const updatedOrder = await Order.findByIdAndUpdate(
-      id,
-      { status },
-      { new: true }
-    );
-
-    if (!updatedOrder) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    res.status(200).json(updatedOrder); // Повертаємо оновлене замовлення
+    res.status(200).json({ message: "Sale updated successfully", sale });
   } catch (error) {
-    console.error("Error in updating order:", error);
-    res.status(500).json({ error: "Failed to update order" });
+    console.error("Error in updating sale:", error);
+    res.status(500).json({ error: "Failed to update sale" });
   }
 });
 
