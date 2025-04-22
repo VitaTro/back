@@ -1,4 +1,5 @@
 const express = require("express");
+const Order = require("../schemas/order");
 const {
   getUserProfile,
   getUserMainData,
@@ -17,7 +18,7 @@ const {
   isAuthenticated,
   authenticateJWT,
 } = require("../middleware/authMiddleware");
-
+const orderValidationSchema = require("../validation/ordersJoi");
 const router = express.Router();
 
 // Профіль користувача
@@ -44,7 +45,21 @@ router.delete(
   isAuthenticated,
   removeFromShoppingCart
 );
-
+router.post("/orders", async (req, res) => {
+  try {
+    // Перевірка даних
+    const { error } = orderValidationSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+    const newOrder = new Order(req.body);
+    await newOrder.save();
+    res.status(201).json(newOrder); // Повертаємо створене замовлення
+  } catch (error) {
+    console.error("Error in creating order:", error);
+    res.status(500).json({ error: "Failed to create order" });
+  }
+});
 // Історія покупок (purchase history)
 router.get("/purchase-history", isAuthenticated, getPurchaseHistory);
 

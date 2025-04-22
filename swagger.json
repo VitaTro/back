@@ -1163,6 +1163,64 @@
         }
       }
     },
+    "patch": {
+      "tags": ["Admin"],
+      "summary": "Оновити статус замовлення",
+      "description": "Цей маршрут дозволяє адміністраторам змінювати статус замовлення за його ідентифікатором.",
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "ID замовлення",
+          "schema": {
+            "type": "string",
+            "example": "604b2f4a8fd3b341d8f9f2e7"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "description": "Новий статус замовлення ('new', 'completed', 'cancelled').",
+                  "enum": ["new", "completed", "cancelled"]
+                }
+              },
+              "example": {
+                "status": "completed"
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Замовлення успішно оновлено",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Order"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Некоректний статус"
+        },
+        "404": {
+          "description": "Замовлення не знайдено"
+        },
+        "500": {
+          "description": "Помилка сервера"
+        }
+      }
+    },
     "/api/admin/orders/{id}": {
       "get": {
         "tags": ["Admin"],
@@ -1204,6 +1262,133 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Замовлення не знайдено"
+          },
+          "500": {
+            "description": "Помилка сервера"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Створити замовлення для конкретного продукту",
+        "description": "Цей маршрут дозволяє адміністраторам створювати нові замовлення для конкретного продукту за його ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID продукту, який замовляється",
+            "schema": {
+              "type": "string",
+              "example": "604b2f4a8fd3b341d8f9f2e7"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderRequest"
+              },
+              "example": {
+                "status": "new",
+                "totalPrice": 120.99,
+                "paymentStatus": "unpaid",
+                "paymentMethod": "cash",
+                "notes": "Доставити терміново"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Замовлення успішно створено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                },
+                "examples": {
+                  "example-1": {
+                    "orderId": "605c3c8f8cd3b341d8f9a1b7",
+                    "productId": "604b2f4a8fd3b341d8f9f2e7",
+                    "name": "Годинник",
+                    "price": 120.99,
+                    "photo": "https://example.com/watch.jpg",
+                    "paymentMethod": "cash",
+                    "status": "new",
+                    "totalPrice": 120.99,
+                    "createdAt": "2023-05-01T10:20:30Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Некоректні дані запиту"
+          },
+          "404": {
+            "description": "Продукт не знайдено"
+          },
+          "500": {
+            "description": "Помилка сервера"
+          }
+        }
+      },
+
+      "patch": {
+        "tags": ["Admin"],
+        "summary": "Оновити статус замовлення",
+        "description": "Цей маршрут дозволяє адміністраторам змінювати статус замовлення за його ідентифікатором.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID замовлення",
+            "schema": {
+              "type": "string",
+              "example": "604b2f4a8fd3b341d8f9f2e7"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "description": "Новий статус замовлення ('new', 'completed', 'cancelled').",
+                    "enum": ["new", "completed", "cancelled"]
+                  }
+                },
+                "example": {
+                  "status": "completed"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Замовлення успішно оновлено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Некоректний статус"
           },
           "404": {
             "description": "Замовлення не знайдено"
@@ -1695,6 +1880,52 @@
         }
       }
     },
+    "/api/user/orders": {
+      "post": {
+        "tags": ["User"],
+        "summary": "Створити нове замовлення",
+        "description": "Цей маршрут дозволяє користувачам створювати нові замовлення в системі.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderRequest"
+              },
+              "example": {
+                "productId": "604b2f4a8fd3b341d8f9f2e7",
+                "userId": "604b2f4a8fd3b341d8f9f2e8",
+                "status": "new",
+                "totalPrice": 150.5,
+                "paymentStatus": "unpaid",
+                "paymentMethod": "нал",
+                "deliveryAddress": "123 Main St, City, Country",
+                "notes": "Будь ласка, доставте після 16:00"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Замовлення успішно створено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Некоректні дані запиту"
+          },
+          "500": {
+            "description": "Помилка сервера"
+          }
+        }
+      }
+    },
+
     "/api/user/purchase-history": {
       "get": {
         "tags": ["User"],
@@ -2257,75 +2488,124 @@
         "properties": {
           "orderId": {
             "type": "string",
-            "description": "Унікальний ідентифікатор замовлення."
+            "description": "Унікальний ідентифікатор замовлення.",
+            "example": "604b2f4a8fd3b341d8f9f2e6"
           },
-          "productId": {
-            "type": "string",
-            "description": "ID продукту, пов'язаного із замовленням."
+          "products": {
+            "type": "array",
+            "description": "Список продуктів у замовленні.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": {
+                  "type": "string",
+                  "description": "ID продукту, пов'язаного із замовленням.",
+                  "example": "604b2f4a8fd3b341d8f9f2e7"
+                },
+                "quantity": {
+                  "type": "number",
+                  "description": "Кількість одиниць продукту у замовленні.",
+                  "example": 2
+                }
+              }
+            }
           },
           "userId": {
             "type": "string",
-            "description": "ID користувача, який зробив замовлення."
+            "description": "ID користувача, який зробив замовлення.",
+            "example": "604b2f4a8fd3b341d8f9f2e8"
           },
           "status": {
             "type": "string",
-            "description": "Статус замовлення (наприклад, 'completed')."
+            "description": "Статус замовлення.",
+            "enum": ["new", "completed", "cancelled"],
+            "example": "new"
           },
           "totalPrice": {
             "type": "number",
-            "description": "Загальна сума замовлення."
+            "description": "Загальна сума замовлення.",
+            "example": 150.5
+          },
+          "totalQuantity": {
+            "type": "number",
+            "description": "Загальна кількість продуктів у замовленні.",
+            "example": 5
           },
           "paymentStatus": {
             "type": "string",
-            "description": "Статус оплати (наприклад, 'paid')."
+            "description": "Статус оплати.",
+            "enum": ["paid", "unpaid"],
+            "example": "unpaid"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Спосіб оплати.",
+            "enum": ["cash", "card"],
+            "example": "cash"
           },
           "deliveryType": {
             "type": "string",
-            "description": "Тип доставки (кур'єр, поштомат, самовивіз).",
-            "enum": ["courier", "smartbox", "pickup"]
+            "description": "Тип доставки.",
+            "enum": ["smartbox", "pickup", "courier"],
+            "example": "courier"
           },
           "smartboxDetails": {
             "type": "object",
+            "description": "Деталі поштомата для доставки.",
             "properties": {
               "boxId": {
                 "type": "string",
-                "description": "Унікальний ідентифікатор поштомата."
+                "description": "Унікальний ідентифікатор поштомата.",
+                "example": "SMARTBOX123"
               },
               "location": {
                 "type": "string",
-                "description": "Адреса поштомата."
+                "description": "Адреса поштомата.",
+                "example": "123 Main St, City, Country"
               }
             }
           },
           "deliveryAddress": {
             "type": "string",
-            "description": "Адреса доставки."
+            "description": "Адреса доставки.",
+            "example": "123 Main St, City, Country"
+          },
+          "deliveryTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Запланований час доставки.",
+            "example": "2023-05-01T10:30:00Z"
           },
           "notes": {
             "type": "string",
-            "description": "Додаткові нотатки щодо замовлення."
+            "description": "Додаткові нотатки щодо замовлення.",
+            "example": "Будь ласка, доставте після 16:00"
           },
           "createdAt": {
             "type": "string",
             "format": "date-time",
-            "description": "Дата створення замовлення."
+            "description": "Дата створення замовлення.",
+            "example": "2023-05-01T10:20:30Z"
           },
           "updatedAt": {
             "type": "string",
             "format": "date-time",
-            "description": "Дата останнього оновлення замовлення."
-          },
-          "quantity": {
-            "type": "number",
-            "description": "Кількість продуктів у замовленні."
-          },
-          "paymentMethod": {
-            "type": "string",
-            "description": "Спосіб оплати (готівка або безготівковий).",
-            "enum": ["cash", "card"]
+            "description": "Дата останнього оновлення замовлення.",
+            "example": "2023-05-02T14:00:00Z"
           }
-        }
+        },
+        "required": [
+          "orderId",
+          "products",
+          "userId",
+          "status",
+          "totalPrice",
+          "paymentStatus",
+          "paymentMethod",
+          "deliveryAddress"
+        ]
       },
+
       "Purchase": {
         "type": "object",
         "description": "Дані про покупку.",

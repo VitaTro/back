@@ -195,6 +195,38 @@ router.get("/orders", async (req, res) => {
   }
 });
 
+router.post("/api/admin/orders/:id", async (req, res) => {
+  try {
+    const { id } = req.params; // ID продукту
+    const { paymentMethod } = req.body; // Спосіб оплати (готівка чи карта)
+
+    if (!["cash", "card"].includes(paymentMethod)) {
+      return res.status(400).json({ error: "Invalid payment method" });
+    }
+
+    // Знаходимо продукт за ID
+    const product = await Product.findById(id).select("name price photo");
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    // Створення замовлення з використанням MongoDB `_id`
+    const newOrder = new Order({
+      productId: id,
+      name: product.name,
+      price: product.price,
+      photo: product.photo,
+      paymentMethod,
+    });
+
+    await newOrder.save();
+    res.status(201).json(newOrder); // Повертаємо створене замовлення
+  } catch (error) {
+    console.error("Error in creating admin order:", error);
+    res.status(500).json({ error: "Failed to create admin order" });
+  }
+});
+
 router.get("/api/admin/orders/:id", async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
@@ -210,19 +242,29 @@ router.get("/api/admin/orders/:id", async (req, res) => {
   }
 });
 
-router.post("/orders", async (req, res) => {
+router.patch("/api/admin/orders/:id", async (req, res) => {
   try {
-    // Перевірка даних
-    const { error } = orderValidationSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ error: error.details[0].message });
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!["new", "completed", "cancelled"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
     }
-    const newOrder = new Order(req.body);
-    await newOrder.save();
-    res.status(201).json(newOrder); // Повертаємо створене замовлення
+
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
+
+    if (!updatedOrder) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    res.status(200).json(updatedOrder); // Повертаємо оновлене замовлення
   } catch (error) {
-    console.error("Error in creating order:", error);
-    res.status(500).json({ error: "Failed to create order" });
+    console.error("Error in updating order:", error);
+    res.status(500).json({ error: "Failed to update order" });
   }
 });
 
