@@ -695,7 +695,7 @@
     },
     "/api/admin/products": {
       "get": {
-        "tags": ["Products"],
+        "tags": ["Admin"],
         "summary": "Отримати список всіх продуктів",
         "description": "Повертає список всіх продуктів з бази даних.",
         "responses": {
@@ -857,13 +857,13 @@
       "get": {
         "tags": ["Admin"],
         "summary": "Адмінська панель",
-        "description": "Надає доступ до адмінської панелі, доступної лише для користувачів з роллю 'admin'. Повертає загальні дані про стан системи, включаючи статистику користувачів, продукти, фінансові показники та популярність товарів.",
+        "description": "Надає доступ до основної панелі адміністратора для перегляду статистики, популярних товарів, низьких залишків і списків бажань.",
         "parameters": [
           {
             "name": "Authorization",
             "in": "header",
             "required": true,
-            "description": "Bearer-токен для авторизації. Дозволяє доступ лише авторизованим адміністраторам.",
+            "description": "Bearer-токен для авторизації адміністратора.",
             "schema": {
               "type": "string",
               "example": "Bearer eyJhbGciOiJI..."
@@ -872,7 +872,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Дані адмін-панелі успішно отримано.",
+            "description": "Дані адмінської панелі успішно отримано.",
             "content": {
               "application/json": {
                 "schema": {
@@ -888,77 +888,128 @@
                       "properties": {
                         "totalUsers": {
                           "type": "integer",
-                          "description": "Загальна кількість користувачів у системі."
+                          "description": "Кількість користувачів у системі."
                         },
                         "totalProducts": {
                           "type": "integer",
-                          "description": "Загальна кількість товарів у базі даних."
+                          "description": "Кількість товарів у базі даних."
                         },
                         "activeUsers": {
                           "type": "integer",
-                          "description": "Кількість користувачів, які були активними за останній період."
-                        },
-                        "salesCount": {
-                          "type": "integer",
-                          "description": "Кількість проданих товарів за визначений період."
-                        },
-                        "netProfit": {
-                          "type": "number",
-                          "description": "Чистий дохід, отриманий від продажів."
+                          "description": "Користувачі, які були активними за певний період."
                         }
                       }
                     },
                     "productsOverview": {
                       "type": "object",
-                      "description": "Детальний огляд продуктів.",
+                      "description": "Огляд продуктів.",
                       "properties": {
                         "lowStockItems": {
                           "type": "array",
-                          "description": "Список товарів, що мають низькі залишки.",
+                          "description": "Список товарів із низькими залишками.",
                           "items": {
                             "type": "object",
                             "properties": {
                               "name": { "type": "string" },
-                              "remainingStock": { "type": "integer" }
+                              "stock": { "type": "integer" },
+                              "photo": { "type": "string" },
+                              "index": { "type": "string" }
                             }
                           }
                         },
                         "popularItems": {
                           "type": "array",
-                          "description": "Найбільш популярні товари на основі продажів та бажань.",
+                          "description": "Список найпопулярніших товарів.",
                           "items": {
                             "type": "object",
                             "properties": {
                               "name": { "type": "string" },
-                              "popularity": { "type": "integer" }
-                            }
-                          }
-                        },
-                        "wishlistOverview": {
-                          "type": "array",
-                          "description": "Список товарів у списках бажань користувачів.",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "name": { "type": "string" },
-                              "count": { "type": "integer" }
+                              "popularity": { "type": "integer" },
+                              "photo": { "type": "string" },
+                              "index": { "type": "string" }
                             }
                           }
                         }
                       }
                     },
+                    "wishlistOverview": {
+                      "type": "array",
+                      "description": "Список бажаних товарів.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": { "type": "string" },
+                          "count": { "type": "integer" },
+                          "photo": { "type": "string" },
+                          "index": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Токен відсутній або недійсний." },
+          "403": {
+            "description": "Доступ заборонено для неадміністративних користувачів."
+          }
+        }
+      }
+    },
+    "/api/admin/finance": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Фінансова панель",
+        "description": "Надає доступ до фінансової інформації, включаючи продажі, витрати і замовлення.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Bearer-токен для авторизації адміністратора.",
+            "schema": {
+              "type": "string",
+              "example": "Bearer eyJhbGciOiJI..."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Фінансові дані успішно отримано.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "salesData": {
+                      "type": "object",
+                      "description": "Продажі та фінансова інформація.",
+                      "properties": {
+                        "salesCount": {
+                          "type": "integer",
+                          "description": "Кількість проданих товарів."
+                        },
+                        "netProfit": {
+                          "type": "number",
+                          "description": "Чистий дохід."
+                        }
+                      }
+                    },
                     "financialOverview": {
                       "type": "object",
-                      "description": "Фінансова статистика продуктів.",
+                      "description": "Фінансовий огляд.",
                       "properties": {
                         "purchasePrices": {
                           "type": "array",
-                          "description": "Закупівельна ціна товарів.",
+                          "description": "Ціни закупівель.",
                           "items": {
                             "type": "object",
                             "properties": {
                               "name": { "type": "string" },
-                              "purchasePrice": { "type": "number" }
+                              "purchasePrice": { "type": "number" },
+                              "photo": { "type": "string" },
+                              "index": { "type": "string" }
                             }
                           }
                         },
@@ -969,49 +1020,45 @@
                             "type": "object",
                             "properties": {
                               "name": { "type": "string" },
-                              "markup": { "type": "number" }
+                              "markup": { "type": "number" },
+                              "photo": { "type": "string" },
+                              "index": { "type": "string" }
                             }
                           }
                         }
                       }
-                    }
-                  }
-                },
-                "examples": {
-                  "success": {
-                    "summary": "Успішна відповідь",
-                    "value": {
-                      "message": "Welcome to the dashboard, admin@example.com!",
-                      "stats": {
-                        "totalUsers": 123,
-                        "totalProducts": 456,
-                        "activeUsers": 100,
-                        "salesCount": 200,
-                        "netProfit": 15000.5
-                      },
-                      "productsOverview": {
-                        "lowStockItems": [
-                          { "name": "Rose Box", "remainingStock": 5 },
-                          { "name": "Gold Cross", "remainingStock": 2 }
-                        ],
-                        "popularItems": [
-                          { "name": "Gold Necklace", "popularity": 95 },
-                          { "name": "Silver Bracelet", "popularity": 88 }
-                        ],
-                        "wishlistOverview": [
-                          { "name": "Diamond Earrings", "count": 30 },
-                          { "name": "Gold Ring", "count": 25 }
-                        ]
-                      },
-                      "financialOverview": {
-                        "purchasePrices": [
-                          { "name": "Gold Cross", "purchasePrice": 100 },
-                          { "name": "Silver Bracelet", "purchasePrice": 50 }
-                        ],
-                        "markupOverview": [
-                          { "name": "Gold Cross", "markup": 50 },
-                          { "name": "Silver Bracelet", "markup": 30 }
-                        ]
+                    },
+                    "ordersOverview": {
+                      "type": "array",
+                      "description": "Історія замовлень.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "orderId": {
+                            "type": "string",
+                            "description": "Ідентифікатор замовлення."
+                          },
+                          "status": {
+                            "type": "string",
+                            "description": "Статус замовлення (нове, виконано, скасовано)."
+                          },
+                          "totalPrice": {
+                            "type": "number",
+                            "description": "Сума замовлення."
+                          },
+                          "paymentStatus": {
+                            "type": "string",
+                            "description": "Статус оплати."
+                          },
+                          "deliveryAddress": {
+                            "type": "string",
+                            "description": "Адреса доставки."
+                          },
+                          "notes": {
+                            "type": "string",
+                            "description": "Нотатки щодо замовлення."
+                          }
+                        }
                       }
                     }
                   }
@@ -1019,16 +1066,13 @@
               }
             }
           },
-          "401": {
-            "description": "Помилка авторизації. Токен відсутній або недійсний."
-          },
+          "401": { "description": "Токен відсутній або недійсний." },
           "403": {
-            "description": "Доступ заборонено. Цей маршрут доступний лише адміністраторам."
+            "description": "Доступ заборонено для неадміністративних користувачів."
           }
         }
       }
     },
-
     "/api/user/main": {
       "get": {
         "tags": ["User"],
@@ -1594,46 +1638,6 @@
   },
   "components": {
     "schemas": {
-      "Purchase": {
-        "type": "object",
-        "properties": {
-          "orderId": {
-            "type": "string",
-            "description": "Унікальний ідентифікатор замовлення."
-          },
-          "date": {
-            "type": "string",
-            "description": "Дата покупки.",
-            "format": "date-time"
-          },
-          "totalAmount": {
-            "type": "number",
-            "description": "Загальна сума покупки.",
-            "example": 150.5
-          },
-          "items": {
-            "type": "array",
-            "description": "Список товарів у цьому замовленні.",
-            "items": {
-              "$ref": "#/components/schemas/Product"
-            }
-          },
-          "status": {
-            "type": "string",
-            "description": "Статус замовлення (наприклад, 'completed', 'cancelled').",
-            "example": "completed"
-          },
-          "shippingAddress": {
-            "type": "string",
-            "description": "Адреса доставки для замовлення."
-          },
-          "paymentMethod": {
-            "type": "string",
-            "description": "Спосіб оплати.",
-            "example": "Credit Card"
-          }
-        }
-      },
       "WishlistItem": {
         "type": "object",
         "properties": {
@@ -1902,36 +1906,6 @@
           }
         }
       },
-      "Payment": {
-        "type": "object",
-        "properties": {
-          "paymentId": {
-            "type": "string",
-            "description": "ID транзакції."
-          },
-          "amount": {
-            "type": "number",
-            "description": "Сума платежу.",
-            "example": 150.5
-          },
-          "method": {
-            "type": "string",
-            "description": "Спосіб оплати.",
-            "example": "Credit Card"
-          },
-          "status": {
-            "type": "string",
-            "description": "Статус платежу.",
-            "example": "Completed"
-          },
-          "date": {
-            "type": "string",
-            "description": "Дата платежу.",
-            "format": "date-time"
-          }
-        }
-      },
-
       "Auth": {
         "required": ["email", "password", "username"],
         "type": "object",
@@ -1977,7 +1951,8 @@
           }
         }
       },
-      "inline_response_200": {
+
+      "response_200": {
         "type": "object",
         "properties": {
           "isFirstAdmin": {
@@ -1985,15 +1960,176 @@
           },
           "DashboardStats": {
             "type": "object",
-            "description": "Статистика адмін-панелі, яка включає загальні дані про користувачів та продукти.",
+            "description": "Статистика адмін-панелі, яка включає дані про користувачів та продукти.",
             "properties": {
               "totalUsers": {
                 "type": "integer",
-                "description": "Загальна кількість зареєстрованих користувачів у системі."
+                "description": "Загальна кількість зареєстрованих користувачів."
               },
               "totalProducts": {
                 "type": "integer",
-                "description": "Загальна кількість товарів, доступних у системі."
+                "description": "Загальна кількість товарів у системі."
+              },
+              "activeUsers": {
+                "type": "integer",
+                "description": "Кількість користувачів, активних за останній період."
+              }
+            }
+          },
+          "LowStockItem": {
+            "type": "object",
+            "description": "Товар із низькими залишками.",
+            "properties": {
+              "name": { "type": "string", "description": "Назва товару." },
+              "stock": {
+                "type": "integer",
+                "description": "Кількість залишків на складі."
+              },
+              "photo": {
+                "type": "string",
+                "description": "Посилання на фото товару."
+              },
+              "index": {
+                "type": "string",
+                "description": "Унікальний код товару."
+              }
+            }
+          },
+          "PopularItem": {
+            "type": "object",
+            "description": "Популярний товар.",
+            "properties": {
+              "name": { "type": "string", "description": "Назва товару." },
+              "popularity": {
+                "type": "integer",
+                "description": "Рівень популярності товару."
+              },
+              "photo": {
+                "type": "string",
+                "description": "Посилання на фото товару."
+              },
+              "index": {
+                "type": "string",
+                "description": "Унікальний код товару."
+              }
+            }
+          },
+          "WishlistItem": {
+            "type": "object",
+            "description": "Елемент списку бажань.",
+            "properties": {
+              "name": { "type": "string", "description": "Назва товару." },
+              "count": {
+                "type": "integer",
+                "description": "Кількість у списку бажань."
+              },
+              "photo": {
+                "type": "string",
+                "description": "Посилання на фото товару."
+              },
+              "index": {
+                "type": "string",
+                "description": "Унікальний код товару."
+              }
+            }
+          },
+          "SalesData": {
+            "type": "object",
+            "description": "Дані про продажі.",
+            "properties": {
+              "salesCount": {
+                "type": "integer",
+                "description": "Кількість проданих товарів."
+              },
+              "netProfit": {
+                "type": "number",
+                "description": "Чистий дохід від продажів."
+              }
+            }
+          },
+          "FinancialOverview": {
+            "type": "object",
+            "description": "Огляд фінансів.",
+            "properties": {
+              "purchasePrices": {
+                "type": "array",
+                "description": "Ціни закупівель.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Назва товару."
+                    },
+                    "purchasePrice": {
+                      "type": "number",
+                      "description": "Ціна закупівлі товару."
+                    },
+                    "photo": {
+                      "type": "string",
+                      "description": "Посилання на фото товару."
+                    },
+                    "index": {
+                      "type": "string",
+                      "description": "Унікальний код товару."
+                    }
+                  }
+                }
+              },
+              "markupOverview": {
+                "type": "array",
+                "description": "Націнка на товари.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Назва товару."
+                    },
+                    "markup": {
+                      "type": "number",
+                      "description": "Націнка на товар."
+                    },
+                    "photo": {
+                      "type": "string",
+                      "description": "Посилання на фото товару."
+                    },
+                    "index": {
+                      "type": "string",
+                      "description": "Унікальний код товару."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "Order": {
+            "type": "object",
+            "description": "Дані про замовлення.",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "Унікальний ідентифікатор замовлення."
+              },
+              "status": {
+                "type": "string",
+                "description": "Статус замовлення (наприклад, 'completed')."
+              },
+              "totalPrice": {
+                "type": "number",
+                "description": "Загальна сума замовлення."
+              },
+              "paymentStatus": {
+                "type": "string",
+                "description": "Статус оплати (наприклад, 'paid')."
+              },
+              "deliveryAddress": {
+                "type": "string",
+                "description": "Адреса доставки."
+              },
+              "notes": {
+                "type": "string",
+                "description": "Додаткові нотатки щодо замовлення."
               }
             }
           },
@@ -2014,6 +2150,103 @@
                 "description": "Список користувачів з базовою інформацією про них.",
                 "items": {
                   "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "Purchase": {
+            "type": "object",
+            "description": "Дані про покупку.",
+            "properties": {
+              "orderId": {
+                "type": "string",
+                "description": "Унікальний ідентифікатор замовлення."
+              },
+              "date": {
+                "type": "string",
+                "description": "Дата покупки.",
+                "format": "date-time"
+              },
+              "totalAmount": {
+                "type": "number",
+                "description": "Загальна сума покупки.",
+                "example": 150.5
+              },
+              "items": {
+                "type": "array",
+                "description": "Список товарів у цьому замовленні.",
+                "items": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              },
+              "status": {
+                "type": "string",
+                "description": "Статус замовлення (completed, cancelled).",
+                "example": "completed"
+              },
+              "shippingAddress": {
+                "type": "string",
+                "description": "Адреса доставки."
+              },
+              "paymentMethod": {
+                "type": "string",
+                "description": "Спосіб оплати (Credit Card, PayPal).",
+                "example": "Credit Card"
+              }
+            }
+          },
+          "Payment": {
+            "type": "object",
+            "description": "Дані про платіж.",
+            "properties": {
+              "paymentId": {
+                "type": "string",
+                "description": "ID транзакції."
+              },
+              "amount": {
+                "type": "number",
+                "description": "Сума платежу.",
+                "example": 150.5
+              },
+              "method": {
+                "type": "string",
+                "description": "Спосіб оплати.",
+                "example": "Credit Card"
+              },
+              "status": {
+                "type": "string",
+                "description": "Статус платежу (Completed, Failed).",
+                "example": "Completed"
+              },
+              "date": {
+                "type": "string",
+                "description": "Дата платежу.",
+                "format": "date-time"
+              }
+            }
+          },
+
+          "markupOverview": {
+            "type": "array",
+            "description": "Націнка на товари.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Назва товару."
+                },
+                "markup": {
+                  "type": "number",
+                  "description": "Націнка на товар."
+                },
+                "photo": {
+                  "type": "string",
+                  "description": "Посилання на фото товару."
+                },
+                "index": {
+                  "type": "string",
+                  "description": "Унікальний код товару."
                 }
               }
             }
