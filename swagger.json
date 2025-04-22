@@ -1074,6 +1074,51 @@
       }
     },
     "/api/admin/orders": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Отримати всі замовлення",
+        "description": "Цей маршрут дозволяє отримати список усіх замовлень у системі.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Номер сторінки для пагінації",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Кількість замовлень на сторінці",
+            "schema": {
+              "type": "integer",
+              "example": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішний запит",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Помилка сервера"
+          }
+        }
+      },
       "post": {
         "tags": ["Admin"],
         "summary": "Створити нове замовлення",
@@ -1091,6 +1136,7 @@
                 "status": "new",
                 "totalPrice": 150.5,
                 "paymentStatus": "unpaid",
+                "paymentMethod": "нал",
                 "deliveryAddress": "123 Main St, City, Country",
                 "notes": "Будь ласка, доставте після 16:00"
               }
@@ -1117,6 +1163,58 @@
         }
       }
     },
+    "/api/admin/orders/{id}": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Отримати конкретне замовлення",
+        "description": "Цей маршрут дозволяє отримати деталі одного замовлення за його ідентифікатором.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID замовлення",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Успішний запит",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                },
+                "examples": {
+                  "example-1": {
+                    "orderId": "604b2f4a8fd3b341d8f9f2e7",
+                    "productId": "604b2f4a8fd3b341d8f9f2f0",
+                    "userId": "604b2f4a8fd3b341d8f9f2e8",
+                    "status": "new",
+                    "totalPrice": 150.5,
+                    "paymentStatus": "unpaid",
+                    "paymentMethod": "нал",
+                    "deliveryAddress": "123 Main St, City, Country",
+                    "notes": "Будь ласка, доставте після 16:00",
+                    "createdAt": "2023-05-01T10:20:30Z",
+                    "updatedAt": "2023-05-02T14:00:00Z"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Замовлення не знайдено"
+          },
+          "500": {
+            "description": "Помилка сервера"
+          }
+        }
+      }
+    },
+
     "/api/user/main": {
       "get": {
         "tags": ["User"],

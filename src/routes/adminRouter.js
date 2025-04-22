@@ -185,6 +185,31 @@ router.get("/finance", async (req, res) => {
   }
 });
 
+router.get("/orders", async (req, res) => {
+  try {
+    const orders = await Order.find().populate("productId").populate("userId");
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error("Error in fetching orders:", error);
+    res.status(500).json({ error: "Failed to fetch orders" });
+  }
+});
+
+router.get("/api/admin/orders/:id", async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate("productId")
+      .populate("userId");
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+    res.status(200).json(order);
+  } catch (error) {
+    console.error("Error in fetching order:", error);
+    res.status(500).json({ error: "Failed to fetch order" });
+  }
+});
+
 router.post("/orders", async (req, res) => {
   try {
     // Перевірка даних
