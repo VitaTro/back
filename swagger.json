@@ -1073,6 +1073,50 @@
         }
       }
     },
+    "/api/admin/orders": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Створити нове замовлення",
+        "description": "Цей маршрут дозволяє адміністраторам створювати нові замовлення в системі.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderRequest"
+              },
+              "example": {
+                "productId": "604b2f4a8fd3b341d8f9f2e7",
+                "userId": "604b2f4a8fd3b341d8f9f2e8",
+                "status": "new",
+                "totalPrice": 150.5,
+                "paymentStatus": "unpaid",
+                "deliveryAddress": "123 Main St, City, Country",
+                "notes": "Будь ласка, доставте після 16:00"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Замовлення успішно створено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Некоректні дані запиту"
+          },
+          "500": {
+            "description": "Помилка сервера"
+          }
+        }
+      }
+    },
     "/api/user/main": {
       "get": {
         "tags": ["User"],
@@ -2117,6 +2161,14 @@
             "type": "string",
             "description": "Унікальний ідентифікатор замовлення."
           },
+          "productId": {
+            "type": "string",
+            "description": "ID продукту, пов'язаного із замовленням."
+          },
+          "userId": {
+            "type": "string",
+            "description": "ID користувача, який зробив замовлення."
+          },
           "status": {
             "type": "string",
             "description": "Статус замовлення (наприклад, 'completed')."
@@ -2136,6 +2188,25 @@
           "notes": {
             "type": "string",
             "description": "Додаткові нотатки щодо замовлення."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата створення замовлення."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Дата останнього оновлення замовлення."
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Кількість продуктів у замовленні."
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Спосіб оплати (готівка або безготівковий).",
+            "enum": ["cash", "card"]
           }
         }
       },

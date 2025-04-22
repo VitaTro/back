@@ -5,6 +5,7 @@ const Product = require("../schemas/product");
 const Wishlist = require("../schemas/wishlist");
 const Order = require("../schemas/order");
 const Sale = require("../schemas/sale");
+const orderValidationSchema = require("../validation/ordersJoi");
 // const { authenticateJWT } = require("../middleware/authMiddleware");
 
 // Маршрут для отримання користувачів
@@ -184,66 +185,20 @@ router.get("/finance", async (req, res) => {
   }
 });
 
-// router.get("/dashboard", async (req, res) => {
-//   try {
-//     // Загальна статистика
-//     const stats = {
-//       totalUsers: await User.countDocuments(),
-//       totalProducts: await Product.countDocuments(),
-//       activeUsers: await User.countDocuments({ isActive: true }), // Приклад, якщо є поле isActive
-//       salesCount: 200, // Можна взяти з бази продажів
-//       netProfit: 15000.5, // Можна розрахувати з бази даних
-//     };
-
-//     // Огляд продуктів
-//     const lowStockItems = await Product.find({ stock: { $lt: 5 } }).select(
-//       "name stock"
-//     );
-//     const popularItems = [
-//       { name: "Gold Necklace", popularity: 95 },
-//       { name: "Silver Bracelet", popularity: 88 },
-//     ]; // Додати логіку для визначення популярності
-//     const wishlist = await Wishlist.find().populate("productId");
-
-//     // Фінансова статистика
-//     const financialOverview = {
-//       purchasePrices: [
-//         { name: "Gold Cross", purchasePrice: 100 },
-//         { name: "Silver Bracelet", purchasePrice: 50 },
-//       ], // Взяти з бази даних закупівель
-//       markupOverview: [
-//         { name: "Gold Cross", markup: 50 },
-//         { name: "Silver Bracelet", markup: 30 },
-//       ], // Розрахувати націнку
-//     };
-
-//     res.status(200).json({
-//       message: "Welcome to the dashboard, admin@example.com!",
-//       stats,
-//       productsOverview: {
-//         lowStockItems,
-//         popularItems,
-//       },
-//       wishlistOverview: wishlist.map((item) => ({
-//         name: item.name,
-//         count: item.quantity,
-//       })),
-//       financialOverview,
-//     });
-//   } catch (error) {
-//     res.status(500).json({ error: "Failed to load dashboard data" });
-//   }
-// });
-
-// Маршрут для перевірки статусу адміністратора
-// router.get("/check-admin", async (req, res) => {
-//   try {
-//     const admins = await User.find({ role: "admin" });
-//     const isFirstAdmin = admins.length === 0;
-//     res.status(200).json({ isFirstAdmin });
-//   } catch (error) {
-//     res.status(500).json({ error: "Failed to check admin status" });
-//   }
-// });
+router.post("/orders", async (req, res) => {
+  try {
+    // Перевірка даних
+    const { error } = orderValidationSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+    const newOrder = new Order(req.body);
+    await newOrder.save();
+    res.status(201).json(newOrder); // Повертаємо створене замовлення
+  } catch (error) {
+    console.error("Error in creating order:", error);
+    res.status(500).json({ error: "Failed to create order" });
+  }
+});
 
 module.exports = router;
