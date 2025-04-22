@@ -1638,89 +1638,23 @@
   },
   "components": {
     "schemas": {
-      "WishlistItem": {
+      "Error": {
         "type": "object",
         "properties": {
-          "id": {
+          "code": {
+            "type": "integer",
+            "description": "Код помилки.",
+            "example": 500
+          },
+          "message": {
             "type": "string",
-            "description": "Унікальний ідентифікатор елемента списку бажань."
-          },
-          "name": {
-            "type": "string",
-            "description": "Назва товару."
-          },
-          "photoUrl": {
-            "type": "string",
-            "description": "Зображення товару."
-          },
-          "color": {
-            "type": "string",
-            "description": "Колір товару.",
-            "example": "Red"
-          },
-          "quantity": {
-            "type": "number",
-            "description": "Кількість товару в списку бажань.",
-            "example": 2
-          },
-          "price": {
-            "type": "number",
-            "description": "Ціна товару.",
-            "example": 100.5
-          },
-          "inStock": {
-            "type": "boolean",
-            "description": "Чи є товар у наявності.",
-            "example": true
-          },
-          "productId": {
-            "type": "string",
-            "description": "Унікальний ідентифікатор продукту."
-          },
-          "addedAt": {
-            "type": "string",
-            "description": "Дата додавання до списку бажань.",
-            "format": "date-time",
-            "example": "2023-04-01T12:34:56Z"
+            "description": "Опис помилки.",
+            "example": "Internal server error."
           }
         }
       },
-
-      "Subscription": {
-        "required": ["email"],
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "description": "Електронна пошта для підписки",
-            "format": "email"
-          },
-          "preferences": {
-            "type": "array",
-            "description": "Список категорій, на які користувач хоче підписатися",
-            "items": {
-              "type": "string"
-            }
-          },
-          "subscriptionType": {
-            "type": "string",
-            "description": "Тип підписки (наприклад, 'newsletter', 'promotions')."
-          }
-        }
-      },
-      "Unsubscription": {
-        "required": ["email"],
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "description": "Електронна пошта для відписки",
-            "format": "email"
-          }
-        }
-      },
-      "UserProfile": {
-        "required": ["email", "username"],
+      "Auth": {
+        "required": ["email", "password", "username"],
         "type": "object",
         "properties": {
           "username": {
@@ -1731,6 +1665,11 @@
             "type": "string",
             "description": "Електронна пошта користувача",
             "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "description": "Пароль користувача",
+            "format": "password"
           },
           "avatar": {
             "type": "string",
@@ -1750,16 +1689,24 @@
           },
           "role": {
             "type": "string",
-            "description": "Роль користувача (наприклад, 'admin', 'user')",
-            "example": "admin"
+            "description": "Роль користувача",
+            "example": "user"
           },
-          "isActive": {
-            "type": "boolean",
-            "description": "Статус аккаунту користувача (активний чи деактивований).",
-            "default": true
+          "tokenStatus": {
+            "type": "string",
+            "description": "Статус токена (активний, прострочений)."
           }
         }
       },
+      "response_200": {
+        "type": "object",
+        "properties": {
+          "isFirstAdmin": {
+            "type": "boolean"
+          }
+        }
+      },
+
       "Product": {
         "required": [
           "name",
@@ -1860,21 +1807,6 @@
           }
         }
       },
-      "Error": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "integer",
-            "description": "Код помилки.",
-            "example": 500
-          },
-          "message": {
-            "type": "string",
-            "description": "Опис помилки.",
-            "example": "Internal server error."
-          }
-        }
-      },
       "Review": {
         "type": "object",
         "properties": {
@@ -1906,8 +1838,34 @@
           }
         }
       },
-      "Auth": {
-        "required": ["email", "password", "username"],
+      "markupOverview": {
+        "type": "array",
+        "description": "Націнка на товари.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Назва товару."
+            },
+            "markup": {
+              "type": "number",
+              "description": "Націнка на товар."
+            },
+            "photo": {
+              "type": "string",
+              "description": "Посилання на фото товару."
+            },
+            "index": {
+              "type": "string",
+              "description": "Унікальний код товару."
+            }
+          }
+        }
+      },
+
+      "UserProfile": {
+        "required": ["email", "username"],
         "type": "object",
         "properties": {
           "username": {
@@ -1918,11 +1876,6 @@
             "type": "string",
             "description": "Електронна пошта користувача",
             "format": "email"
-          },
-          "password": {
-            "type": "string",
-            "description": "Пароль користувача",
-            "format": "password"
           },
           "avatar": {
             "type": "string",
@@ -1942,12 +1895,68 @@
           },
           "role": {
             "type": "string",
-            "description": "Роль користувача",
-            "example": "user"
+            "description": "Роль користувача (наприклад, 'admin', 'user')",
+            "example": "admin"
           },
-          "tokenStatus": {
+          "isActive": {
+            "type": "boolean",
+            "description": "Статус аккаунту користувача (активний чи деактивований).",
+            "default": true
+          }
+        }
+      },
+      "Subscription": {
+        "required": ["email"],
+        "type": "object",
+        "properties": {
+          "email": {
             "type": "string",
-            "description": "Статус токена (активний, прострочений)."
+            "description": "Електронна пошта для підписки",
+            "format": "email"
+          },
+          "preferences": {
+            "type": "array",
+            "description": "Список категорій, на які користувач хоче підписатися",
+            "items": {
+              "type": "string"
+            }
+          },
+          "subscriptionType": {
+            "type": "string",
+            "description": "Тип підписки (наприклад, 'newsletter', 'promotions')."
+          }
+        }
+      },
+      "Unsubscription": {
+        "required": ["email"],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Електронна пошта для відписки",
+            "format": "email"
+          }
+        }
+      },
+
+      "AdminDashboard": {
+        "type": "object",
+        "description": "Дані для адміністративної панелі, яка надає загальну статистику та інформацію про користувачів.",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Привітання, яке включає ім'я або електронну адресу адміністратора."
+          },
+          "stats": {
+            "$ref": "#/components/schemas/DashboardStats",
+            "description": "Об'єкт, який містить загальну статистику системи."
+          },
+          "users": {
+            "type": "array",
+            "description": "Список користувачів з базовою інформацією про них.",
+            "items": {
+              "$ref": "#/components/schemas/UserProfile"
+            }
           }
         }
       },
@@ -2009,23 +2018,52 @@
       },
       "WishlistItem": {
         "type": "object",
-        "description": "Елемент списку бажань.",
         "properties": {
-          "name": { "type": "string", "description": "Назва товару." },
-          "count": {
-            "type": "integer",
-            "description": "Кількість у списку бажань."
-          },
-          "photo": {
+          "id": {
             "type": "string",
-            "description": "Посилання на фото товару."
+            "description": "Унікальний ідентифікатор елемента списку бажань."
           },
-          "index": {
+          "name": {
             "type": "string",
-            "description": "Унікальний код товару."
+            "description": "Назва товару."
+          },
+          "photoUrl": {
+            "type": "string",
+            "description": "Зображення товару."
+          },
+          "color": {
+            "type": "string",
+            "description": "Колір товару.",
+            "example": "Red"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Кількість товару в списку бажань.",
+            "example": 2
+          },
+          "price": {
+            "type": "number",
+            "description": "Ціна товару.",
+            "example": 100.5
+          },
+          "inStock": {
+            "type": "boolean",
+            "description": "Чи є товар у наявності.",
+            "example": true
+          },
+          "productId": {
+            "type": "string",
+            "description": "Унікальний ідентифікатор продукту."
+          },
+          "addedAt": {
+            "type": "string",
+            "description": "Дата додавання до списку бажань.",
+            "format": "date-time",
+            "example": "2023-04-01T12:34:56Z"
           }
         }
       },
+
       "SalesData": {
         "type": "object",
         "description": "Дані про продажі.",
@@ -2068,31 +2106,6 @@
                 }
               }
             }
-          },
-          "markupOverview": {
-            "type": "array",
-            "description": "Націнка на товари.",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "description": "Назва товару."
-                },
-                "markup": {
-                  "type": "number",
-                  "description": "Націнка на товар."
-                },
-                "photo": {
-                  "type": "string",
-                  "description": "Посилання на фото товару."
-                },
-                "index": {
-                  "type": "string",
-                  "description": "Унікальний код товару."
-                }
-              }
-            }
           }
         }
       },
@@ -2123,27 +2136,6 @@
           "notes": {
             "type": "string",
             "description": "Додаткові нотатки щодо замовлення."
-          }
-        }
-      },
-      "AdminDashboard": {
-        "type": "object",
-        "description": "Дані для адміністративної панелі, яка надає загальну статистику та інформацію про користувачів.",
-        "properties": {
-          "message": {
-            "type": "string",
-            "description": "Привітання, яке включає ім'я або електронну адресу адміністратора."
-          },
-          "stats": {
-            "$ref": "#/components/schemas/DashboardStats",
-            "description": "Об'єкт, який містить загальну статистику системи."
-          },
-          "users": {
-            "type": "array",
-            "description": "Список користувачів з базовою інформацією про них.",
-            "items": {
-              "$ref": "#/components/schemas/UserProfile"
-            }
           }
         }
       },
@@ -2215,40 +2207,6 @@
             "type": "string",
             "description": "Дата платежу.",
             "format": "date-time"
-          }
-        }
-      },
-
-      "markupOverview": {
-        "type": "array",
-        "description": "Націнка на товари.",
-        "items": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "Назва товару."
-            },
-            "markup": {
-              "type": "number",
-              "description": "Націнка на товар."
-            },
-            "photo": {
-              "type": "string",
-              "description": "Посилання на фото товару."
-            },
-            "index": {
-              "type": "string",
-              "description": "Унікальний код товару."
-            }
-          }
-        }
-      },
-      "response_200": {
-        "type": "object",
-        "properties": {
-          "isFirstAdmin": {
-            "type": "boolean"
           }
         }
       }
