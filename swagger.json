@@ -2181,6 +2181,24 @@
             "type": "string",
             "description": "Статус оплати (наприклад, 'paid')."
           },
+          "deliveryType": {
+            "type": "string",
+            "description": "Тип доставки (кур'єр, поштомат, самовивіз).",
+            "enum": ["courier", "smartbox", "pickup"]
+          },
+          "smartboxDetails": {
+            "type": "object",
+            "properties": {
+              "boxId": {
+                "type": "string",
+                "description": "Унікальний ідентифікатор поштомата."
+              },
+              "location": {
+                "type": "string",
+                "description": "Адреса поштомата."
+              }
+            }
+          },
           "deliveryAddress": {
             "type": "string",
             "description": "Адреса доставки."
