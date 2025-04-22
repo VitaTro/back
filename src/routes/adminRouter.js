@@ -3,6 +3,8 @@ const router = express.Router();
 const User = require("../schemas/user");
 const Product = require("../schemas/product");
 const Wishlist = require("../schemas/wishlist");
+const Order = require("../schemas/order");
+const Sale = require("../schemas/sale");
 // const { authenticateJWT } = require("../middleware/authMiddleware");
 
 // Маршрут для отримання користувачів
@@ -108,7 +110,7 @@ router.get("/dashboard", async (req, res) => {
         photo: "/path/to/photo2.jpg",
         index: "SB-456",
       },
-    ]; // Додати логіку для визначення популярності
+    ]; // Логіка для визначення популярності
     const wishlist = await Wishlist.find().populate("productId");
 
     res.status(200).json({
@@ -126,6 +128,7 @@ router.get("/dashboard", async (req, res) => {
       })),
     });
   } catch (error) {
+    console.error("Error in /dashboard route:", error);
     res.status(500).json({ error: "Failed to load dashboard data" });
   }
 });
@@ -140,16 +143,32 @@ router.get("/finance", async (req, res) => {
       markupOverview: await Product.find().select("name markup photo index"),
     };
 
-    const salesData = {
-      salesCount: 200, // Взяти з бази даних продажів
-      netProfit: 15000.5, // Розрахунок чистого доходу
-    };
+    // Продажі та дохід
+    const salesData = await Sale.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalSales: { $sum: "$totalAmount" },
+          totalProfit: { $sum: "$salePrice" },
+        },
+      },
+    ]);
 
-    const orders = await Order.find().populate("productId");
+    const orders = await Order.find().populate("productId").lean();
+    if (!orders.length) {
+      return res
+        .status(200)
+        .json({ message: "Немає доступних замовлень", orders: [] });
+    }
 
     res.status(200).json({
       financialOverview,
-      salesData,
+      salesData: salesData.length
+        ? {
+            salesCount: salesData[0].totalSales,
+            netProfit: salesData[0].totalProfit,
+          }
+        : { salesCount: 0, netProfit: 0 },
       ordersOverview: orders.map((order) => ({
         orderId: order._id,
         status: order.status,
@@ -160,6 +179,7 @@ router.get("/finance", async (req, res) => {
       })),
     });
   } catch (error) {
+    console.error("Error in /finance route:", error);
     res.status(500).json({ error: "Failed to load financial data" });
   }
 });
