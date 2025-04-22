@@ -6,6 +6,7 @@ const orderValidationSchema = Joi.object({
   status: Joi.string().valid("new", "completed", "cancelled").required(),
   totalPrice: Joi.number().required(),
   paymentStatus: Joi.string().valid("paid", "unpaid").required(),
+  paymentMethod: Joi.string().valid("cash", "card").required(),
   deliveryAddress: Joi.string().required(),
   notes: Joi.string().optional(),
 });
