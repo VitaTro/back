@@ -135,57 +135,6 @@ router.get("/dashboard", async (req, res) => {
   }
 });
 
-router.get("/finance", async (req, res) => {
-  try {
-    // Фінансовий огляд
-    const financialOverview = {
-      purchasePrices: await Product.find().select(
-        "name purchasePrice photo index"
-      ),
-      markupOverview: await Product.find().select("name markup photo index"),
-    };
-
-    // Продажі та дохід
-    const salesData = await Sale.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalSales: { $sum: "$totalAmount" },
-          totalProfit: { $sum: "$salePrice" },
-        },
-      },
-    ]);
-
-    const orders = await Order.find().populate("productId").lean();
-    if (!orders.length) {
-      return res
-        .status(200)
-        .json({ message: "Немає доступних замовлень", orders: [] });
-    }
-
-    res.status(200).json({
-      financialOverview,
-      salesData: salesData.length
-        ? {
-            salesCount: salesData[0].totalSales,
-            netProfit: salesData[0].totalProfit,
-          }
-        : { salesCount: 0, netProfit: 0 },
-      ordersOverview: orders.map((order) => ({
-        orderId: order._id,
-        status: order.status,
-        totalPrice: order.totalPrice,
-        paymentStatus: order.paymentStatus,
-        deliveryAddress: order.deliveryAddress,
-        notes: order.notes,
-      })),
-    });
-  } catch (error) {
-    console.error("Error in /finance route:", error);
-    res.status(500).json({ error: "Failed to load financial data" });
-  }
-});
-
 router.get("/finance/orders", async (req, res) => {
   try {
     const orders = await Order.find().populate("productId").populate("userId");
@@ -400,6 +349,94 @@ router.patch("/finance/sale/:id", async (req, res) => {
   } catch (error) {
     console.error("Error in updating sale:", error);
     res.status(500).json({ error: "Failed to update sale" });
+  }
+});
+router.get("/finance/overview", async (req, res) => {
+  try {
+    // Загальна статистика
+    const stats = {
+      totalUsers: await User.countDocuments(),
+      totalProducts: await Product.countDocuments(),
+      totalOrders: await Order.countDocuments(),
+      totalSales: await Sale.countDocuments(),
+    };
+
+    // Дані продуктів (закупки, низький залишок, популярні товари)
+    const productsOverview = {
+      purchasePrices: await Product.find().select(
+        "name purchasePrice photo index"
+      ),
+      markupOverview: await Product.find().select("name markup photo index"),
+      lowStockItems: await Product.find({ stock: { $lt: 5 } }).select(
+        "name stock photo index"
+      ),
+      popularItems: [
+        {
+          name: "Gold Necklace",
+          popularity: 95,
+          photo: "/path/to/photo1.jpg",
+          index: "GN-123",
+        },
+        {
+          name: "Silver Bracelet",
+          popularity: 88,
+          photo: "/path/to/photo2.jpg",
+          index: "SB-456",
+        },
+      ],
+    };
+
+    // Дані продажів (загальний продаж та прибуток)
+    const salesData = await Sale.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalSales: { $sum: "$totalAmount" },
+          totalProfit: { $sum: "$salePrice" },
+        },
+      },
+    ]);
+
+    const salesOverview = salesData.length
+      ? {
+          salesCount: salesData[0].totalSales,
+          netProfit: salesData[0].totalProfit,
+        }
+      : { salesCount: 0, netProfit: 0 };
+
+    // Дані замовлень
+    const orders = await Order.find().populate("productId").lean();
+    const ordersOverview = orders.map((order) => ({
+      orderId: order._id,
+      status: order.status,
+      totalPrice: order.totalPrice,
+      paymentStatus: order.paymentStatus,
+      deliveryAddress: order.deliveryAddress,
+      notes: order.notes,
+    }));
+
+    // Wishlist (якщо необхідно)
+    const wishlist = await Wishlist.find().populate("productId");
+    const wishlistOverview = wishlist.map((item) => ({
+      name: item.productId.name,
+      count: item.quantity,
+      photo: item.productId.photo,
+      index: item.productId.index,
+    }));
+
+    // Формуємо фінансовий огляд
+    const financialOverview = {
+      stats,
+      productsOverview,
+      salesOverview,
+      ordersOverview,
+      wishlistOverview,
+    };
+
+    res.status(200).json(financialOverview);
+  } catch (error) {
+    console.error("Error in /finance/overview route:", error);
+    res.status(500).json({ error: "Failed to load financial overview" });
   }
 });
 
