@@ -351,6 +351,7 @@ router.patch("/finance/sale/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to update sale" });
   }
 });
+
 router.get("/finance/overview", async (req, res) => {
   try {
     // Загальна статистика

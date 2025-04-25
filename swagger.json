@@ -957,11 +957,11 @@
         }
       }
     },
-    "/api/admin/finance": {
+    "/api/admin/finance/overview": {
       "get": {
         "tags": ["Admin"],
-        "summary": "Фінансова панель",
-        "description": "Надає доступ до фінансової інформації, включаючи продажі, витрати і замовлення.",
+        "summary": "Фінансовий огляд",
+        "description": "Надає доступ до загальної фінансової інформації, включаючи статистику, продажі, замовлення, продукти та інші дані.",
         "parameters": [
           {
             "name": "Authorization",
@@ -982,23 +982,31 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "salesData": {
+                    "stats": {
                       "type": "object",
-                      "description": "Продажі та фінансова інформація.",
+                      "description": "Загальна статистика.",
                       "properties": {
-                        "salesCount": {
+                        "totalUsers": {
                           "type": "integer",
-                          "description": "Кількість проданих товарів."
+                          "description": "Кількість користувачів."
                         },
-                        "netProfit": {
-                          "type": "number",
-                          "description": "Чистий дохід."
+                        "totalProducts": {
+                          "type": "integer",
+                          "description": "Кількість продуктів."
+                        },
+                        "totalOrders": {
+                          "type": "integer",
+                          "description": "Кількість замовлень."
+                        },
+                        "totalSales": {
+                          "type": "integer",
+                          "description": "Кількість продажів."
                         }
                       }
                     },
-                    "financialOverview": {
+                    "productsOverview": {
                       "type": "object",
-                      "description": "Фінансовий огляд.",
+                      "description": "Огляд продуктів.",
                       "properties": {
                         "purchasePrices": {
                           "type": "array",
@@ -1015,7 +1023,7 @@
                         },
                         "markupOverview": {
                           "type": "array",
-                          "description": "Націнка на товари.",
+                          "description": "Націнка продуктів.",
                           "items": {
                             "type": "object",
                             "properties": {
@@ -1025,6 +1033,46 @@
                               "index": { "type": "string" }
                             }
                           }
+                        },
+                        "lowStockItems": {
+                          "type": "array",
+                          "description": "Товари з низьким запасом.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string" },
+                              "stock": { "type": "integer" },
+                              "photo": { "type": "string" },
+                              "index": { "type": "string" }
+                            }
+                          }
+                        },
+                        "popularItems": {
+                          "type": "array",
+                          "description": "Популярні товари.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": { "type": "string" },
+                              "popularity": { "type": "integer" },
+                              "photo": { "type": "string" },
+                              "index": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "salesOverview": {
+                      "type": "object",
+                      "description": "Огляд продажів.",
+                      "properties": {
+                        "salesCount": {
+                          "type": "integer",
+                          "description": "Загальна кількість продажів."
+                        },
+                        "netProfit": {
+                          "type": "number",
+                          "description": "Чистий прибуток."
                         }
                       }
                     },
@@ -1036,15 +1084,15 @@
                         "properties": {
                           "orderId": {
                             "type": "string",
-                            "description": "Ідентифікатор замовлення."
+                            "description": "ID замовлення."
                           },
                           "status": {
                             "type": "string",
-                            "description": "Статус замовлення (нове, виконано, скасовано)."
+                            "description": "Статус замовлення."
                           },
                           "totalPrice": {
                             "type": "number",
-                            "description": "Сума замовлення."
+                            "description": "Загальна ціна."
                           },
                           "paymentStatus": {
                             "type": "string",
@@ -1056,7 +1104,32 @@
                           },
                           "notes": {
                             "type": "string",
-                            "description": "Нотатки щодо замовлення."
+                            "description": "Нотатки до замовлення."
+                          }
+                        }
+                      }
+                    },
+                    "wishlistOverview": {
+                      "type": "array",
+                      "description": "Огляд Wishlist.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Назва продукту."
+                          },
+                          "count": {
+                            "type": "integer",
+                            "description": "Кількість у списку бажань."
+                          },
+                          "photo": {
+                            "type": "string",
+                            "description": "Фото продукту."
+                          },
+                          "index": {
+                            "type": "string",
+                            "description": "Індекс продукту."
                           }
                         }
                       }
@@ -1073,6 +1146,7 @@
         }
       }
     },
+
     "/api/admin/finance/orders": {
       "get": {
         "tags": ["Admin"],
