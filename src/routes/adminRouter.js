@@ -201,6 +201,16 @@ router.post("/finance/orders", async (req, res) => {
     });
 
     await newAdminOrder.save();
+    // Після створення замовлення додаємо продаж
+    for (const product of orderProducts) {
+      const newSale = new Sale({
+        productId: product.productId,
+        quantity: product.quantity,
+        salePrice: product.price,
+        totalAmount: product.price * product.quantity,
+      });
+      await newSale.save();
+    }
 
     res.status(201).json({
       message: "Admin order created successfully.",
