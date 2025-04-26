@@ -150,13 +150,19 @@ router.post("/finance/orders", async (req, res) => {
   try {
     const { products, paymentMethod } = req.body;
 
+    if (!products || products.length === 0) {
+      return res.status(400).json({
+        message: "Масив продуктів не може бути порожнім.",
+      });
+    }
+
     let totalPrice = 0;
     const orderProducts = [];
 
     for (const product of products) {
       const { productId, quantity, color } = product;
-      const dbProduct = await Product.findById(productId);
 
+      const dbProduct = await Product.findById(productId);
       if (!dbProduct || dbProduct.quantity < quantity) {
         return res.status(400).json({
           message: `Продукт ${productId} не доступний або недостатня кількість.`,
@@ -175,10 +181,10 @@ router.post("/finance/orders", async (req, res) => {
       });
 
       dbProduct.quantity -= quantity;
+      if (dbProduct.quantity < 0) {
+        dbProduct.quantity = 0; // Запобігання негативним значенням
+      }
       await dbProduct.save();
-    }
-    if (dbProduct.quantity < 0) {
-      dbProduct.quantity = 0; // Запобігання негативним значенням
     }
 
     const newAdminOrder = new AdminOrder({
