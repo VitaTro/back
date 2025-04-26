@@ -20,7 +20,7 @@ const productSchema = new mongoose.Schema(
     },
     purchasePrice: {
       type: Number,
-      required: true, // Закупівельна ціна
+      required: false, // Закупівельна ціна
     },
     description: {
       type: String,
