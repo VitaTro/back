@@ -1195,8 +1195,8 @@
       },
       "post": {
         "tags": ["Admin"],
-        "summary": "Створити нове замовлення із декількома продуктами",
-        "description": "Цей маршрут дозволяє адміністраторам створювати нові замовлення, додаючи кілька товарів до одного замовлення.",
+        "summary": "Створити нове адміністративне замовлення із декількома продуктами",
+        "description": "Цей маршрут дозволяє адміністраторам створювати нові замовлення, додаючи кілька товарів із зазначенням кольору та кількості.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1216,9 +1216,14 @@
                         "quantity": {
                           "type": "integer",
                           "description": "Кількість одиниць продукту"
+                        },
+                        "color": {
+                          "type": "string",
+                          "description": "Колір продукту",
+                          "example": "yellow"
                         }
                       },
-                      "required": ["productId", "quantity"]
+                      "required": ["productId", "quantity", "color"]
                     }
                   },
                   "paymentMethod": {
@@ -1226,28 +1231,24 @@
                     "enum": ["cash", "card"],
                     "description": "Спосіб оплати",
                     "example": "card"
-                  },
-                  "deliveryAddress": {
-                    "type": "string",
-                    "description": "Адреса доставки",
-                    "example": "123 Main St, City, Country"
-                  },
-                  "notes": {
-                    "type": "string",
-                    "description": "Додаткові нотатки до замовлення",
-                    "example": "Доставити після 16:00"
                   }
                 },
-                "required": ["products", "paymentMethod", "deliveryAddress"]
+                "required": ["products", "paymentMethod"]
               },
               "example": {
                 "products": [
-                  { "productId": "604b2f4a8fd3b341d8f9f2e7", "quantity": 2 },
-                  { "productId": "604b2f4a8fd3b341d8f9f2e8", "quantity": 1 }
+                  {
+                    "productId": "604b2f4a8fd3b341d8f9f2e7",
+                    "quantity": 2,
+                    "color": "red"
+                  },
+                  {
+                    "productId": "604b2f4a8fd3b341d8f9f2e8",
+                    "quantity": 1,
+                    "color": "blue"
+                  }
                 ],
-                "paymentMethod": "card",
-                "deliveryAddress": "123 Main St, City, Country",
-                "notes": "Доставити терміново"
+                "paymentMethod": "card"
               }
             }
           }

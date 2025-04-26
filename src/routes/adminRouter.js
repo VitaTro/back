@@ -4,6 +4,7 @@ const User = require("../schemas/user");
 const Product = require("../schemas/product");
 const Wishlist = require("../schemas/wishlist");
 const Order = require("../schemas/order");
+const AdminOrder = require("../schemas/adminOrder");
 const Sale = require("../schemas/sale");
 const orderValidationSchema = require("../validation/ordersJoi");
 const { validate } = require("../middleware/validateMiddleware");
@@ -145,81 +146,56 @@ router.get("/finance/orders", async (req, res) => {
   }
 });
 
-router.post(
-  "/finance/orders",
-  validate(orderValidationSchema),
-  async (req, res) => {
-    try {
-      const { products, paymentMethod, deliveryAddress, notes } = req.body;
+router.post("/finance/orders", async (req, res) => {
+  try {
+    const { products, paymentMethod } = req.body;
 
-      // Логіка створення замовлення
-      let totalPrice = 0;
-      const orderProducts = [];
+    let totalPrice = 0;
+    const adminOrderProducts = [];
 
-      for (const product of products) {
-        const { productId, quantity } = product;
-        const dbProduct = await Product.findById(productId);
+    for (const product of products) {
+      const { productId, quantity, color } = product;
+      const dbProduct = await Product.findById(productId);
 
-        // Розрахунок ціни та оновлення складу
-        totalPrice += dbProduct.price * quantity;
-        orderProducts.push({
-          productId: dbProduct._id,
-          name: dbProduct.name,
-          price: dbProduct.price,
-          quantity,
-          photoUrl: dbProduct.photoUrl,
+      if (!dbProduct || dbProduct.quantity < quantity) {
+        return res.status(400).json({
+          message: `Продукт ${productId} не доступний або недостатня кількість.`,
         });
-
-        dbProduct.quantity -= quantity;
-        await dbProduct.save();
       }
 
-      // Створюємо замовлення
-      const newOrder = new Order({
-        products: orderProducts,
-        totalPrice,
-        paymentMethod,
-        deliveryAddress,
-        notes,
-        status: "pending-payment", // Початковий статус
+      totalPrice += dbProduct.price * quantity;
+
+      adminOrderProducts.push({
+        productId: dbProduct._id,
+        name: dbProduct.name,
+        price: dbProduct.price,
+        quantity,
+        color, // Додаємо колір до продукту
+        photoUrl: dbProduct.photoUrl,
       });
 
-      await newOrder.save();
-
-      // Імітація підтвердження оплати
-      if (paymentMethod === "card") {
-        const paymentConfirmation = await processPayment(totalPrice);
-
-        if (paymentConfirmation.success) {
-          newOrder.status = "paid"; // Змінюємо статус на "оплачено"
-          await newOrder.save();
-          res.status(201).json({
-            message: "Order created and payment confirmed",
-            order: newOrder,
-          });
-        } else {
-          res.status(400).json({
-            message: "Payment failed. Order created but not confirmed.",
-          });
-        }
-      } else {
-        res.status(201).json({
-          message: "Order created successfully. Awaiting cash payment.",
-          order: newOrder,
-        });
-      }
-    } catch (error) {
-      console.error("Error in creating order:", error);
-      res.status(500).json({ error: "Failed to create order" });
+      dbProduct.quantity -= quantity;
+      await dbProduct.save();
     }
-  }
-);
 
-// Функція для обробки оплати
-async function processPayment(amount) {
-  // Імітація перевірки платежу
-  return { success: true }; // У реальному світі інтегрується платіжна система
-}
+    const newAdminOrder = new AdminOrder({
+      products: adminOrderProducts,
+      totalPrice,
+      paymentMethod,
+      status: "pending-payment",
+    });
+
+    await newAdminOrder.save();
+
+    res.status(201).json({
+      message: "Admin order created successfully.",
+      order: newAdminOrder,
+    });
+  } catch (error) {
+    console.error("Error creating admin order:", error);
+    res.status(500).json({ error: "Failed to create admin order" });
+  }
+});
 
 router.get("/finance/orders/:id", async (req, res) => {
   try {
