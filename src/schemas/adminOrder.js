@@ -22,36 +22,26 @@ const adminOrderSchema = new mongoose.Schema(
     // Метод оплати
     paymentMethod: {
       type: String,
-      enum: ["cash", "card", "bank_transfer"], // Можливість додати інші методи
+      enum: ["cash", "card", "bank_transfer"], // Додаємо гнучкість
       required: true,
     },
 
-    // Адреса доставки (якщо потрібно)
-    deliveryAddress: { type: String },
-
-    // Статус замовлення
-    status: {
-      type: String,
-      enum: ["new", "completed", "cancelled"],
-      default: "new",
-    },
-
     // Примітки до замовлення
-    notes: { type: String },
+    notes: { type: String }, // Нехай буде опціональним
 
     // Унікальний ідентифікатор замовлення
     orderId: {
       type: String,
       unique: true,
       default: () =>
-        `ADM-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+        `ADM-${Math.random().toString(36).substr(2, 9).toUpperCase()}`, // Генеруємо ID для адміністраторів
     },
 
-    // Таймстемпи
+    // Таймстемпи створення та оновлення
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },
-  { timestamps: true }
+  { timestamps: true } // Додатково додає createdAt та updatedAt автоматично
 );
 
 const AdminOrder = mongoose.model("AdminOrder", adminOrderSchema);
