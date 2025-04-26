@@ -152,48 +152,15 @@ router.post(
     try {
       const { products, paymentMethod, deliveryAddress, notes } = req.body;
 
-      if (!products || !Array.isArray(products) || products.length === 0) {
-        return res
-          .status(400)
-          .json({ error: "Products list is required and must not be empty." });
-      }
-
-      if (!["cash", "card"].includes(paymentMethod)) {
-        return res
-          .status(400)
-          .json({ error: "Invalid payment method. Use 'cash' or 'card'." });
-      }
-
-      // Ініціалізуємо загальні показники
+      // Логіка створення замовлення
       let totalPrice = 0;
       const orderProducts = [];
 
-      // Перевіряємо доступність товарів і розраховуємо загальну ціну
       for (const product of products) {
         const { productId, quantity } = product;
-
-        if (!productId || !quantity || quantity <= 0) {
-          return res.status(400).json({
-            error:
-              "Each product must have a valid productId and positive quantity.",
-          });
-        }
-
         const dbProduct = await Product.findById(productId);
 
-        if (!dbProduct) {
-          return res
-            .status(404)
-            .json({ error: `Product with ID ${productId} not found.` });
-        }
-
-        if (dbProduct.quantity < quantity) {
-          return res.status(400).json({
-            error: `Not enough stock for product: ${dbProduct.name}. Available: ${dbProduct.quantity}, Requested: ${quantity}.`,
-          });
-        }
-
-        // Додаємо продукт до списку замовлення
+        // Розрахунок ціни та оновлення складу
         totalPrice += dbProduct.price * quantity;
         orderProducts.push({
           productId: dbProduct._id,
@@ -203,31 +170,56 @@ router.post(
           photoUrl: dbProduct.photoUrl,
         });
 
-        // Оновлюємо кількість товару на складі
         dbProduct.quantity -= quantity;
         await dbProduct.save();
       }
 
-      // Створюємо нове замовлення
+      // Створюємо замовлення
       const newOrder = new Order({
         products: orderProducts,
         totalPrice,
         paymentMethod,
         deliveryAddress,
         notes,
-        status: "new",
+        status: "pending-payment", // Початковий статус
       });
 
       await newOrder.save();
-      res
-        .status(201)
-        .json({ message: "Order created successfully", order: newOrder });
+
+      // Імітація підтвердження оплати
+      if (paymentMethod === "card") {
+        const paymentConfirmation = await processPayment(totalPrice);
+
+        if (paymentConfirmation.success) {
+          newOrder.status = "paid"; // Змінюємо статус на "оплачено"
+          await newOrder.save();
+          res.status(201).json({
+            message: "Order created and payment confirmed",
+            order: newOrder,
+          });
+        } else {
+          res.status(400).json({
+            message: "Payment failed. Order created but not confirmed.",
+          });
+        }
+      } else {
+        res.status(201).json({
+          message: "Order created successfully. Awaiting cash payment.",
+          order: newOrder,
+        });
+      }
     } catch (error) {
       console.error("Error in creating order:", error);
       res.status(500).json({ error: "Failed to create order" });
     }
   }
 );
+
+// Функція для обробки оплати
+async function processPayment(amount) {
+  // Імітація перевірки платежу
+  return { success: true }; // У реальному світі інтегрується платіжна система
+}
 
 router.get("/finance/orders/:id", async (req, res) => {
   try {
