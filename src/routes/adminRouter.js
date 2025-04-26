@@ -163,9 +163,15 @@ router.post("/finance/orders", async (req, res) => {
       const { productId, quantity, color } = product;
 
       const dbProduct = await Product.findById(productId);
-      if (!dbProduct || dbProduct.quantity < quantity) {
+      if (!dbProduct) {
         return res.status(400).json({
-          message: `Продукт ${productId} не доступний або недостатня кількість.`,
+          message: `Продукт ${productId} не знайдено.`,
+        });
+      }
+
+      if (dbProduct.quantity < quantity) {
+        return res.status(400).json({
+          message: `Недостатньо товару для продукту ${productId}. Доступно: ${dbProduct.quantity}.`,
         });
       }
 
