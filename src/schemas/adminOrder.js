@@ -12,7 +12,7 @@ const adminOrderSchema = new mongoose.Schema(
         quantity: { type: Number, required: true },
         name: { type: String, required: true },
         price: { type: Number, required: true },
-        color: { type: String, required: true },
+        color: { type: String }, // Робимо поле опціональним
       },
     ],
 
@@ -20,9 +20,13 @@ const adminOrderSchema = new mongoose.Schema(
     totalPrice: { type: Number, required: true },
 
     // Метод оплати
-    paymentMethod: { type: String, enum: ["cash", "card"], required: true },
+    paymentMethod: {
+      type: String,
+      enum: ["cash", "card", "bank_transfer"], // Можливість додати інші методи
+      required: true,
+    },
 
-    // Адреса доставки (опціонально)
+    // Адреса доставки (якщо потрібно)
     deliveryAddress: { type: String },
 
     // Статус замовлення
@@ -43,7 +47,7 @@ const adminOrderSchema = new mongoose.Schema(
         `ADM-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
     },
 
-    // Таймстемпи для відстеження
+    // Таймстемпи
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },
