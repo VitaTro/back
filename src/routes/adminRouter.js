@@ -151,7 +151,7 @@ router.post("/finance/orders", async (req, res) => {
     const { products, paymentMethod } = req.body;
 
     let totalPrice = 0;
-    const adminOrderProducts = [];
+    const orderProducts = [];
 
     for (const product of products) {
       const { productId, quantity, color } = product;
@@ -165,7 +165,7 @@ router.post("/finance/orders", async (req, res) => {
 
       totalPrice += dbProduct.price * quantity;
 
-      adminOrderProducts.push({
+      orderProducts.push({
         productId: dbProduct._id,
         name: dbProduct.name,
         price: dbProduct.price,
@@ -177,9 +177,12 @@ router.post("/finance/orders", async (req, res) => {
       dbProduct.quantity -= quantity;
       await dbProduct.save();
     }
+    if (dbProduct.quantity < 0) {
+      dbProduct.quantity = 0; // Запобігання негативним значенням
+    }
 
     const newAdminOrder = new AdminOrder({
-      products: adminOrderProducts,
+      products: orderProducts,
       totalPrice,
       paymentMethod,
       status: "pending-payment",
