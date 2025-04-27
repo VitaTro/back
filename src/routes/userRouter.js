@@ -1,5 +1,5 @@
 const express = require("express");
-const Order = require("../schemas/order");
+const OnlineOrder = require("../schemas/finance/onlineOrders");
 const {
   getUserProfile,
   getUserMainData,
@@ -18,7 +18,7 @@ const {
   isAuthenticated,
   authenticateJWT,
 } = require("../middleware/authMiddleware");
-const orderValidationSchema = require("../validation/ordersJoi");
+const orderValidationSchema = require("../validation/onlineOrdersJoi");
 const router = express.Router();
 
 // Профіль користувача

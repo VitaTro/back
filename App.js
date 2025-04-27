@@ -11,6 +11,9 @@ const WishlistRouter = require("./src/routes/wishlistRouter");
 const SearchRouter = require("./src/routes/searchRouter");
 const FilterRouter = require("./src/routes/filterRouter");
 const AdminRouter = require("./src/routes/adminRouter");
+const OnlineFinanceRouter = require("./src/routes/onlineFinanceRouter");
+const OfflineFinanceRouter = require("./src/routes/offlineFinanceRouter");
+const financeOverviewRouter = require("./src/routes/financeOverviewRouter");
 const app = express();
 
 const allowedOrigins = [
@@ -55,7 +58,9 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api", SearchRouter);
 app.use("/api/products", FilterRouter);
 app.use("/api/admin", AdminRouter);
-
+app.use("/api/admin/finance/online", OnlineFinanceRouter);
+app.use("/api/admin/finance/offline", OfflineFinanceRouter);
+app.use("/api/admin/finance/overview", financeOverviewRouter);
 app.post("/upload", upload.single("photo"), (req, res) => {
   try {
     if (!req.file) {

@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
-const adminOrderSchema = new mongoose.Schema(
+
+const offlineOrderSchema = new mongoose.Schema(
   {
     // Масив продуктів у замовленні
     products: [
@@ -30,12 +31,6 @@ const adminOrderSchema = new mongoose.Schema(
     notes: { type: String }, // Нехай буде опціональним
 
     // Унікальний ідентифікатор замовлення
-    orderId: {
-      type: String,
-      unique: true,
-      default: () =>
-        `ADM-${Math.random().toString(36).substr(2, 9).toUpperCase()}`, // Генеруємо ID для адміністраторів
-    },
 
     // Таймстемпи створення та оновлення
     createdAt: { type: Date, default: Date.now },
@@ -44,5 +39,5 @@ const adminOrderSchema = new mongoose.Schema(
   { timestamps: true } // Додатково додає createdAt та updatedAt автоматично
 );
 
-const AdminOrder = mongoose.model("AdminOrder", adminOrderSchema);
-module.exports = AdminOrder;
+const OfflineOrder = mongoose.model("OfflineOrder", offlineOrderSchema);
+module.exports = OfflineOrder;

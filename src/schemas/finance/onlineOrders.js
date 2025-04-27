@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const orderSchema = new mongoose.Schema(
+const onlineOrderSchema = new mongoose.Schema(
   {
     // Основні зв'язки: товар і користувач
     productId: {
@@ -43,7 +43,11 @@ const orderSchema = new mongoose.Schema(
       enum: ["paid", "unpaid"],
       default: "unpaid",
     },
-    paymentMethod: { type: String, enum: ["cash", "card"], required: true },
+    paymentMethod: {
+      type: String,
+      enum: ["cash", "card", "bank_transfer"],
+      required: true,
+    },
 
     // Історія змін оплати
     paymentHistory: [
@@ -80,5 +84,5 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Order = mongoose.model("Order", orderSchema);
-module.exports = Order;
+const OnlineOrder = mongoose.model("Order", onlineOrderSchema);
+module.exports = OnlineOrder;

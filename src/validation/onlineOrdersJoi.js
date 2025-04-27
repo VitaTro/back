@@ -1,6 +1,6 @@
 const Joi = require("joi");
 
-const orderValidationSchema = Joi.object({
+const onlineOrderValidationSchema = Joi.object({
   productId: Joi.string().required(),
   userId: Joi.string().required(),
   status: Joi.string().valid("new", "completed", "cancelled").required(),
@@ -20,4 +20,4 @@ const orderValidationSchema = Joi.object({
   notes: Joi.string().optional(),
 });
 
-module.exports = orderValidationSchema;
+module.exports = onlineOrderValidationSchema;
