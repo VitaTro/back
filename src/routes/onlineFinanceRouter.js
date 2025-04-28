@@ -95,7 +95,10 @@ router.patch("/orders/:id", async (req, res) => {
 router.get("/sales", async (req, res) => {
   try {
     const sales = await OnlineSale.find()
-      .populate("products.productId")
+      .populate({
+        path: "products.productId",
+        select: "name photoUrl",
+      })
       .populate("processedBy");
     res.status(200).json(sales);
   } catch (error) {

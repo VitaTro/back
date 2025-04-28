@@ -11,7 +11,10 @@ const validateOfflineSale = require("../validation/offlineSalesJoi");
 router.get("/orders", async (req, res) => {
   try {
     const orders = await OfflineOrder.find()
-      .populate("products.productId")
+      .populate({
+        path: "products.productId",
+        select: "name photoUrl",
+      })
       .populate("processedBy");
     res.status(200).json(orders);
   } catch (error) {
