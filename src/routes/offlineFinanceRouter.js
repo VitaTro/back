@@ -15,7 +15,6 @@ router.get("/orders", async (req, res) => {
       .populate("processedBy");
     res.status(200).json(orders);
   } catch (error) {
-    console.error("Error fetching offline orders:", error);
     res.status(500).json({ error: "Failed to fetch offline orders" });
   }
 });
@@ -26,31 +25,24 @@ router.post("/orders", validate(validateOfflineOrder), async (req, res) => {
     const { products, totalPrice, paymentMethod, processedBy, saleLocation } =
       req.body;
 
-    if (!products || products.length === 0) {
-      return res.status(400).json({ error: "Products list cannot be empty." });
-    }
-
     const orderProducts = [];
     for (const product of products) {
-      const { productId, quantity } = product;
-
-      const dbProduct = await Product.findById(productId);
-      if (!dbProduct || dbProduct.quantity < quantity) {
+      const dbProduct = await Product.findById(product.productId);
+      if (!dbProduct || dbProduct.quantity < product.quantity) {
         return res.status(400).json({
           error: `Insufficient stock for product: ${
-            dbProduct?.name || productId
+            dbProduct?.name || product.productId
           }`,
         });
       }
-
-      dbProduct.quantity -= quantity;
+      dbProduct.quantity -= product.quantity;
       await dbProduct.save();
 
       orderProducts.push({
         productId: dbProduct._id,
         name: dbProduct.name,
         price: dbProduct.price,
-        quantity,
+        quantity: product.quantity,
       });
     }
 
@@ -68,11 +60,9 @@ router.post("/orders", validate(validateOfflineOrder), async (req, res) => {
       .status(201)
       .json({ message: "Offline order created successfully", order: newOrder });
   } catch (error) {
-    console.error("Error creating offline order:", error);
     res.status(500).json({ error: "Failed to create offline order" });
   }
 });
-
 // Отримати конкретне офлайн-замовлення
 router.get("/orders/:id", async (req, res) => {
   try {
@@ -112,10 +102,11 @@ router.patch("/orders/:id", async (req, res) => {
       order: updatedOrder,
     });
   } catch (error) {
-    console.error("Error updating offline order:", error);
     res.status(500).json({ error: "Failed to update offline order" });
   }
 });
+
+// Отримати всі офлайн-продажі
 router.get("/sales", async (req, res) => {
   try {
     const sales = await OfflineSale.find()
@@ -123,40 +114,32 @@ router.get("/sales", async (req, res) => {
       .populate("processedBy");
     res.status(200).json(sales);
   } catch (error) {
-    console.error("Error fetching offline sales:", error);
     res.status(500).json({ error: "Failed to fetch offline sales" });
   }
 });
 
-// Додати новий запис про офлайн-продаж
+// Створити новий офлайн-продаж
 router.post("/sales", validate(validateOfflineSale), async (req, res) => {
   try {
     const { products, totalAmount, paymentMethod, processedBy, saleLocation } =
       req.body;
 
-    if (!products || products.length === 0) {
-      return res.status(400).json({ error: "Products list cannot be empty." });
-    }
-
     const saleProducts = [];
     for (const product of products) {
-      const { productId, quantity } = product;
-
-      const dbProduct = await Product.findById(productId);
-      if (!dbProduct || dbProduct.quantity < quantity) {
+      const dbProduct = await Product.findById(product.productId);
+      if (!dbProduct || dbProduct.quantity < product.quantity) {
         return res.status(400).json({
           error: `Insufficient stock for product: ${
-            dbProduct?.name || productId
+            dbProduct?.name || product.productId
           }`,
         });
       }
-
-      dbProduct.quantity -= quantity;
+      dbProduct.quantity -= product.quantity;
       await dbProduct.save();
 
       saleProducts.push({
         productId: dbProduct._id,
-        quantity,
+        quantity: product.quantity,
         price: dbProduct.price,
       });
     }
@@ -174,7 +157,6 @@ router.post("/sales", validate(validateOfflineSale), async (req, res) => {
       .status(201)
       .json({ message: "Offline sale recorded successfully", sale: newSale });
   } catch (error) {
-    console.error("Error recording offline sale:", error);
     res.status(500).json({ error: "Failed to record offline sale" });
   }
 });
@@ -182,12 +164,15 @@ router.post("/sales", validate(validateOfflineSale), async (req, res) => {
 // Оновити інформацію про офлайн-продаж
 router.patch("/sales/:id", async (req, res) => {
   try {
-    const { id } = req.params;
     const updatedData = req.body;
 
-    const sale = await OfflineSale.findByIdAndUpdate(id, updatedData, {
-      new: true,
-    });
+    const sale = await OfflineSale.findByIdAndUpdate(
+      req.params.id,
+      updatedData,
+      {
+        new: true,
+      }
+    );
     if (!sale) {
       return res.status(404).json({ error: "Offline sale not found" });
     }
@@ -196,8 +181,8 @@ router.patch("/sales/:id", async (req, res) => {
       .status(200)
       .json({ message: "Offline sale updated successfully", sale });
   } catch (error) {
-    console.error("Error updating offline sale:", error);
     res.status(500).json({ error: "Failed to update offline sale" });
   }
 });
+
 module.exports = router;
