@@ -32,8 +32,8 @@ const onlineOrderSchema = new mongoose.Schema(
     // Статус замовлення
     status: {
       type: String,
-      enum: ["new", "completed", "cancelled"],
-      default: "new",
+      enum: ["received", "assembled", "shipped", "completed", "cancelled"],
+      default: "received",
     },
 
     // Фінансова інформація

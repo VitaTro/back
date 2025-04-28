@@ -23,7 +23,7 @@ const onlineSaleSchema = new mongoose.Schema(
     }, // Метод оплати
     status: {
       type: String,
-      enum: ["confirmed", "pending", "rejected"],
+      enum: ["received", "assembled", "shipped", "completed", "cancelled"],
       default: "pending",
     },
     deliveryDetails: { type: String }, // Додаткові деталі доставки
