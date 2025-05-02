@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const User = require("../schemas/user");
 const Product = require("../schemas/product");
 const OnlineOrder = require("../schemas/finance/onlineOrders");
@@ -7,23 +8,41 @@ const OfflineOrder = require("../schemas/finance/offlineOrders");
 const OnlineSale = require("../schemas/finance/onlineSales");
 const OfflineSale = require("../schemas/finance/offlineSales");
 const FinanceSettings = require("../schemas/financeSettings"); // Схема для налаштувань
+const FinanceOverview = require("../schemas/finance/financeOverview");
 
 // GET: Отримати загальний фінансовий огляд
 router.get("/", async (req, res) => {
   try {
+    console.log("🔍 Fetching financial overview...");
+
     // Загальна статистика
     const stats = {
       totalUsers: await User.countDocuments(),
       totalProducts: await Product.countDocuments(),
       totalOnlineOrders: await OnlineOrder.countDocuments(),
       totalOfflineOrders: await OfflineOrder.countDocuments(),
+      completedOfflineOrders: await OfflineOrder.countDocuments({
+        status: "completed",
+      }), // ВАЖЛИВО!
       totalOnlineSales: await OnlineSale.countDocuments(),
       totalOfflineSales: await OfflineSale.countDocuments(),
     };
-
     // Огляд продуктів: низький залишок
     const lowStockItems = await Product.find({ stock: { $lt: 5 } }).select(
       "name stock photo index"
+    );
+
+    // Огляд виконаних замовлень
+    const completedOrders = await OfflineOrder.find({
+      status: "completed",
+    }).select("products totalPrice paymentMethod createdAt");
+
+    const financeOverview = await FinanceOverview.findOne({}).populate(
+      "completedOrders"
+    );
+    console.log(
+      "🔎 Populated completedOrders:",
+      financeOverview.completedOrders
     );
 
     // Дані продажів: загальна сума та прибуток
@@ -63,14 +82,16 @@ router.get("/", async (req, res) => {
     // Формуємо фінансовий огляд
     const financialOverview = {
       stats,
+      completedOrders, // Додаємо виконані замовлення
       lowStockItems,
       salesOverview,
       financeSettings,
     };
 
+    console.log("✅ Financial overview fetched:", financialOverview);
     res.status(200).json(financialOverview);
   } catch (error) {
-    console.error("Error in /finance/overview route:", error);
+    console.error("🔥 Error in /finance/overview route:", error);
     res.status(500).json({ error: "Failed to load financial overview" });
   }
 });

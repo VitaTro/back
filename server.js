@@ -3,6 +3,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const app = require("./App");
+require("./cronTasks");
 
 const PORT = process.env.PORT || 5000;
 

@@ -5,6 +5,7 @@ const offlineOrderSchema = new mongoose.Schema(
     // Масив продуктів у замовленні
     products: [
       {
+        _id: false,
         productId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Product",
@@ -30,8 +31,11 @@ const offlineOrderSchema = new mongoose.Schema(
 
     // Примітки до замовлення
     notes: { type: String }, // Нехай буде опціональним
-
-    // Унікальний ідентифікатор замовлення
+    status: {
+      type: String,
+      enum: ["pending", "completed", "cancelled"],
+      default: "pending",
+    },
 
     // Таймстемпи створення та оновлення
     createdAt: { type: Date, default: Date.now },
