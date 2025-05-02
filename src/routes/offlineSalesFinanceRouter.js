@@ -55,9 +55,6 @@ router.post("/", validate(offlineSaleValidationSchema), async (req, res) => {
 
       saleProducts.push({
         productId: dbProduct._id,
-        quantity: product.quantity,
-        price: dbProduct.price,
-        photoUrl: dbProduct.photoUrl,
       });
     }
 

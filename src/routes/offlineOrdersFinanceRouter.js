@@ -5,10 +5,10 @@ const OfflineOrder = require("../schemas/finance/offlineOrders");
 const { validate } = require("../middleware/validateMiddleware");
 const offlineOrderValidationSchema = require("../validation/offlineOrdersJoi");
 const Product = require("../schemas/product");
-const offlineSaleValidationSchema = require("../validation/offlineSalesJoi");
+
 const OfflineSale = require("../schemas/finance/offlineSales");
 const FinanceOverview = require("../schemas/finance/financeOverview");
-const FinanceSettings = require("../schemas/financeSettings");
+
 router.get("/", async (req, res) => {
   try {
     console.log("🔍 Fetching offline orders...");
