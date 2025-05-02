@@ -12,8 +12,10 @@ const SearchRouter = require("./src/routes/searchRouter");
 const FilterRouter = require("./src/routes/filterRouter");
 const AdminRouter = require("./src/routes/adminRouter");
 const OnlineFinanceRouter = require("./src/routes/onlineFinanceRouter");
-const OfflineFinanceRouter = require("./src/routes/offlineFinanceRouter");
+const OfflineOrdersFinanceRouter = require("./src/routes/offlineOrdersFinanceRouter");
 const financeOverviewRouter = require("./src/routes/financeOverviewRouter");
+const OfflineSalesFinanceRouter = require("./src/routes/offlineSalesFinanceRouter");
+const offlineSaleValidationSchema = require("./src/validation/offlineSalesJoi");
 const app = express();
 
 const allowedOrigins = [
@@ -59,7 +61,8 @@ app.use("/api", SearchRouter);
 app.use("/api/products", FilterRouter);
 app.use("/api/admin", AdminRouter);
 app.use("/api/admin/finance/online", OnlineFinanceRouter);
-app.use("/api/admin/finance/offline", OfflineFinanceRouter);
+app.use("/api/admin/finance/offline/orders", OfflineOrdersFinanceRouter);
+app.use("/api/admin/finance/offline/sales", OfflineSalesFinanceRouter);
 app.use("/api/admin/finance/overview", financeOverviewRouter);
 app.post("/upload", upload.single("photo"), (req, res) => {
   try {

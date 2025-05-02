@@ -1,11 +1,15 @@
 const mongoose = require("mongoose");
-const OfflineOrder = require("./offlineOrders");
+const OfflineSale = require("./offlineSales");
+const OnlineSale = require("./onlineSales");
 
 const financeOverviewSchema = new mongoose.Schema({
-  completedOrders: [
-    { type: mongoose.Schema.Types.ObjectId, ref: "OfflineOrder" },
-  ],
-  totalRevenue: { type: Number, default: 0 },
+  totalRevenue: { type: Number, default: 0 }, // Загальний дохід
+  totalProfit: { type: Number, default: 0 }, // 💰 Чистий прибуток
+  expenses: { type: Number, default: 0 }, // 🛠 Витрати (операційні, закупівлі)
+  completedSales: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "OfflineSale" },
+    { type: mongoose.Schema.Types.ObjectId, ref: "OnlineSale" },
+  ], // ✅ Тепер зберігаємо продажі, а не замовлення!
 });
 
 const FinanceOverview = mongoose.model(
