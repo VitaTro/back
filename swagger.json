@@ -987,123 +987,80 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Фінансові дані успішно отримані.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "stats": {
-                      "type": "object",
-                      "description": "Основні фінансові показники",
-                      "properties": {
-                        "totalUsers": {
-                          "type": "integer",
-                          "description": "Кількість зареєстрованих користувачів."
-                        },
-                        "totalProducts": {
-                          "type": "integer",
-                          "description": "Кількість активних продуктів."
-                        },
-                        "totalOnlineSales": {
-                          "type": "integer",
-                          "description": "Кількість онлайн-продажів."
-                        },
-                        "totalOfflineSales": {
-                          "type": "integer",
-                          "description": "Кількість офлайн-продажів."
-                        }
-                      }
-                    },
-                    "salesOverview": {
-                      "type": "object",
-                      "description": "Аналіз продажів",
-                      "properties": {
-                        "online": {
-                          "type": "object",
-                          "properties": {
-                            "totalSales": {
-                              "type": "number",
-                              "description": "Сума онлайн-продажів."
-                            },
-                            "netProfit": {
-                              "type": "number",
-                              "description": "Чистий прибуток від онлайн-продажів."
-                            }
-                          }
-                        },
-                        "offline": {
-                          "type": "object",
-                          "properties": {
-                            "totalSales": {
-                              "type": "number",
-                              "description": "Сума офлайн-продажів."
-                            },
-                            "netProfit": {
-                              "type": "number",
-                              "description": "Чистий прибуток від офлайн-продажів."
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "paymentMethods": {
-                      "type": "object",
-                      "description": "Розподіл платежів",
-                      "properties": {
-                        "cash": {
-                          "type": "number",
-                          "description": "Сума продажів готівкою."
-                        },
-                        "card": {
-                          "type": "number",
-                          "description": "Сума продажів карткою."
-                        },
-                        "bank_transfer": {
-                          "type": "number",
-                          "description": "Сума продажів через банківський переказ."
-                        }
-                      }
-                    },
-                    "lowStockItems": {
-                      "type": "array",
-                      "description": "Продукти з низьким запасом",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "name": { "type": "string" },
-                          "stock": { "type": "integer" }
-                        }
-                      }
-                    },
-                    "financeSettings": {
-                      "type": "object",
-                      "description": "Фінансові налаштування",
-                      "properties": {
-                        "taxRate": {
-                          "type": "number",
-                          "description": "Ставка податку у відсотках."
-                        },
-                        "operatingCosts": {
-                          "type": "number",
-                          "description": "Загальні операційні витрати."
-                        },
-                        "budgetForProcurement": {
-                          "type": "number",
-                          "description": "Бюджет для закупівлі товарів."
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
+          "200": { "description": "Фінансові дані успішно отримані." },
           "401": { "description": "Немає токена або недійсний." },
           "403": {
             "description": "Доступ заборонено для неадміністративних користувачів."
           }
+        }
+      },
+      "post": {
+        "tags": ["Finance Overview"],
+        "summary": "Створити нові фінансові налаштування",
+        "description": "Ініціалізує фінансові налаштування, включаючи ставку податку, операційні витрати та бюджет закупівлі.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Bearer-токен для авторизації адміністратора.",
+            "schema": {
+              "type": "string",
+              "example": "Bearer eyJhbGciOiJI..."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "taxRate": 15,
+                "operatingCosts": 5000,
+                "budgetForProcurement": 10000
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Фінансові налаштування успішно створені." },
+          "400": { "description": "Недійсні дані у запиті." },
+          "500": { "description": "Помилка сервера." }
+        }
+      },
+      "patch": {
+        "tags": ["Finance Overview"],
+        "summary": "Оновити фінансові налаштування",
+        "description": "Дозволяє оновлювати параметри фінансів, такі як податкова ставка та операційні витрати.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Bearer-токен для авторизації адміністратора.",
+            "schema": {
+              "type": "string",
+              "example": "Bearer eyJhbGciOiJI..."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "taxRate": 20,
+                "operatingCosts": 7000,
+                "budgetForProcurement": 12000
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Фінансові налаштування успішно оновлені." },
+          "400": { "description": "Недійсні дані у запиті." },
+          "404": { "description": "Фінансові налаштування не знайдені." },
+          "500": { "description": "Помилка сервера." }
         }
       }
     },
