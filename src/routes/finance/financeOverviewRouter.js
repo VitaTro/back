@@ -1,14 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
-const User = require("../schemas/user");
-const Product = require("../schemas/product");
-const OnlineOrder = require("../schemas/finance/onlineOrders");
-const OfflineOrder = require("../schemas/finance/offlineOrders");
-const OnlineSale = require("../schemas/finance/onlineSales");
-const OfflineSale = require("../schemas/finance/offlineSales");
-const FinanceSettings = require("../schemas/financeSettings"); // Схема для налаштувань
-const FinanceOverview = require("../schemas/finance/financeOverview");
+const User = require("../../schemas/user");
+const Product = require("../../schemas/product");
+const OnlineOrder = require("../../schemas/finance/onlineOrders");
+const OfflineOrder = require("../../schemas/finance/offlineOrders");
+const OnlineSale = require("../../schemas/finance/onlineSales");
+const OfflineSale = require("../../schemas/finance/offlineSales");
+const FinanceSettings = require("../../schemas/finance/financeSettings"); // Схема для налаштувань
+const FinanceOverview = require("../../schemas/finance/financeOverview");
 
 // GET: Отримати загальний фінансовий огляд
 router.get("/", async (req, res) => {
@@ -19,31 +19,46 @@ router.get("/", async (req, res) => {
     const stats = {
       totalUsers: await User.countDocuments(),
       totalProducts: await Product.countDocuments(),
-      totalOnlineOrders: await OnlineOrder.countDocuments(),
-      totalOfflineOrders: await OfflineOrder.countDocuments(),
-      completedOfflineOrders: await OfflineOrder.countDocuments({
-        status: "completed",
-      }), // ВАЖЛИВО!
+
+      // Продажі (а не просто замовлення!)
       totalOnlineSales: await OnlineSale.countDocuments(),
       totalOfflineSales: await OfflineSale.countDocuments(),
+
+      // Загальна виручка за методами оплати
+      totalRevenue: await FinanceOverview.findOne().select("totalRevenue"),
+
+      paymentMethods: {
+        cash: await OfflineSale.aggregate([
+          { $match: { paymentMethod: "cash" } },
+          { $group: { _id: null, totalCash: { $sum: "$totalAmount" } } },
+        ]).then((data) => data[0]?.totalCash || 0),
+
+        card: await OfflineSale.aggregate([
+          { $match: { paymentMethod: "card" } },
+          { $group: { _id: null, totalCard: { $sum: "$totalAmount" } } },
+        ]).then((data) => data[0]?.totalCard || 0),
+
+        bank_transfer: await OfflineSale.aggregate([
+          { $match: { paymentMethod: "bank_transfer" } },
+          { $group: { _id: null, totalBank: { $sum: "$totalAmount" } } },
+        ]).then((data) => data[0]?.totalBank || 0),
+      },
     };
+
     // Огляд продуктів: низький залишок
     const lowStockItems = await Product.find({ stock: { $lt: 5 } }).select(
       "name stock photo index"
     );
 
     // Огляд виконаних замовлень
-    const completedOrders = await OfflineOrder.find({
+    const completedSales = await OfflineSale.find({
       status: "completed",
     }).select("products totalPrice paymentMethod createdAt");
 
     const financeOverview = await FinanceOverview.findOne({}).populate(
-      "completedOrders"
+      "completedSales"
     );
-    console.log(
-      "🔎 Populated completedOrders:",
-      financeOverview.completedOrders
-    );
+    console.log("🔎 Populated completedSales:", financeOverview.completedSales);
 
     // Дані продажів: загальна сума та прибуток
     const onlineSalesData = await OnlineSale.aggregate([
@@ -77,12 +92,16 @@ router.get("/", async (req, res) => {
     };
 
     // Дані з налаштувань фінансів
-    const financeSettings = await FinanceSettings.findOne();
+    const financeSettings = (await FinanceSettings.findOne()) || {
+      taxRate: 0,
+      operatingCosts: 0,
+      budgetForProcurement: 0,
+    };
 
     // Формуємо фінансовий огляд
     const financialOverview = {
       stats,
-      completedOrders, // Додаємо виконані замовлення
+      completedSales,
       lowStockItems,
       salesOverview,
       financeSettings,

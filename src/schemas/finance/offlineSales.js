@@ -1,8 +1,13 @@
 const mongoose = require("mongoose");
-
+const OfflineOrder = require("./offlineOrders");
+const Product = require("../product");
 const offlineSaleSchema = new mongoose.Schema(
   {
-    // Основні зв'язки
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "OfflineOrder",
+      required: true,
+    },
     products: [
       {
         productId: {
@@ -14,23 +19,22 @@ const offlineSaleSchema = new mongoose.Schema(
         quantity: { type: Number, required: true },
         name: { type: String, required: true },
         price: { type: Number, required: true },
-        color: { type: String }, // Робимо поле опціональним
+        color: { type: String },
       },
     ],
-    totalAmount: { type: Number, required: true }, // Загальна сума продажу
+    totalAmount: { type: Number, required: true },
     paymentMethod: {
       type: String,
       enum: ["cash", "bank_transfer", "card"],
       required: true,
-    }, // Метод оплати
+    },
     status: {
       type: String,
       enum: ["completed", "pending", "cancelled"],
       default: "completed",
     },
-
     notes: { type: String },
-    saleDate: { type: Date, default: Date.now }, // Дата продажу
+    saleDate: { type: Date, default: Date.now },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
     archived: { type: Boolean, default: false },

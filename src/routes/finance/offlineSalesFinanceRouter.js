@@ -2,13 +2,13 @@ const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
 
-const { validate } = require("../middleware/validateMiddleware");
+const { validate } = require("../../middleware/validateMiddleware");
 
-const Product = require("../schemas/product");
-const offlineSaleValidationSchema = require("../validation/offlineSalesJoi");
-const OfflineSale = require("../schemas/finance/offlineSales");
-const FinanceOverview = require("../schemas/finance/financeOverview");
-const FinanceSettings = require("../schemas/financeSettings");
+const Product = require("../../schemas/product");
+const offlineSaleValidationSchema = require("../../validation/offlineSalesJoi");
+const OfflineSale = require("../../schemas/finance/offlineSales");
+const FinanceOverview = require("../../schemas/finance/financeOverview");
+const FinanceSettings = require("../../schemas/finance/financeSettings");
 
 // Отримати всі офлайн-продажі
 router.get("/", async (req, res) => {

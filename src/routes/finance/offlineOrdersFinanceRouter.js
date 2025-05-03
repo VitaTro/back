@@ -1,13 +1,13 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
-const OfflineOrder = require("../schemas/finance/offlineOrders");
-const { validate } = require("../middleware/validateMiddleware");
-const offlineOrderValidationSchema = require("../validation/offlineOrdersJoi");
-const Product = require("../schemas/product");
+const OfflineOrder = require("../../schemas/finance/offlineOrders");
+const { validate } = require("../../middleware/validateMiddleware");
+const offlineOrderValidationSchema = require("../../validation/offlineOrdersJoi");
+const Product = require("../../schemas/product");
 
-const OfflineSale = require("../schemas/finance/offlineSales");
-const FinanceOverview = require("../schemas/finance/financeOverview");
+const OfflineSale = require("../../schemas/finance/offlineSales");
+const FinanceOverview = require("../../schemas/finance/financeOverview");
 
 router.get("/", async (req, res) => {
   try {

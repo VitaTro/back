@@ -11,11 +11,12 @@ const WishlistRouter = require("./src/routes/wishlistRouter");
 const SearchRouter = require("./src/routes/searchRouter");
 const FilterRouter = require("./src/routes/filterRouter");
 const AdminRouter = require("./src/routes/adminRouter");
-const OnlineFinanceRouter = require("./src/routes/onlineFinanceRouter");
-const OfflineOrdersFinanceRouter = require("./src/routes/offlineOrdersFinanceRouter");
-const financeOverviewRouter = require("./src/routes/financeOverviewRouter");
-const OfflineSalesFinanceRouter = require("./src/routes/offlineSalesFinanceRouter");
-const offlineSaleValidationSchema = require("./src/validation/offlineSalesJoi");
+const OnlineOrdersFinanceRouter = require("./src/routes/finance/onlineOrdersFinanceRouter");
+const OnlineSalesFinanceRouter = require("./src/routes/finance/onlineSalesFinanceRouter");
+const OfflineOrdersFinanceRouter = require("./src/routes/finance/offlineOrdersFinanceRouter");
+const OfflineSalesFinanceRouter = require("./src/routes/finance/offlineSalesFinanceRouter");
+const FinanceOverviewRouter = require("./src/routes/finance/financeOverviewRouter");
+const FinanceSettingsRouter = require("./src/routes/finance/financeSettingsRouter");
 const app = express();
 
 const allowedOrigins = [
@@ -60,10 +61,12 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api", SearchRouter);
 app.use("/api/products", FilterRouter);
 app.use("/api/admin", AdminRouter);
-app.use("/api/admin/finance/online", OnlineFinanceRouter);
+app.use("/api/admin/finance/online/orders", OnlineOrdersFinanceRouter);
+app.use("/api/admin/finance/online/sales", OnlineSalesFinanceRouter);
 app.use("/api/admin/finance/offline/orders", OfflineOrdersFinanceRouter);
 app.use("/api/admin/finance/offline/sales", OfflineSalesFinanceRouter);
-app.use("/api/admin/finance/overview", financeOverviewRouter);
+app.use("/api/admin/finance/overview", FinanceOverviewRouter);
+app.use("/api/admin/finance/settings", FinanceSettingsRouter);
 app.post("/upload", upload.single("photo"), (req, res) => {
   try {
     if (!req.file) {
