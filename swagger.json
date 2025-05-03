@@ -971,9 +971,9 @@
     },
     "/api/admin/finance/overview": {
       "get": {
-        "tags": ["Finance Settings"],
+        "tags": ["Finance Overview"],
         "summary": "Фінансовий огляд",
-        "description": "Надає доступ до загальної фінансової інформації, включаючи статистику, продажі, замовлення, продукти та налаштування.",
+        "description": "Повертає загальну фінансову аналітику компанії, включаючи продажі, прибуток, витрати та запаси.",
         "parameters": [
           {
             "name": "Authorization",
@@ -988,7 +988,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Фінансові дані успішно отримано.",
+            "description": "Фінансові дані успішно отримані.",
             "content": {
               "application/json": {
                 "schema": {
@@ -996,23 +996,15 @@
                   "properties": {
                     "stats": {
                       "type": "object",
-                      "description": "Загальна статистика.",
+                      "description": "Основні фінансові показники",
                       "properties": {
                         "totalUsers": {
                           "type": "integer",
-                          "description": "Кількість користувачів."
+                          "description": "Кількість зареєстрованих користувачів."
                         },
                         "totalProducts": {
                           "type": "integer",
-                          "description": "Кількість продуктів."
-                        },
-                        "totalOnlineOrders": {
-                          "type": "integer",
-                          "description": "Кількість онлайн-замовлень."
-                        },
-                        "totalOfflineOrders": {
-                          "type": "integer",
-                          "description": "Кількість офлайн-замовлень."
+                          "description": "Кількість активних продуктів."
                         },
                         "totalOnlineSales": {
                           "type": "integer",
@@ -1026,14 +1018,14 @@
                     },
                     "salesOverview": {
                       "type": "object",
-                      "description": "Огляд продажів.",
+                      "description": "Аналіз продажів",
                       "properties": {
                         "online": {
                           "type": "object",
                           "properties": {
                             "totalSales": {
                               "type": "number",
-                              "description": "Загальна сума онлайн-продажів."
+                              "description": "Сума онлайн-продажів."
                             },
                             "netProfit": {
                               "type": "number",
@@ -1046,7 +1038,7 @@
                           "properties": {
                             "totalSales": {
                               "type": "number",
-                              "description": "Загальна сума офлайн-продажів."
+                              "description": "Сума офлайн-продажів."
                             },
                             "netProfit": {
                               "type": "number",
@@ -1056,9 +1048,38 @@
                         }
                       }
                     },
+                    "paymentMethods": {
+                      "type": "object",
+                      "description": "Розподіл платежів",
+                      "properties": {
+                        "cash": {
+                          "type": "number",
+                          "description": "Сума продажів готівкою."
+                        },
+                        "card": {
+                          "type": "number",
+                          "description": "Сума продажів карткою."
+                        },
+                        "bank_transfer": {
+                          "type": "number",
+                          "description": "Сума продажів через банківський переказ."
+                        }
+                      }
+                    },
+                    "lowStockItems": {
+                      "type": "array",
+                      "description": "Продукти з низьким запасом",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": { "type": "string" },
+                          "stock": { "type": "integer" }
+                        }
+                      }
+                    },
                     "financeSettings": {
                       "type": "object",
-                      "description": "Налаштування фінансів.",
+                      "description": "Фінансові налаштування",
                       "properties": {
                         "taxRate": {
                           "type": "number",
@@ -1071,10 +1092,6 @@
                         "budgetForProcurement": {
                           "type": "number",
                           "description": "Бюджет для закупівлі товарів."
-                        },
-                        "lastUpdated": {
-                          "type": "string",
-                          "description": "Останнє оновлення налаштувань."
                         }
                       }
                     }
@@ -1083,16 +1100,18 @@
               }
             }
           },
-          "401": { "description": "Токен відсутній або недійсний." },
+          "401": { "description": "Немає токена або недійсний." },
           "403": {
             "description": "Доступ заборонено для неадміністративних користувачів."
           }
         }
-      },
-      "post": {
+      }
+    },
+    "/api/admin/finance/settings": {
+      "get": {
         "tags": ["Finance Settings"],
-        "summary": "Створити фінансові налаштування",
-        "description": "Ініціалізує фінансові налаштування, такі як ставка податку, операційні витрати та бюджет на закупівлю.",
+        "summary": "Отримати фінансові налаштування",
+        "description": "Повертає поточні налаштування фінансів, такі як ставка податку, операційні витрати та бюджет закупівлі.",
         "parameters": [
           {
             "name": "Authorization",
@@ -1105,44 +1124,28 @@
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "taxRate": {
-                    "type": "number",
-                    "description": "Ставка податку у відсотках."
-                  },
-                  "operatingCosts": {
-                    "type": "number",
-                    "description": "Загальні операційні витрати."
-                  },
-                  "budgetForProcurement": {
-                    "type": "number",
-                    "description": "Бюджет для закупівлі товарів."
-                  }
-                },
+        "responses": {
+          "200": {
+            "description": "Фінансові налаштування успішно отримані.",
+            "content": {
+              "application/json": {
                 "example": {
-                  "taxRate": 15,
+                  "taxRate": 20,
                   "operatingCosts": 5000,
-                  "budgetForProcurement": 10000
+                  "budgetForProcurement": 15000,
+                  "lastUpdated": "2025-05-03T07:45:00.000Z"
                 }
               }
             }
-          }
-        },
-        "responses": {
-          "201": { "description": "Налаштування фінансів успішно створено." },
-          "400": { "description": "Недійсні дані у запиті." }
+          },
+          "404": { "description": "Фінансові налаштування не знайдені." },
+          "500": { "description": "Помилка сервера." }
         }
       },
       "patch": {
         "tags": ["Finance Settings"],
         "summary": "Оновити фінансові налаштування",
-        "description": "Дозволяє оновлювати поточні налаштування фінансів для врахування змін у бізнесі.",
+        "description": "Дозволяє змінювати параметри фінансів, такі як податкова ставка та операційні витрати.",
         "parameters": [
           {
             "name": "Authorization",
@@ -1159,35 +1162,18 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "taxRate": {
-                    "type": "number",
-                    "description": "Ставка податку у відсотках."
-                  },
-                  "operatingCosts": {
-                    "type": "number",
-                    "description": "Загальні операційні витрати."
-                  },
-                  "budgetForProcurement": {
-                    "type": "number",
-                    "description": "Бюджет для закупівлі товарів."
-                  }
-                },
-                "example": {
-                  "taxRate": 20,
-                  "operatingCosts": 7000,
-                  "budgetForProcurement": 12000
-                }
+              "example": {
+                "taxRate": 18,
+                "operatingCosts": 4500,
+                "budgetForProcurement": 14000
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Налаштування фінансів успішно оновлено." },
-          "400": { "description": "Недійсні дані у запиті." },
-          "404": { "description": "Налаштування фінансів не знайдено." }
+          "200": { "description": "Налаштування успішно оновлені." },
+          "404": { "description": "Налаштування не знайдені." },
+          "500": { "description": "Помилка сервера." }
         }
       }
     },
@@ -3196,7 +3182,7 @@
       },
       "FinancialOverview": {
         "type": "object",
-        "description": "Огляд фінансів.",
+        "description": "Огляд фінансів, що містить статистику продажів, способи оплати та фінансові налаштування.",
         "properties": {
           "stats": {
             "type": "object",
@@ -3204,43 +3190,77 @@
             "properties": {
               "totalUsers": {
                 "type": "integer",
-                "description": "Кількість користувачів."
+                "description": "Кількість зареєстрованих користувачів."
               },
               "totalProducts": {
                 "type": "integer",
-                "description": "Кількість продуктів."
+                "description": "Кількість доступних продуктів."
+              },
+              "totalOnlineSales": {
+                "type": "integer",
+                "description": "Кількість онлайн-продажів."
+              },
+              "totalOfflineSales": {
+                "type": "integer",
+                "description": "Кількість офлайн-продажів."
               }
             }
           },
           "salesOverview": {
             "type": "object",
-            "description": "Огляд продажів.",
+            "description": "Огляд продажів з розподілом між онлайн та офлайн.",
             "properties": {
               "online": {
                 "type": "object",
-                "description": "Онлайн-продажі.",
+                "description": "Аналіз онлайн-продажів.",
                 "properties": {
-                  "totalAmount": {
+                  "totalSales": {
                     "type": "number",
                     "description": "Загальна сума онлайн-продажів."
+                  },
+                  "netProfit": {
+                    "type": "number",
+                    "description": "Чистий прибуток від онлайн-продажів."
                   }
                 }
               },
               "offline": {
                 "type": "object",
-                "description": "Офлайн-продажі.",
+                "description": "Аналіз офлайн-продажів.",
                 "properties": {
-                  "totalAmount": {
+                  "totalSales": {
                     "type": "number",
                     "description": "Загальна сума офлайн-продажів."
+                  },
+                  "netProfit": {
+                    "type": "number",
+                    "description": "Чистий прибуток від офлайн-продажів."
                   }
                 }
               }
             }
           },
+          "paymentMethods": {
+            "type": "object",
+            "description": "Розподіл продажів за способами оплати.",
+            "properties": {
+              "cash": {
+                "type": "number",
+                "description": "Загальна сума продажів готівкою."
+              },
+              "card": {
+                "type": "number",
+                "description": "Загальна сума продажів карткою."
+              },
+              "bank_transfer": {
+                "type": "number",
+                "description": "Загальна сума продажів через банківський переказ."
+              }
+            }
+          },
           "financeSettings": {
             "type": "object",
-            "description": "Налаштування фінансів.",
+            "description": "Налаштування фінансів, що визначають податкову політику та операційні витрати.",
             "properties": {
               "taxRate": {
                 "type": "number",
@@ -3248,7 +3268,11 @@
               },
               "operatingCosts": {
                 "type": "number",
-                "description": "Операційні витрати."
+                "description": "Загальні операційні витрати."
+              },
+              "budgetForProcurement": {
+                "type": "number",
+                "description": "Бюджет для закупівлі товарів."
               }
             }
           }
@@ -3256,7 +3280,7 @@
       },
       "Order": {
         "type": "object",
-        "description": "Дані про замовлення.",
+        "description": "Дані про замовлення (онлайн та офлайн).",
         "properties": {
           "orderId": {
             "type": "string",
@@ -3289,8 +3313,9 @@
           },
           "userId": {
             "type": "string",
-            "description": "ID користувача, який зробив замовлення.",
-            "example": "604b2f4a8fd3b341d8f9f2e8"
+            "description": "ID користувача, який зробив замовлення (тільки для онлайн-замовлень).",
+            "example": "604b2f4a8fd3b341d8f9f2e8",
+            "nullable": true
           },
           "status": {
             "type": "string",
@@ -3303,10 +3328,17 @@
             "description": "Загальна сума замовлення.",
             "example": 150.5
           },
+          "saleType": {
+            "type": "string",
+            "description": "Тип замовлення: онлайн або офлайн.",
+            "enum": ["online", "offline"],
+            "example": "online"
+          },
           "saleLocation": {
             "type": "string",
-            "description": "Місце здійснення замовлення (для офлайн-замовлень).",
-            "example": "Shop #45"
+            "description": "Місце здійснення замовлення (тільки для офлайн-замовлень).",
+            "example": "Shop #45",
+            "nullable": true
           },
           "paymentMethod": {
             "type": "string",
@@ -3318,51 +3350,53 @@
         "required": [
           "orderId",
           "products",
-          "userId",
           "status",
           "totalPrice",
+          "saleType",
           "paymentMethod"
         ]
       },
 
-      "Purchase": {
+      "Sale": {
         "type": "object",
-        "description": "Дані про покупку.",
+        "description": "Дані про завершений продаж (офлайн або онлайн).",
         "properties": {
-          "orderId": {
+          "saleId": {
             "type": "string",
-            "description": "Унікальний ідентифікатор замовлення."
+            "description": "Унікальний ідентифікатор продажу."
           },
           "date": {
             "type": "string",
-            "description": "Дата покупки.",
+            "description": "Дата продажу.",
             "format": "date-time"
           },
           "totalAmount": {
             "type": "number",
-            "description": "Загальна сума покупки.",
+            "description": "Загальна сума продажу.",
             "example": 150.5
           },
           "items": {
             "type": "array",
-            "description": "Список товарів у цьому замовленні.",
+            "description": "Список товарів у продажу.",
             "items": {
               "$ref": "#/components/schemas/Product"
             }
           },
           "status": {
             "type": "string",
-            "description": "Статус замовлення (completed, cancelled).",
+            "description": "Стан продажу (completed, cancelled).",
             "example": "completed"
-          },
-          "shippingAddress": {
-            "type": "string",
-            "description": "Адреса доставки."
           },
           "paymentMethod": {
             "type": "string",
-            "description": "Спосіб оплати (Credit Card, PayPal).",
-            "example": "Credit Card"
+            "description": "Спосіб оплати (cash, card, bank_transfer).",
+            "example": "cash"
+          },
+          "saleType": {
+            "type": "string",
+            "description": "Тип продажу: онлайн або офлайн.",
+            "enum": ["online", "offline"],
+            "example": "offline"
           }
         }
       },
