@@ -3,16 +3,16 @@ const mongoose = require("mongoose");
 const onlineOrderSchema = new mongoose.Schema(
   {
     // Основні зв'язки: товар і користувач
-    productId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-      required: true,
-    },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+    // productId: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "Product",
+    //   required: true,
+    // },
+    // userId: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "User",
+    //   required: true,
+    // },
 
     // Масив продуктів у замовленні
     products: [
@@ -32,39 +32,46 @@ const onlineOrderSchema = new mongoose.Schema(
     // Статус замовлення
     status: {
       type: String,
-      enum: ["received", "assembled", "shipped", "completed", "cancelled"],
+      enum: [
+        "new",
+        "received",
+        "assembled",
+        "shipped",
+        "completed",
+        "cancelled",
+      ],
       default: "received",
     },
 
     // Фінансова інформація
     totalPrice: { type: Number, required: true },
-    paymentStatus: {
-      type: String,
-      enum: ["paid", "unpaid"],
-      default: "unpaid",
-    },
-    paymentMethod: {
-      type: String,
-      enum: ["cash", "card", "bank_transfer"],
-      required: true,
-    },
+    // paymentStatus: {
+    //   type: String,
+    //   enum: ["paid", "unpaid"],
+    //   default: "unpaid",
+    // },
+    // paymentMethod: {
+    //   type: String,
+    //   enum: ["cash", "card", "bank_transfer"],
+    //   required: true,
+    // },
 
     // Історія змін оплати
-    paymentHistory: [
-      {
-        status: { type: String, enum: ["paid", "unpaid"] },
-        updatedAt: { type: Date, default: Date.now },
-      },
-    ],
+    // paymentHistory: [
+    //   {
+    //     status: { type: String, enum: ["paid", "unpaid"] },
+    //     updatedAt: { type: Date, default: Date.now },
+    //   },
+    // ],
 
     // Інформація про доставку
-    deliveryAddress: { type: String, required: true },
-    deliveryTime: { type: Date }, // Запланований час доставки
-    shippingMethod: {
-      type: String,
-      enum: ["courier", "smartbox", "pickup"],
-      default: "courier",
-    },
+    // deliveryAddress: { type: String, required: true },
+    // deliveryTime: { type: Date }, // Запланований час доставки
+    // shippingMethod: {
+    //   type: String,
+    //   enum: ["courier", "smartbox", "pickup"],
+    //   default: "courier",
+    // },
 
     // Додаткові нотатки
     notes: { type: String },
@@ -84,5 +91,5 @@ const onlineOrderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const OnlineOrder = mongoose.model("Order", onlineOrderSchema);
+const OnlineOrder = mongoose.model("OnlineOrder", onlineOrderSchema);
 module.exports = OnlineOrder;
