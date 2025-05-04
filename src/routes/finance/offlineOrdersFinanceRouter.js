@@ -145,7 +145,7 @@ router.get("/:id", async (req, res) => {
 
     const offlineOrder = await OfflineOrder.findById(req.params.id).populate(
       "products.productId",
-      "name photoUrl"
+      "name photoUrl price"
     );
 
     if (!offlineOrder) {
@@ -164,39 +164,27 @@ router.get("/:id", async (req, res) => {
 // Оновити статус офлайн-замовлення
 router.patch("/:id", async (req, res) => {
   try {
-    console.log(
-      `🛠 Updating order ID: ${req.params.id} with status: ${req.body.status}`
-    );
-
     const { status } = req.body;
     const validStatuses = ["pending", "completed", "cancelled"];
 
     if (!validStatuses.includes(status)) {
-      console.warn(`⚠️ Invalid status received: ${status}`);
       return res.status(400).json({ error: "Invalid status" });
     }
 
     const existingOfflineOrder = await OfflineOrder.findById(req.params.id);
     if (!existingOfflineOrder) {
-      console.warn(`⚠️ Order not found for ID: ${req.params.id}`);
       return res.status(404).json({ error: "Offline order not found" });
     }
 
     if (existingOfflineOrder.status === status) {
-      console.warn(`⚠️ Status is already '${status}', no update needed.`);
       return res.status(400).json({ error: "Order already has this status" });
     }
 
     existingOfflineOrder.status = status;
     await existingOfflineOrder.save();
 
-    console.log("✅ Offline order status updated successfully!");
-
-    // 📌 Якщо замовлення оплачено і завершено, додаємо його у `OfflineSales`
-    console.log("🔍 Checking order status for OfflineSale creation");
     if (status === "completed") {
-      console.log("📊 Payment confirmed. Adding order to OfflineSales...");
-
+      console.log("📦 Adding offline order to OfflineSales...");
       const newOfflineSale = new OfflineSale({
         orderId: existingOfflineOrder._id,
         totalAmount: existingOfflineOrder.totalPrice,
@@ -205,16 +193,14 @@ router.patch("/:id", async (req, res) => {
         saleDate: new Date(),
       });
 
-      console.log("📦 New OfflineSale (before save):", newOfflineSale);
       await newOfflineSale.save();
-      console.log("✅ Sale saved successfully!");
+      console.log("✅ Offline sale recorded successfully!");
 
-      await OfflineOrder.updateOne(
-        { _id: existingOfflineOrder._id },
-        { status: "archived" }
-      );
+      // ✅ **Видаляємо офлайн-замовлення після успішного продажу**
+      await OfflineOrder.deleteOne({ _id: existingOfflineOrder._id });
+      console.log("🗑 Offline order removed from database!");
 
-      console.log("🔍 Adding order ID:", existingOfflineOrder._id);
+      // 📌 **Оновлюємо `FinanceOverview`**
       await FinanceOverview.updateOne(
         {},
         {
@@ -223,8 +209,7 @@ router.patch("/:id", async (req, res) => {
         },
         { upsert: true }
       );
-
-      console.log("✅ Order added to FinanceOverview!");
+      console.log("✅ Finance overview updated!");
     }
 
     res.status(200).json({

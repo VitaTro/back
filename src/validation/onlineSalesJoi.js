@@ -6,14 +6,14 @@ const onlineSaleValidationSchema = Joi.object({
       Joi.object({
         productId: Joi.string().required(),
         quantity: Joi.number().min(1).required(),
-        salePrice: Joi.number().required(), // Ціна за одиницю
+        salePrice: Joi.number().optional(), // 🔹 Ціна за одиницю неважлива
       })
     )
-    .required(), // Масив продуктів обов'язковий
-  totalAmount: Joi.number().required(), // Загальна сума обов'язкова
-  paymentMethod: Joi.string().valid("card", "bank_transfer").required(), // Дозволені методи оплати
-  processedBy: Joi.string().required(), // Адміністратор обов'язковий
-  notes: Joi.string().optional(), // Примітки опціональні
+    .optional(), // 🔹 Масив продуктів неважливий
+  totalAmount: Joi.number().optional(), // 🔹 Загальна сума неважлива
+  paymentMethod: Joi.string().valid("card", "bank_transfer").optional(), // 🔹 Метод оплати неважливий
+  processedBy: Joi.string().optional(), // 🔹 Адміністратор неважливий
+  notes: Joi.string().optional(), // 🔹 Примітки неважливі
 });
 
 module.exports = onlineSaleValidationSchema;

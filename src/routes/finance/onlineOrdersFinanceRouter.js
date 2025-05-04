@@ -24,8 +24,11 @@ router.get("/", async (req, res) => {
 
     // Отримання замовлень з фільтром
     const onlineOrders = await OnlineOrder.find(filter)
-      .populate("products.productId")
-      .populate("userId")
+      .populate({
+        path: "products.productId",
+        select: "name photoUrl",
+      })
+      .populate("userId", "email name")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -37,7 +40,7 @@ router.get("/", async (req, res) => {
     }
     res.status(200).json({ onlineOrders, page, limit });
   } catch (error) {
-    console.error("Error in fetching online orders:", error);
+    console.error("🔥 Error in fetching online orders:", error);
     res.status(500).json({ error: "Failed to fetch online orders" });
   }
 });
@@ -48,22 +51,22 @@ router.post("/", validate(onlineOrderValidationSchema), async (req, res) => {
     console.log("➡️ Received request for online order.");
     console.log("Request Body:", req.body);
 
-    const {
-      products,
-      totalQuantity,
-      totalPrice,
-      paymentMethod,
-      paymentStatus,
-      userId,
-    } = req.body;
+    const { products, totalPrice, paymentMethod, paymentStatus, userId } =
+      req.body;
 
     if (!products || products.length === 0) {
       return res.status(400).json({ error: "Product list cannot be empty." });
     }
 
+    // Автоматичний підрахунок totalQuantity
+    const totalQuantity = products.reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
+
     const newOnlineOrder = new OnlineOrder({
       products,
-      totalQuantity,
+      totalQuantity, // ✅ Використовуємо автоматичний розрахунок
       totalPrice,
       paymentMethod,
       userId,
@@ -74,10 +77,10 @@ router.post("/", validate(onlineOrderValidationSchema), async (req, res) => {
     await newOnlineOrder.save();
     res.status(201).json({
       message: "Online order created successfully",
-      order: newOnlineOrder,
+      onlineOrder: newOnlineOrder, // ✅ Замінено `order` на `onlineOrder`
     });
   } catch (error) {
-    console.error("Error in creating online order:", error);
+    console.error("🔥 Error in creating online order:", error);
     res.status(500).json({ error: "Failed to create online order" });
   }
 });
@@ -85,43 +88,119 @@ router.post("/", validate(onlineOrderValidationSchema), async (req, res) => {
 // Отримати конкретне онлайн замовлення
 router.get("/:id", async (req, res) => {
   try {
+    console.log(`🔎 Fetching online order with ID: ${req.params.id}`);
+
     const onlineOrder = await OnlineOrder.findById(req.params.id)
-      .populate("products.productId")
-      .populate("userId");
+      .populate("products.productId", "name photoUrl")
+      .populate("userId", "email name");
+
     if (!onlineOrder) {
-      return res.status(404).json({ error: "Order not found" });
+      console.warn(`⚠️ Online order not found for ID: ${req.params.id}`);
+      return res.status(404).json({ error: "Online order not found" });
     }
+
+    console.log("✅ Online order fetched:", onlineOrder);
     res.status(200).json(onlineOrder);
   } catch (error) {
-    console.error("Error in fetching order:", error);
+    console.error("🔥 Error in fetching online order:", error);
     res.status(500).json({ error: "Failed to fetch online order" });
   }
 });
 
-// Оновити статус онлайн замовлення
+// Оновити статус онлайн замовлення та додати у `OnlineSales`
 router.patch("/:id", async (req, res) => {
   try {
+    console.log(
+      `🛠 Updating online order ID: ${req.params.id} with status: ${req.body.status}`
+    );
+
     const { status } = req.body;
     const validStatuses = ["new", "completed", "cancelled"];
+
     if (!validStatuses.includes(status)) {
+      console.warn(`⚠️ Invalid status received: ${status}`);
       return res.status(400).json({ error: "Invalid status" });
     }
 
-    const updatedOnlineOrder = await OnlineOrder.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
-    if (!updatedOnlineOrder) {
-      return res.status(404).json({ error: "Order not found" });
+    const existingOnlineOrder = await OnlineOrder.findById(req.params.id);
+    if (!existingOnlineOrder) {
+      console.warn(`⚠️ Online order not found for ID: ${req.params.id}`);
+      return res.status(404).json({ error: "Online order not found" });
+    }
+
+    if (existingOnlineOrder.status === status) {
+      console.warn(`⚠️ Status is already '${status}', no update needed.`);
+      return res
+        .status(400)
+        .json({ error: "Online order already has this status" });
+    }
+
+    // ✅ Оновлюємо статус онлайн-замовлення
+    existingOnlineOrder.status = status;
+    await existingOnlineOrder.save();
+
+    console.log("✅ Online order status updated successfully!");
+
+    // 📌 Якщо замовлення завершене, додаємо його в `OnlineSales`
+    if (status === "completed") {
+      console.log("📊 Checking if online order is already in OnlineSales...");
+      const saleExists = await OnlineSale.findOne({
+        orderId: existingOnlineOrder.orderId,
+      });
+
+      if (!saleExists) {
+        console.log("📦 Adding online order to OnlineSales...");
+        // Встановлюємо `paymentMethod`, якщо його немає в запиті
+        const salePaymentMethod = existingOnlineOrder.paymentMethod || "card";
+
+        // Встановлюємо `processedBy`, якщо його немає в запиті
+        const saleProcessedBy = req.body.processedBy || "Admin";
+
+        // Перевіряємо `products`, щоб уникнути помилок валідації
+        const saleProducts = existingOnlineOrder.products.map((product) => ({
+          productId: product.productId,
+          quantity: product.quantity,
+          salePrice: product.salePrice || product.price || 0, // Якщо `salePrice` немає, ставимо `0`
+        }));
+
+        const newOnlineSale = new OnlineSale({
+          onlineOrderId: existingOnlineOrder._id,
+          totalAmount: existingOnlineOrder.totalPrice,
+          paymentMethod: salePaymentMethod, // 🔹 Тепер гарантовано визначена змінна
+          processedBy: saleProcessedBy, // 🔹 Тепер гарантовано визначена змінна
+          products: saleProducts,
+          status: "completed",
+          saleDate: new Date(),
+        });
+
+        await newOnlineSale.save();
+        console.log("✅ Online sale saved successfully!");
+
+        await OnlineOrder.deleteOne({ _id: existingOnlineOrder._id });
+      } else {
+        console.log("⚠️ Online order is already in OnlineSales, skipping...");
+      }
+
+      // 📌 Оновлюємо `FinanceOverview`
+      console.log("🔍 Adding online order ID to FinanceOverview...");
+      await FinanceOverview.updateOne(
+        {},
+        {
+          $push: { completedOrders: existingOnlineOrder._id },
+          $inc: { totalRevenue: existingOnlineOrder.totalPrice },
+        },
+        { upsert: true }
+      );
+
+      console.log("✅ Online order added to FinanceOverview!");
     }
 
     res.status(200).json({
       message: "Online order updated successfully",
-      order: updatedOnlineOrder,
+      onlineOrder: existingOnlineOrder, // ✅ Замінено `order` на `onlineOrder`
     });
   } catch (error) {
-    console.error("Error in updating order:", error);
+    console.error("🔥 Error updating online order:", error);
     res.status(500).json({ error: "Failed to update online order" });
   }
 });

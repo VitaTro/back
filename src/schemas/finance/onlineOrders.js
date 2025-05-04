@@ -3,16 +3,16 @@ const mongoose = require("mongoose");
 const onlineOrderSchema = new mongoose.Schema(
   {
     // Основні зв'язки: товар і користувач
-    // productId: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: "Product",
-    //   required: true,
-    // },
-    // userId: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: "User",
-    //   required: true,
-    // },
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: false,
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+    },
 
     // Масив продуктів у замовленні
     products: [
@@ -45,16 +45,16 @@ const onlineOrderSchema = new mongoose.Schema(
 
     // Фінансова інформація
     totalPrice: { type: Number, required: true },
-    // paymentStatus: {
-    //   type: String,
-    //   enum: ["paid", "unpaid"],
-    //   default: "unpaid",
-    // },
-    // paymentMethod: {
-    //   type: String,
-    //   enum: ["cash", "card", "bank_transfer"],
-    //   required: true,
-    // },
+    paymentStatus: {
+      type: String,
+      enum: ["paid", "unpaid"],
+      default: "unpaid",
+    },
+    paymentMethod: {
+      type: String,
+      enum: ["cash", "card", "bank_transfer"],
+      required: false,
+    },
 
     // Історія змін оплати
     // paymentHistory: [

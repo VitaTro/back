@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const onlineSaleSchema = new mongoose.Schema(
   {
-    // Основні зв'язки
     products: [
       {
         productId: {
@@ -11,30 +10,28 @@ const onlineSaleSchema = new mongoose.Schema(
           required: true,
         },
         quantity: { type: Number, required: true },
-        salePrice: { type: Number, required: true }, // Ціна продажу за одиницю
+        salePrice: { type: Number, default: 0 }, // ✅ Якщо не передано, буде 0
       },
     ],
-    totalAmount: { type: Number, required: true }, // Загальна сума продажу
-    discount: { type: Number, default: 0 }, // Знижка в процентах
+    totalAmount: { type: Number, required: true },
+    discount: { type: Number, default: 0 },
     paymentMethod: {
       type: String,
       enum: ["card", "bank_transfer"],
-      required: true,
-    }, // Метод оплати
+      default: "card", // ✅ Якщо не передано, буде "card"
+    },
     status: {
       type: String,
       enum: ["received", "assembled", "shipped", "completed", "cancelled"],
-      default: "pending",
+      default: "completed", // ✅ Уникнення "pending" конфлікту
     },
-    deliveryDetails: { type: String }, // Додаткові деталі доставки
+    deliveryDetails: { type: String },
     processedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
-    }, // Адміністратор
-    saleDate: { type: Date, default: Date.now }, // Дата продажу
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
+      default: null, // ✅ Якщо не передано, буде null
+    },
+    saleDate: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
