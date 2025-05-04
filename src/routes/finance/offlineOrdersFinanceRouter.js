@@ -5,7 +5,6 @@ const OfflineOrder = require("../../schemas/finance/offlineOrders");
 const { validate } = require("../../middleware/validateMiddleware");
 const offlineOrderValidationSchema = require("../../validation/offlineOrdersJoi");
 const Product = require("../../schemas/product");
-
 const OfflineSale = require("../../schemas/finance/offlineSales");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 
@@ -24,20 +23,20 @@ router.get("/", async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Отримання замовлень з фільтром
-    const orders = await OfflineOrder.find(filter)
+    const offlineOrders = await OfflineOrder.find(filter)
       .populate("products.productId", "name photoUrl")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    console.log("✅ Orders fetched:", orders);
+    console.log("✅ offlineOrders fetched:", offlineOrders);
 
-    if (!orders || orders.length === 0) {
+    if (!offlineOrders || offlineOrders.length === 0) {
       console.warn("⚠️ No offline orders found.");
       return res.status(404).json({ error: "No offline orders available" });
     }
 
-    res.status(200).json({ orders, page, limit });
+    res.status(200).json({ offlineOrders, page, limit });
   } catch (error) {
     console.error("🔥 Error fetching offline orders:", error);
     res.status(500).json({ error: "Failed to fetch offline orders" });
@@ -52,7 +51,7 @@ router.post("/", validate(offlineOrderValidationSchema), async (req, res) => {
     const { products, totalPrice, paymentMethod, paymentStatus } = req.body;
     console.log("✅ Extracted request data.");
 
-    const orderProducts = [];
+    const offlineOrderProducts = [];
 
     for (const product of products) {
       console.log(`🔎 Checking product: ${product.productId}`);
@@ -83,7 +82,7 @@ router.post("/", validate(offlineOrderValidationSchema), async (req, res) => {
         `✔️ Updated stock for ${dbProduct.name}. New quantity: ${dbProduct.quantity}`
       );
 
-      orderProducts.push({
+      offlineOrderProducts.push({
         productId: dbProduct._id,
         name: dbProduct.name,
         price: dbProduct.price,
@@ -93,16 +92,16 @@ router.post("/", validate(offlineOrderValidationSchema), async (req, res) => {
     }
 
     console.log("📦 Preparing new order object...");
-    const newOrder = new OfflineOrder({
-      products: orderProducts,
+    const newOfflineOrder = new OfflineOrder({
+      products: offlineOrderProducts,
       totalPrice,
       paymentMethod,
       paymentStatus: paymentStatus || "pending", // ✅ Додаємо paymentStatus
       status: "pending",
     });
 
-    console.log("📦 New OfflineOrder (before save):", newOrder);
-    await newOrder.save();
+    console.log("📦 New OfflineOrder (before save):", newOfflineOrder);
+    await newOfflineOrder.save();
     console.log("✅ Offline order created successfully!");
 
     // ✅ Якщо замовлення оплачено, додаємо його до FinanceOverview
@@ -119,10 +118,10 @@ router.post("/", validate(offlineOrderValidationSchema), async (req, res) => {
         await overview.save();
       }
 
-      console.log("🔍 Adding order ID:", newOrder._id);
+      console.log("🔍 Adding order ID:", newOfflineOrder._id);
       await FinanceOverview.updateOne(
         {},
-        { $push: { completedOrders: newOrder._id } },
+        { $push: { completedOrders: newOfflineOrder._id } },
         { upsert: true }
       );
 
@@ -131,7 +130,7 @@ router.post("/", validate(offlineOrderValidationSchema), async (req, res) => {
 
     res.status(201).json({
       message: "Offline order created successfully",
-      order: newOrder,
+      order: newOfflineOrder,
     });
   } catch (error) {
     console.error("🔥 Error creating offline order:", error);
@@ -144,18 +143,18 @@ router.get("/:id", async (req, res) => {
   try {
     console.log(`🔎 Fetching order with ID: ${req.params.id}`);
 
-    const order = await OfflineOrder.findById(req.params.id).populate(
+    const offlineOrder = await OfflineOrder.findById(req.params.id).populate(
       "products.productId",
       "name photoUrl"
     );
 
-    if (!order) {
+    if (!offlineOrder) {
       console.warn(`⚠️ Order not found for ID: ${req.params.id}`);
       return res.status(404).json({ error: "Offline order not found" });
     }
 
-    console.log("✅ Order fetched:", order);
-    res.status(200).json(order);
+    console.log("✅ offlineOrder fetched:", offlineOrder);
+    res.status(200).json(offlineOrder);
   } catch (error) {
     console.error("🔥 Error fetching offline order:", error);
     res.status(500).json({ error: "Failed to fetch offline order" });
@@ -177,19 +176,19 @@ router.patch("/:id", async (req, res) => {
       return res.status(400).json({ error: "Invalid status" });
     }
 
-    const existingOrder = await OfflineOrder.findById(req.params.id);
-    if (!existingOrder) {
+    const existingOfflineOrder = await OfflineOrder.findById(req.params.id);
+    if (!existingOfflineOrder) {
       console.warn(`⚠️ Order not found for ID: ${req.params.id}`);
       return res.status(404).json({ error: "Offline order not found" });
     }
 
-    if (existingOrder.status === status) {
+    if (existingOfflineOrder.status === status) {
       console.warn(`⚠️ Status is already '${status}', no update needed.`);
       return res.status(400).json({ error: "Order already has this status" });
     }
 
-    existingOrder.status = status;
-    await existingOrder.save();
+    existingOfflineOrder.status = status;
+    await existingOfflineOrder.save();
 
     console.log("✅ Offline order status updated successfully!");
 
@@ -198,26 +197,29 @@ router.patch("/:id", async (req, res) => {
     if (status === "completed") {
       console.log("📊 Payment confirmed. Adding order to OfflineSales...");
 
-      const newSale = new OfflineSale({
-        orderId: existingOrder._id,
-        totalAmount: existingOrder.totalPrice,
-        paymentMethod: existingOrder.paymentMethod,
-        products: existingOrder.products,
+      const newOfflineSale = new OfflineSale({
+        orderId: existingOfflineOrder._id,
+        totalAmount: existingOfflineOrder.totalPrice,
+        paymentMethod: existingOfflineOrder.paymentMethod,
+        products: existingOfflineOrder.products,
         saleDate: new Date(),
       });
 
-      console.log("📦 New OfflineSale (before save):", newSale);
-      await newSale.save();
+      console.log("📦 New OfflineSale (before save):", newOfflineSale);
+      await newOfflineSale.save();
       console.log("✅ Sale saved successfully!");
 
-      await OfflineOrder.updateOne({ _id: order._id }, { status: "archived" });
+      await OfflineOrder.updateOne(
+        { _id: existingOfflineOrder._id },
+        { status: "archived" }
+      );
 
-      console.log("🔍 Adding order ID:", existingOrder._id);
+      console.log("🔍 Adding order ID:", existingOfflineOrder._id);
       await FinanceOverview.updateOne(
         {},
         {
-          $push: { completedOrders: existingOrder._id },
-          $inc: { totalRevenue: existingOrder.totalPrice },
+          $push: { completedOrders: existingOfflineOrder._id },
+          $inc: { totalRevenue: existingOfflineOrder.totalPrice },
         },
         { upsert: true }
       );
@@ -227,7 +229,7 @@ router.patch("/:id", async (req, res) => {
 
     res.status(200).json({
       message: "Offline order updated successfully",
-      order: existingOrder,
+      order: existingOfflineOrder,
     });
   } catch (error) {
     console.error("🔥 Error updating offline order:", error);
