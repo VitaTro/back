@@ -93,6 +93,7 @@ router.post("/", validate(offlineSaleValidationSchema), async (req, res) => {
   }
 });
 
+const validSaleStatuses = ["pending", "completed", "cancelled"];
 // Оновити інформацію про офлайн-продаж
 router.patch("/:id", async (req, res) => {
   try {
