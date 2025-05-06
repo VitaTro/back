@@ -145,4 +145,38 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
+router.put("/:id/return", async (req, res) => {
+  try {
+    const { refundAmount } = req.body;
+    const sale = await OfflineSale.findById(req.params.id);
+
+    if (!sale) return res.status(404).json({ error: "Продаж не знайдено" });
+    if (sale.status === "returned")
+      return res.status(400).json({ error: "Продаж вже повернуто" });
+
+    // 🔄 Повертаємо товари на склад
+    for (const product of sale.products) {
+      await Product.updateOne(
+        { _id: product.productId },
+        { $inc: { stock: product.quantity } }
+      );
+    }
+
+    // 💰 Оновлення фінансів
+    await FinanceOverview.updateOne(
+      {},
+      { $inc: { totalRevenue: -refundAmount } }
+    );
+
+    sale.status = "returned";
+    sale.refundAmount = refundAmount;
+    await sale.save();
+
+    res.status(200).json({ message: "Товар повернуто", sale });
+  } catch (error) {
+    console.error("🔥 Error processing return:", error);
+    res.status(500).json({ error: "Не вдалося повернути товар" });
+  }
+});
+
 module.exports = router;

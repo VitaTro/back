@@ -30,9 +30,10 @@ const offlineSaleSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["completed", "pending", "cancelled"],
+      enum: ["completed", "pending", "cancelled", "returned"],
       default: "completed",
     },
+    refundAmount: { type: Number, default: 0 },
     notes: { type: String },
     saleDate: { type: Date, default: Date.now },
     createdAt: { type: Date, default: Date.now },
