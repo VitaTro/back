@@ -2053,6 +2053,55 @@
         }
       }
     },
+    "/api/admin/finance/offline/sales/{id}/return": {
+      "put": {
+        "tags": ["Finance - Offline"],
+        "summary": "Повернення офлайн-продажу",
+        "description": "Оновлює статус продажу на `returned`, повертає товари на склад і коригує фінансові показники.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID офлайн-продажу, що повертається.",
+            "schema": { "type": "string", "example": "sale123" }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Bearer-токен для авторизації адміністратора.",
+            "schema": {
+              "type": "string",
+              "example": "Bearer eyJhbGciOiJI..."
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refundAmount": {
+                    "type": "number",
+                    "description": "Сума повернення покупцю"
+                  }
+                },
+                "example": { "refundAmount": 500 }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Офлайн-продаж успішно повернуто." },
+          "400": { "description": "Недійсні дані у запиті." },
+          "404": { "description": "Офлайн-продаж не знайдено." }
+        }
+      }
+    },
+
     "/api/user/main": {
       "get": {
         "tags": ["User"],
