@@ -2,19 +2,11 @@ const mongoose = require("mongoose");
 
 const onlineOrderSchema = new mongoose.Schema(
   {
-    // Основні зв'язки: товар і користувач
-    productId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-      required: false,
-    },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false,
+      required: true, // 🔹 Обов’язково
     },
-
-    // Масив продуктів у замовленні
     products: [
       {
         productId: {
@@ -22,14 +14,10 @@ const onlineOrderSchema = new mongoose.Schema(
           ref: "Product",
           required: true,
         },
-        quantity: { type: Number, default: 1 },
+        quantity: { type: Number, required: true, min: 1 },
       },
     ],
-
-    // Загальна кількість товарів у замовленні
     totalQuantity: { type: Number, required: true, default: 0 },
-
-    // Статус замовлення
     status: {
       type: String,
       enum: [
@@ -40,53 +28,75 @@ const onlineOrderSchema = new mongoose.Schema(
         "completed",
         "cancelled",
       ],
-      default: "received",
+      default: "new",
+      required: true,
     },
-
-    // Фінансова інформація
+    statusHistory: [
+      {
+        status: {
+          type: String,
+          enum: [
+            "new",
+            "received",
+            "assembled",
+            "shipped",
+            "completed",
+            "cancelled",
+          ],
+          required: true,
+        },
+        updatedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        updatedAt: { type: Date, default: Date.now },
+      },
+    ],
     totalPrice: { type: Number, required: true },
     paymentStatus: {
       type: String,
       enum: ["paid", "unpaid"],
       default: "unpaid",
+      required: true,
     },
     paymentMethod: {
       type: String,
       enum: ["cash", "card", "bank_transfer"],
-      required: false,
+      required: true,
     },
-
-    // Історія змін оплати
-    // paymentHistory: [
-    //   {
-    //     status: { type: String, enum: ["paid", "unpaid"] },
-    //     updatedAt: { type: Date, default: Date.now },
-    //   },
-    // ],
-
-    // Інформація про доставку
-    // deliveryAddress: { type: String, required: true },
-    // deliveryTime: { type: Date }, // Запланований час доставки
-    // shippingMethod: {
-    //   type: String,
-    //   enum: ["courier", "smartbox", "pickup"],
-    //   default: "courier",
-    // },
-
-    // Додаткові нотатки
+    deliveryType: {
+      type: String,
+      enum: ["courier", "smartbox", "pickup"],
+      required: true,
+    },
+    smartboxDetails: {
+      boxId: {
+        type: String,
+        required: function () {
+          return this.deliveryType === "smartbox";
+        },
+      },
+      location: {
+        type: String,
+        required: function () {
+          return this.deliveryType === "smartbox";
+        },
+      },
+    },
+    deliveryAddress: {
+      type: String,
+      required: function () {
+        return this.deliveryType === "courier";
+      },
+    },
     notes: { type: String },
-
-    // Унікальний ідентифікатор замовлення
     orderId: {
       type: String,
       unique: true,
       default: () =>
         `ORD-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
     },
-
-    // Автоматичні таймстемпи
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );

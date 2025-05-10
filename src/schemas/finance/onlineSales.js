@@ -10,7 +10,7 @@ const onlineSaleSchema = new mongoose.Schema(
           required: true,
         },
         quantity: { type: Number, required: true },
-        salePrice: { type: Number, default: 0 }, // ✅ Якщо не передано, буде 0
+        salePrice: { type: Number, default: 0 },
       },
     ],
     totalAmount: { type: Number, required: true },
@@ -18,18 +18,18 @@ const onlineSaleSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       enum: ["card", "bank_transfer"],
-      default: "card", // ✅ Якщо не передано, буде "card"
+      default: "card",
     },
     status: {
       type: String,
-      enum: ["received", "assembled", "shipped", "completed", "cancelled"],
-      default: "completed", // ✅ Уникнення "pending" конфлікту
+      enum: ["new", "completed", "cancelled", "returned"],
+      default: "new",
     },
     deliveryDetails: { type: String },
     processedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      default: null, // ✅ Якщо не передано, буде null
+      default: null,
     },
     saleDate: { type: Date, default: Date.now },
   },

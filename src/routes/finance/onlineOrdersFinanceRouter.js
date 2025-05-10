@@ -205,4 +205,94 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
+router.put("/:id", async (req, res) => {
+  try {
+    console.log(`🛠 Updating online order ID: ${req.params.id}...`);
+    const updatedOrderData = req.body;
+
+    const onlineOrder = await OnlineOrder.findById(req.params.id);
+    if (!onlineOrder) {
+      return res.status(404).json({ error: "❌ Замовлення не знайдено" });
+    }
+
+    // ✅ Додаємо статус в історію змін
+    if (updatedOrderData.status && updatedOrderData.updatedBy) {
+      onlineOrder.statusHistory.push({
+        status: updatedOrderData.status,
+        updatedBy: updatedOrderData.updatedBy,
+      });
+    }
+
+    Object.assign(onlineOrder, updatedOrderData);
+    await onlineOrder.save();
+
+    console.log("✅ Online order updated successfully!");
+    res.status(200).json({ message: "✅ Замовлення оновлено!", onlineOrder });
+  } catch (error) {
+    console.error("🔥 Помилка оновлення:", error);
+    res.status(500).json({ error: "❌ Не вдалося оновити замовлення" });
+  }
+});
+
+router.patch("/:id/return", async (req, res) => {
+  try {
+    console.log(`🔄 Returning items for order ID: ${req.params.id}...`);
+    const { returnedProducts, refundAmount, updatedBy } = req.body;
+
+    const onlineOrder = await OnlineOrder.findById(req.params.id);
+    if (!onlineOrder) {
+      return res.status(404).json({ error: "❌ Замовлення не знайдено" });
+    }
+
+    let totalRefunded = 0;
+
+    for (const product of onlineOrder.products) {
+      const returnedItem = returnedProducts.find(
+        (p) => p.productId === product.productId.toString()
+      );
+
+      if (returnedItem) {
+        if (returnedItem.quantity > product.quantity) {
+          return res.status(400).json({
+            error: "❌ Кількість поверненого товару перевищує куплену!",
+          });
+        }
+
+        await Product.updateOne(
+          { _id: product.productId },
+          { $inc: { stock: returnedItem.quantity } }
+        );
+
+        totalRefunded += returnedItem.quantity * product.price;
+        product.quantity -= returnedItem.quantity;
+      }
+    }
+
+    await FinanceOverview.updateOne(
+      {},
+      { $inc: { totalRevenue: -totalRefunded } }
+    );
+
+    onlineOrder.products = onlineOrder.products.filter((p) => p.quantity > 0);
+    onlineOrder.statusHistory.push({
+      status: "returned",
+      updatedBy: updatedBy,
+    });
+
+    if (onlineOrder.products.length === 0) {
+      onlineOrder.status = "returned";
+    }
+
+    await onlineOrder.save();
+
+    console.log("✅ Items returned successfully!");
+    res
+      .status(200)
+      .json({ message: "✅ Часткове повернення виконано!", onlineOrder });
+  } catch (error) {
+    console.error("🔥 Error processing return:", error);
+    res.status(500).json({ error: "❌ Не вдалося виконати повернення" });
+  }
+});
+
 module.exports = router;
