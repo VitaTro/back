@@ -234,7 +234,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-router.patch("/:id/return", async (req, res) => {
+router.put("/:id/return", async (req, res) => {
   try {
     console.log(`🔄 Returning items for order ID: ${req.params.id}...`);
     const { returnedProducts, refundAmount, updatedBy } = req.body;

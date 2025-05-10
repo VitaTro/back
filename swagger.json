@@ -1357,9 +1357,7 @@
           "400": { "description": "Недійсний статус." },
           "404": { "description": "Замовлення не знайдено." }
         }
-      }
-    },
-    "/api/admin/finance/online/orders/{id}": {
+      },
       "put": {
         "tags": ["Finance - Online"],
         "summary": "Оновити онлайн-замовлення",
@@ -1417,7 +1415,7 @@
       }
     },
     "/api/admin/finance/online/orders/{id}/return": {
-      "patch": {
+      "put": {
         "tags": ["Finance - Online"],
         "summary": "Часткове повернення товару",
         "description": "Дозволяє користувачеві повернути окремі товари із замовлення.",
