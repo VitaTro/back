@@ -88,12 +88,10 @@ router.post("/", async (req, res) => {
       .json({ message: "✅ Замовлення створено!", onlineOrder: newOrder });
   } catch (error) {
     console.error("🔥 Помилка створення замовлення:", error.message);
-    res
-      .status(500)
-      .json({
-        error: "❌ Не вдалося створити замовлення",
-        errorMessage: error.message,
-      });
+    res.status(500).json({
+      error: "❌ Не вдалося створити замовлення",
+      errorMessage: error.message,
+    });
   }
 });
 
@@ -271,6 +269,56 @@ router.put("/:id/return", async (req, res) => {
       error: "❌ Не вдалося виконати повернення",
       errorMessage: error.message,
     });
+  }
+});
+
+router.patch("/:id/status", async (req, res) => {
+  try {
+    const { status, updatedBy } = req.body;
+
+    // ✅ Перевіряємо, чи статус допустимий
+    const validStatuses = [
+      "new",
+      "received",
+      "assembled",
+      "shipped",
+      "completed",
+      "cancelled",
+    ];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: "❌ Некоректний статус" });
+    }
+
+    const order = await OnlineOrder.findById(req.params.id);
+    if (!order)
+      return res.status(404).json({ error: "❌ Замовлення не знайдено" });
+
+    // ✅ Додаємо зміну у `statusHistory`
+    order.statusHistory.push({
+      status,
+      updatedBy,
+      updatedAt: new Date(),
+    });
+
+    // ✅ Якщо статус `"cancelled"` і платіж не пройшов, підтверджуємо скасування
+    if (status === "cancelled" && order.paymentStatus === "unpaid") {
+      order.status = "cancelled";
+    } else {
+      order.status = status;
+    }
+
+    await order.save();
+
+    // 🔹 Відправляємо оновлення користувачу через Socket.io
+    io.emit("orderStatusUpdated", {
+      orderId: order._id,
+      newStatus: order.status,
+    });
+
+    res.status(200).json({ message: "✅ Статус оновлено", order });
+  } catch (error) {
+    console.error("❌ Помилка оновлення статусу:", error);
+    res.status(500).json({ error: "❌ Не вдалося оновити статус" });
   }
 });
 

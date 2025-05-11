@@ -1486,6 +1486,54 @@
         }
       }
     },
+    "/api/admin/finance/online/orders/{id}/status": {
+      "patch": {
+        "tags": ["Finance - Online"],
+        "summary": "Оновлення статусу онлайн-замовлення",
+        "description": "Дозволяє адміну змінювати статус замовлення (new, assembled, shipped, completed).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID онлайн-замовлення.",
+            "schema": { "type": "string", "example": "order123" }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Bearer-токен для авторизації адміністратора.",
+            "schema": { "type": "string", "example": "Bearer eyJhbGciOiJI..." }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["new", "assembled", "shipped", "completed"],
+                    "description": "Новий статус замовлення."
+                  }
+                },
+                "example": {
+                  "status": "assembled"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "✅ Статус успішно оновлено." },
+          "400": { "description": "❌ Некоректні дані." },
+          "404": { "description": "❌ Замовлення не знайдено." }
+        }
+      }
+    },
 
     "/api/admin/finance/online/sales": {
       "get": {

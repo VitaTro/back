@@ -1,6 +1,10 @@
 const Joi = require("joi");
 
 const onlineOrderValidationSchema = Joi.object({
+  orderId: Joi.string()
+    .pattern(/^ORD-[A-Z0-9]{9}$/) // ✅ Перевіряємо унікальний формат ID
+    .required(),
+  userId: Joi.string().required(),
   products: Joi.array()
     .items(
       Joi.object({
@@ -12,11 +16,27 @@ const onlineOrderValidationSchema = Joi.object({
     )
     .min(1)
     .required(),
-  userId: Joi.string().required(),
+  totalQuantity: Joi.number().min(1).required(),
   status: Joi.string()
     .valid("new", "received", "assembled", "shipped", "completed", "cancelled")
     .required(),
-  totalPrice: Joi.number().required(),
+  statusHistory: Joi.array().items(
+    Joi.object({
+      status: Joi.string()
+        .valid(
+          "new",
+          "received",
+          "assembled",
+          "shipped",
+          "completed",
+          "cancelled"
+        )
+        .required(),
+      updatedBy: Joi.string().required(),
+      updatedAt: Joi.date().default(Date.now),
+    })
+  ),
+  totalPrice: Joi.number().min(0).required(),
   paymentStatus: Joi.string().valid("paid", "unpaid").required(),
   paymentMethod: Joi.string().valid("cash", "card", "bank_transfer").required(),
   deliveryType: Joi.string().valid("courier", "smartbox", "pickup").required(),
@@ -34,6 +54,10 @@ const onlineOrderValidationSchema = Joi.object({
     otherwise: Joi.optional(),
   }),
   notes: Joi.string().optional(),
+  timestamps: Joi.object({
+    createdAt: Joi.date().default(Date.now),
+    updatedAt: Joi.date().default(Date.now),
+  }).optional(),
 });
 
 module.exports = onlineOrderValidationSchema;
