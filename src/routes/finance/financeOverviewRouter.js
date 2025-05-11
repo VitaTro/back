@@ -81,6 +81,7 @@ router.get("/", async (req, res) => {
         },
       },
     ]);
+
     const refundsData = await OfflineSale.aggregate([
       {
         $match: { status: "returned" },
@@ -93,7 +94,22 @@ router.get("/", async (req, res) => {
       },
     ]);
 
-    // ✅ Оновлюємо `salesOverview`, щоб включити прогноз прибутку
+    // ✅ Дані з налаштувань фінансів
+    const financeSettings = (await FinanceSettings.findOne()) || {
+      taxRate: 0,
+      operatingCosts: 0,
+      budgetForProcurement: 0,
+    };
+
+    // ✅ Розрахунок `profitForecast`
+    const totalRevenue = stats.totalRevenue?.totalRevenue || 0;
+    const totalExpenses =
+      financeSettings.operatingCosts +
+      financeSettings.budgetForProcurement +
+      (refundsData[0]?.totalRefunds || 0);
+    const profitForecast = totalRevenue - totalExpenses;
+
+    // ✅ Формуємо `salesOverview` після розрахунку `profitForecast`
     const salesOverview = {
       online: {
         totalSales: onlineSalesData[0]?.totalSales || 0,
@@ -103,16 +119,8 @@ router.get("/", async (req, res) => {
         totalSales: offlineSalesData[0]?.totalSales || 0,
         netProfit: offlineSalesData[0]?.netProfit || 0,
       },
-      refunds:
-        refundedSales.reduce((sum, sale) => sum + sale.refundAmount, 0) || 0,
-      profitForecast: profitForecast || 0, // ✅ Прогнозований прибуток
-    };
-
-    // ✅ Дані з налаштувань фінансів
-    const financeSettings = (await FinanceSettings.findOne()) || {
-      taxRate: 0,
-      operatingCosts: 0,
-      budgetForProcurement: 0,
+      refunds: refundsData[0]?.totalRefunds || 0,
+      profitForecast, // ✅ Тепер він визначений перед використанням
     };
 
     // ✅ Формуємо фінансовий огляд
