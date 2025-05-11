@@ -7,7 +7,7 @@ const OnlineOrder = require("../../schemas/finance/onlineOrders");
 const OfflineOrder = require("../../schemas/finance/offlineOrders");
 const OnlineSale = require("../../schemas/finance/onlineSales");
 const OfflineSale = require("../../schemas/finance/offlineSales");
-const FinanceSettings = require("../../schemas/finance/financeSettings"); // Схема для налаштувань
+const FinanceSettings = require("../../schemas/finance/financeSettings");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 
 // GET: Отримати загальний фінансовий огляд
@@ -15,71 +15,85 @@ router.get("/", async (req, res) => {
   try {
     console.log("🔍 Fetching financial overview...");
 
-    // Загальна статистика
+    // ✅ Загальна статистика
     const stats = {
       totalUsers: await User.countDocuments(),
       totalProducts: await Product.countDocuments(),
-
-      // Продажі (а не просто замовлення!)
-      totalOnlineSales: await OnlineSale.countDocuments(),
-      totalOfflineSales: await OfflineSale.countDocuments(),
-
-      // Загальна виручка за методами оплати
+      totalOnlineSales: await OnlineSale.countDocuments({
+        status: "completed",
+      }),
+      totalOfflineSales: await OfflineSale.countDocuments({
+        status: "completed",
+      }),
       totalRevenue: await FinanceOverview.findOne().select("totalRevenue"),
-
-      paymentMethods: {
-        cash: await OfflineSale.aggregate([
-          { $match: { paymentMethod: "cash" } },
-          { $group: { _id: null, totalCash: { $sum: "$totalAmount" } } },
-        ]).then((data) => data[0]?.totalCash || 0),
-
-        card: await OfflineSale.aggregate([
-          { $match: { paymentMethod: "card" } },
-          { $group: { _id: null, totalCard: { $sum: "$totalAmount" } } },
-        ]).then((data) => data[0]?.totalCard || 0),
-
-        bank_transfer: await OfflineSale.aggregate([
-          { $match: { paymentMethod: "bank_transfer" } },
-          { $group: { _id: null, totalBank: { $sum: "$totalAmount" } } },
-        ]).then((data) => data[0]?.totalBank || 0),
-      },
     };
 
-    // Огляд продуктів: низький залишок
+    // ✅ Продажі за методами оплати
+    const paymentMethods = {
+      cash: await OfflineSale.aggregate([
+        { $match: { paymentMethod: "cash" } },
+        { $group: { _id: null, totalCash: { $sum: "$totalAmount" } } },
+      ]).then((data) => data[0]?.totalCash || 0),
+
+      card: await OnlineSale.aggregate([
+        { $match: { paymentMethod: "card" } },
+        { $group: { _id: null, totalCard: { $sum: "$totalAmount" } } },
+      ]).then((data) => data[0]?.totalCard || 0),
+
+      bank_transfer: await OnlineSale.aggregate([
+        { $match: { paymentMethod: "bank_transfer" } },
+        { $group: { _id: null, totalBank: { $sum: "$totalAmount" } } },
+      ]).then((data) => data[0]?.totalBank || 0),
+    };
+
+    // ✅ Огляд продуктів: низький залишок
     const lowStockItems = await Product.find({ stock: { $lt: 5 } }).select(
       "name stock photo index"
     );
 
-    // Огляд виконаних замовлень
+    // ✅ Виконані замовлення
     const completedSales = await OfflineSale.find({
       status: "completed",
     }).select("products totalPrice paymentMethod createdAt");
 
-    const financeOverview = await FinanceOverview.findOne({}).populate(
-      "completedSales"
+    // ✅ Повернення
+    const refundedSales = await OfflineSale.find({ status: "returned" }).select(
+      "products refundAmount paymentMethod createdAt"
     );
-    console.log("🔎 Populated completedSales:", financeOverview.completedSales);
 
-    // Дані продажів: загальна сума та прибуток
+    // ✅ Дані про продажі
     const onlineSalesData = await OnlineSale.aggregate([
       {
         $group: {
           _id: null,
           totalSales: { $sum: "$totalAmount" },
-          netProfit: { $sum: "$salePrice" },
+          netProfit: { $sum: { $subtract: ["$totalAmount", "$cost"] } },
         },
       },
     ]);
+
     const offlineSalesData = await OfflineSale.aggregate([
       {
         $group: {
           _id: null,
           totalSales: { $sum: "$totalAmount" },
-          netProfit: { $sum: "$price" },
+          netProfit: { $sum: { $subtract: ["$totalAmount", "$cost"] } },
+        },
+      },
+    ]);
+    const refundsData = await OfflineSale.aggregate([
+      {
+        $match: { status: "returned" },
+      },
+      {
+        $group: {
+          _id: null,
+          totalRefunds: { $sum: "$refundAmount" },
         },
       },
     ]);
 
+    // ✅ Оновлюємо `salesOverview`, щоб включити прогноз прибутку
     const salesOverview = {
       online: {
         totalSales: onlineSalesData[0]?.totalSales || 0,
@@ -89,19 +103,24 @@ router.get("/", async (req, res) => {
         totalSales: offlineSalesData[0]?.totalSales || 0,
         netProfit: offlineSalesData[0]?.netProfit || 0,
       },
+      refunds:
+        refundedSales.reduce((sum, sale) => sum + sale.refundAmount, 0) || 0,
+      profitForecast: profitForecast || 0, // ✅ Прогнозований прибуток
     };
 
-    // Дані з налаштувань фінансів
+    // ✅ Дані з налаштувань фінансів
     const financeSettings = (await FinanceSettings.findOne()) || {
       taxRate: 0,
       operatingCosts: 0,
       budgetForProcurement: 0,
     };
 
-    // Формуємо фінансовий огляд
+    // ✅ Формуємо фінансовий огляд
     const financialOverview = {
       stats,
+      paymentMethods,
       completedSales,
+      refundedSales,
       lowStockItems,
       salesOverview,
       financeSettings,
@@ -114,7 +133,6 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to load financial overview" });
   }
 });
-
 // POST: Створити нові налаштування фінансів
 router.post("/", async (req, res) => {
   try {
