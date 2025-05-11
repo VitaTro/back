@@ -10,7 +10,7 @@ const onlineSaleSchema = new mongoose.Schema(
           required: true,
         },
         quantity: { type: Number, required: true },
-        salePrice: { type: Number, default: 0 },
+        salePrice: { type: Number, required: true },
       },
     ],
     totalAmount: { type: Number, required: true },
