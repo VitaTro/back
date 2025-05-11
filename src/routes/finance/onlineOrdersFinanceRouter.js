@@ -113,6 +113,9 @@ router.patch("/:id", async (req, res) => {
     console.log(
       `🛠 Updating online order ID: ${req.params.id} with status: ${req.body.status}`
     );
+    console.log(
+      `🛠 Updating order ID: ${req.params.id} with status: ${req.body.status}`
+    );
 
     const { status } = req.body;
     const validStatuses = [
@@ -241,6 +244,8 @@ router.put("/:id", async (req, res) => {
 });
 
 router.put("/:id/return", async (req, res) => {
+  console.log("🔄 Отримані дані для повернення:", req.body);
+
   try {
     console.log(`🔄 Returning items for order ID: ${req.params.id}...`);
     const { returnedProducts, refundAmount, updatedBy } = req.body;
