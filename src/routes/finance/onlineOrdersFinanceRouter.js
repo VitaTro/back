@@ -115,7 +115,13 @@ router.patch("/:id", async (req, res) => {
     );
 
     const { status } = req.body;
-    const validStatuses = ["new", "completed", "cancelled"];
+    const validStatuses = [
+      "new",
+      "assembled",
+      "shipped",
+      "completed",
+      "cancelled",
+    ];
 
     if (!validStatuses.includes(status)) {
       console.warn(`⚠️ Invalid status received: ${status}`);
@@ -238,6 +244,11 @@ router.put("/:id/return", async (req, res) => {
   try {
     console.log(`🔄 Returning items for order ID: ${req.params.id}...`);
     const { returnedProducts, refundAmount, updatedBy } = req.body;
+    if (!returnedProducts || returnedProducts.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "❌ Не вказані товари для повернення" });
+    }
 
     const onlineOrder = await OnlineOrder.findById(req.params.id);
     if (!onlineOrder) {
