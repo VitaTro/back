@@ -1,5 +1,6 @@
 const cron = require("node-cron");
 const OfflineSale = require("./src/schemas/finance/offlineSales");
+require("events").EventEmitter.defaultMaxListeners = 20;
 
 // Запуск `cron`-задачі кожен день о 2:00 ночі
 console.log("✅ cronTasks.js loaded!");

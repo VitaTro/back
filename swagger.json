@@ -425,21 +425,34 @@
         "tags": ["Auth"],
         "summary": "Реєстрація нового користувача",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Auth"
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string", "example": "Vitalii" },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "strongpassword123"
+                  }
+                }
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
-            "description": "Користувача зареєстровано"
+            "description": "Користувача успішно зареєстровано. Email-підтвердження надіслано."
           },
           "400": {
-            "description": "Невірний запит"
+            "description": "Невірний запит або email вже використовується."
           }
         }
       }
@@ -468,6 +481,27 @@
         }
       }
     },
+    "/api/auth/verify-email": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Підтвердження email",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "email-verification-token"
+            }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Email підтверджено успішно." },
+          "400": { "description": "Невірний або прострочений токен." }
+        }
+      }
+    },
     "/api/auth/login": {
       "post": {
         "tags": ["Auth"],
@@ -479,8 +513,16 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "email": { "type": "string", "example": "user@example.com" },
-                  "password": { "type": "string", "example": "password123" }
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "password123"
+                  }
                 }
               }
             }
@@ -488,23 +530,20 @@
         },
         "responses": {
           "200": {
-            "description": "Успішна авторизація",
+            "description": "Успішна авторизація. Повертає токен доступу.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "token": { "type": "string" },
-                    "user": {
-                      "$ref": "#/components/schemas/User"
-                    }
+                    "user": { "$ref": "#/components/schemas/User" }
                   }
                 }
               }
             }
           },
-          "401": { "description": "Неправильний логін або пароль" },
-          "500": { "description": "Внутрішня помилка сервера" }
+          "401": { "description": "Неправильний логін або пароль." }
         }
       }
     },
@@ -521,8 +560,7 @@
     "/api/auth/reset-password": {
       "post": {
         "tags": ["Auth"],
-        "summary": "Відновлення пароля",
-        "description": "Цей маршрут надсилає посилання для відновлення пароля на електронну пошту користувача.",
+        "summary": "Запит на скидання пароля",
         "requestBody": {
           "required": true,
           "content": {
@@ -532,7 +570,6 @@
                 "properties": {
                   "email": {
                     "type": "string",
-                    "description": "Електронна пошта користувача",
                     "format": "email",
                     "example": "user@example.com"
                   }
@@ -543,22 +580,16 @@
         },
         "responses": {
           "200": {
-            "description": "Посилання для відновлення пароля надіслано."
+            "description": "Лист із посиланням для відновлення пароля надіслано."
           },
-          "404": {
-            "description": "Користувач із вказаною електронною поштою не знайдений."
-          },
-          "500": {
-            "description": "Внутрішня помилка сервера."
-          }
+          "404": { "description": "Користувач не знайдений." }
         }
       }
     },
     "/api/auth/update-password": {
       "post": {
         "tags": ["Auth"],
-        "summary": "Оновлення пароля",
-        "description": "Цей маршрут дозволяє користувачу оновити свій пароль за допомогою токена відновлення.",
+        "summary": "Оновлення пароля після отримання токена",
         "requestBody": {
           "required": true,
           "content": {
@@ -566,16 +597,11 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "token": {
-                    "type": "string",
-                    "description": "Токен відновлення пароля",
-                    "example": "reset-token-123"
-                  },
+                  "token": { "type": "string", "example": "reset-token-123" },
                   "newPassword": {
                     "type": "string",
-                    "description": "Новий пароль",
                     "format": "password",
-                    "example": "newPassword123"
+                    "example": "newStrongPassword!"
                   }
                 }
               }
@@ -583,15 +609,8 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "Пароль оновлено успішно."
-          },
-          "400": {
-            "description": "Неправильний або прострочений токен."
-          },
-          "500": {
-            "description": "Внутрішня помилка сервера."
-          }
+          "200": { "description": "Пароль змінено успішно." },
+          "400": { "description": "Невірний або прострочений токен." }
         }
       }
     },
@@ -653,9 +672,7 @@
             "description": "Дані про користувача",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/User"
-                }
+                "schema": { "$ref": "#/components/schemas/User" }
               }
             }
           },
@@ -3173,6 +3190,7 @@
         "required": ["email", "username"],
         "type": "object",
         "properties": {
+          "id": { "type": "string", "example": "654321abcdef" },
           "username": {
             "type": "string",
             "description": "Ім'я користувача"
@@ -3201,13 +3219,14 @@
           "role": {
             "type": "string",
             "description": "Роль користувача (наприклад, 'admin', 'user')",
-            "example": "admin"
+            "example": "user"
           },
           "isActive": {
             "type": "boolean",
             "description": "Статус аккаунту користувача (активний чи деактивований).",
             "default": true
-          }
+          },
+          "isVerified": { "type": "boolean", "example": true }
         }
       },
       "Subscription": {

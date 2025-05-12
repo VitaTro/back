@@ -1,4 +1,6 @@
 const User = require("../schemas/user");
+const Product = require("../schemas/product");
+
 const getUserMainData = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password"); // Витягуємо профіль без пароля
@@ -15,12 +17,10 @@ const getUserMainData = async (req, res) => {
       products, // Відправляємо продукти
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Failed to load main user data.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to load main user data.",
+      error: error.message,
+    });
   }
 };
 
