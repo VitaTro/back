@@ -3,6 +3,8 @@ const router = express.Router();
 const sendEmail = require("../../emailService");
 const User = require("../schemas/user");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+
 router.post("/register", async (req, res) => {
   const { username, email, password, adminSecret } = req.body;
 
@@ -45,9 +47,20 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    // 🔍 Шукаємо адміна
     const user = await User.findOne({ email, role: "admin" });
-    if (!user || !bcrypt.compareSync(password, user.password)) {
-      return res.status(403).json({ message: "Invalid credentials" });
+    if (!user) {
+      return res.status(403).json({ message: "Admin not found" });
+    }
+
+    // 🔥 Лог пароля перед перевіркою
+    console.log("Entered password:", password);
+    console.log("Stored hashed password:", user.password);
+
+    // 🛡️ Перевірка пароля
+    const isPasswordCorrect = bcrypt.compareSync(password, user.password);
+    if (!isPasswordCorrect) {
+      return res.status(403).json({ message: "Invalid password" });
     }
 
     // 🎫 Генеруємо JWT-токен
@@ -64,13 +77,10 @@ router.post("/login", async (req, res) => {
       `Вітаємо, ${user.username}! Ви успішно увійшли до адміністративної панелі.`
     );
 
-    // 🔀 Перенаправлення після входу
-    res.json({
-      message: "Login successful",
-      token,
-      redirect: "/api/admin/dashboard",
-    });
+    // 🔀 Відповідь з токеном
+    res.json({ message: "Login successful", token });
   } catch (error) {
+    console.error("Login error:", error);
     res.status(500).json({ error: "Login failed", details: error.message });
   }
 });
