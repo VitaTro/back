@@ -74,4 +74,27 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ error: "Login failed", details: error.message });
   }
 });
+
+router.post("/send-email", async (req, res) => {
+  const { to, subject, text } = req.body;
+
+  try {
+    await sendEmail(to, subject, text);
+    res.status(200).json({ message: "Email sent successfully!" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Failed to send email", details: error.message });
+  }
+});
+
+router.post("/logout", async (req, res) => {
+  try {
+    // 🔐 Очищуємо токен на клієнті
+    res.json({ message: "Admin logged out successfully!" });
+  } catch (error) {
+    res.status(500).json({ error: "Logout failed", details: error.message });
+  }
+});
+
 module.exports = router;

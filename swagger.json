@@ -402,24 +402,121 @@
         }
       }
     },
-    "/api/auth/check-admin": {
-      "get": {
-        "tags": ["Auth"],
-        "summary": "Перевірка першого адміністратора",
-        "responses": {
-          "200": {
-            "description": "Перевірка наявності першого адміністратора",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/inline_response_200"
-                }
+    "/api/admin/auth/register": {
+      "post": {
+        "tags": ["Admin Auth"],
+        "summary": "Реєстрація адміністратора",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminRegister"
               }
             }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Адміністратор успішно зареєстрований"
+          },
+          "403": {
+            "description": "Невірний секретний ключ адміністратора"
+          },
+          "500": {
+            "description": "Помилка реєстрації"
           }
         }
       }
     },
+    "/api/admin/auth/login": {
+      "post": {
+        "tags": ["Admin Auth"],
+        "summary": "Логін адміністратора",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminLogin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Успішний вхід, повертається токен",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "token": { "type": "string" },
+                    "redirect": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Невірний email або пароль"
+          },
+          "500": {
+            "description": "Помилка входу"
+          }
+        }
+      }
+    },
+    "/api/admin/auth/send-email": {
+      "post": {
+        "tags": ["Admin Auth"],
+        "summary": "Надсилання email адміністратора",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminEmail"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email успішно надіслано"
+          },
+          "500": {
+            "description": "Помилка надсилання email"
+          }
+        }
+      }
+    },
+    "/api/admin/auth/logout": {
+      "post": {
+        "tags": ["Admin Auth"],
+        "summary": "Вихід адміністратора",
+        "responses": {
+          "200": {
+            "description": "Адміністратор успішно вийшов із системи",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Помилка виходу"
+          }
+        }
+      }
+    },
+
     "/api/auth/register/user": {
       "post": {
         "tags": ["Auth"],
@@ -2969,7 +3066,34 @@
           }
         }
       },
-      "Auth": {
+      "AdminRegister": {
+        "type": "object",
+        "properties": {
+          "username": { "type": "string" },
+          "email": { "type": "string" },
+          "password": { "type": "string" },
+          "adminSecret": { "type": "string" }
+        },
+        "required": ["username", "email", "password", "adminSecret"]
+      },
+      "AdminLogin": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "password": { "type": "string" }
+        },
+        "required": ["email", "password"]
+      },
+      "AdminEmail": {
+        "type": "object",
+        "properties": {
+          "to": { "type": "string" },
+          "subject": { "type": "string" },
+          "text": { "type": "string" }
+        },
+        "required": ["to", "subject", "text"]
+      },
+      "User": {
         "required": ["email", "password", "username"],
         "type": "object",
         "properties": {

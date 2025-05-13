@@ -14,15 +14,6 @@ const generateToken = (user) => {
 };
 
 // Маршрут для перевірки статусу адміністратора
-router.get("/check-admin", async (req, res) => {
-  try {
-    const admins = await User.find({ role: "admin" });
-    const isFirstAdmin = admins.length === 0;
-    res.status(200).json({ isFirstAdmin });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to check admin status" });
-  }
-});
 
 // 📝 Реєстрація користувача + email-підтвердження
 router.post("/register/user", async (req, res) => {
