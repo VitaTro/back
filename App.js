@@ -5,7 +5,7 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./swagger.json");
 const { cloudinary, storage, upload } = require("./src/config/cloudinary");
 const ProductRouter = require("./src/routes/productRouter");
-const AuthRouter = require("./src/routes/userRouter");
+// const AuthRouter = require("./src/routes/authRouter");
 const ShoppingCartRouter = require("./src/routes/shoppingCartRouter");
 const WishlistRouter = require("./src/routes/wishlistRouter");
 const SearchRouter = require("./src/routes/searchRouter");
@@ -17,7 +17,7 @@ const OfflineOrdersFinanceRouter = require("./src/routes/finance/offlineOrdersFi
 const OfflineSalesFinanceRouter = require("./src/routes/finance/offlineSalesFinanceRouter");
 const FinanceOverviewRouter = require("./src/routes/finance/financeOverviewRouter");
 const FinanceSettingsRouter = require("./src/routes/finance/financeSettingsRouter");
-
+const AdminAuthRouter = require("./src/routes/adminAuth");
 const app = express();
 
 const allowedOrigins = [
@@ -55,8 +55,8 @@ app.get("/test", (req, res) => {
 
 // Routes
 app.use("/api/products", ProductRouter);
-app.use("/api/auth", AuthRouter);
-
+// app.use("/api/auth", AuthRouter);
+app.use("/api/admin/auth", AdminAuthRouter);
 app.use("/api/shopping-cart", ShoppingCartRouter);
 app.use("/api/wishlist", WishlistRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
