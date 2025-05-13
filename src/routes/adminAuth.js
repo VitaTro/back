@@ -4,38 +4,37 @@ const sendEmail = require("../../emailService");
 const User = require("../schemas/user");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const Auth = require("../schemas/auth");
 
 router.post("/register", async (req, res) => {
   const { username, email, password, adminSecret } = req.body;
 
-  // 🔐 Перевірка секретного ключа для адміна
   if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET_KEY) {
     return res.status(403).json({ message: "Invalid Admin Secret Key" });
   }
 
   try {
-    // 🛡️ Хешування пароля
-    const hashedPassword = bcrypt.hashSync(password, 10);
+    const existingAdmin = await Auth.findOne({ email });
+    if (existingAdmin) {
+      return res.status(400).json({ message: "Admin already exists" });
+    }
 
-    // 📌 Створення нового адміна
-    const newAdmin = new User({
-      username,
-      email,
-      password: hashedPassword,
-      role: "admin",
-    });
-    await newAdmin.save();
+    // 🛡️ **Зберігаємо пароль у `Auth`**
+    const newAdminAuth = new Auth({ email });
+    newAdminAuth.setPassword(password);
+    await newAdminAuth.save();
 
-    // ✉️ Надсилання email-підтвердження
+    // 📌 **Зберігаємо загальні дані у `User`**
+    const newAdminUser = new User({ username, email, role: "admin" });
+    await newAdminUser.save();
+
     await sendEmail(
       email,
-      "Адміністратор успішно зареєстрований!",
-      `Вітаємо, ${username}! Ваш обліковий запис адміністратора створено успішно. Тепер ви можете увійти на платформу.`
+      "Welcome Admin!",
+      `Hello ${username}, your admin account is now active!`
     );
 
-    res
-      .status(201)
-      .json({ message: "Admin registered successfully! Email sent." });
+    res.status(201).json({ message: "Admin registered successfully!" });
   } catch (error) {
     res
       .status(500)
@@ -47,40 +46,30 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // 🔍 Шукаємо адміна
-    const user = await User.findOne({ email, role: "admin" });
-    if (!user) {
-      return res.status(403).json({ message: "Admin not found" });
+    // 🔍 **Шукаємо адміна в `Auth`, бо там пароль**
+    const adminAuth = await Auth.findOne({ email });
+    if (!adminAuth || !adminAuth.validPassword(password)) {
+      return res.status(403).json({ message: "Invalid credentials" });
     }
 
-    // 🔥 Лог пароля перед перевіркою
-    console.log("Entered password:", password);
-    console.log("Stored hashed password:", user.password);
+    // 🎫 **Шукаємо загальні дані в `User`**
+    const adminUser = await User.findOne({ email });
 
-    // 🛡️ Перевірка пароля
-    const isPasswordCorrect = bcrypt.compareSync(password, user.password);
-    if (!isPasswordCorrect) {
-      return res.status(403).json({ message: "Invalid password" });
-    }
-
-    // 🎫 Генеруємо JWT-токен
+    // 🎟 Генеруємо токен
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { id: adminUser._id, role: adminUser.role },
       process.env.JWT_SECRET,
       { expiresIn: "2h" }
     );
 
-    // ✉️ Сповіщення про успішний логін
     await sendEmail(
       email,
-      "Вхід адміністратора",
-      `Вітаємо, ${user.username}! Ви успішно увійшли до адміністративної панелі.`
+      "Admin Login",
+      `Hello ${adminUser.username}, you have logged in successfully!`
     );
 
-    // 🔀 Відповідь з токеном
     res.json({ message: "Login successful", token });
   } catch (error) {
-    console.error("Login error:", error);
     res.status(500).json({ error: "Login failed", details: error.message });
   }
 });
