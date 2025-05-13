@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const sendEmail = require("../../emailService");
 const User = require("../schemas/user");
-
+const bcrypt = require("bcrypt");
 router.post("/register", async (req, res) => {
   const { username, email, password, adminSecret } = req.body;
 
