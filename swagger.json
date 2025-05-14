@@ -24,16 +24,20 @@
       "description": "CRUD операції, пошук, популярні товари і фільтри продуктів"
     },
     {
-      "name": "Auth",
-      "description": "Авторизація користувачів, токени і управління доступом"
+      "name": "Admin Auth",
+      "description": "Авторизація адміністраторів, токени і управління доступом"
     },
     {
-      "name": "User",
-      "description": "Операції з профілем користувача, включаючи список бажань і корзину"
+      "name": "User Auth",
+      "description": "Авторизація користувачів, токени і управління доступом"
     },
     {
       "name": "Admin",
       "description": "Операції для адміністраторів, включаючи доступ до адмінської панелі, керування користувачами та продуктами."
+    },
+    {
+      "name": "User",
+      "description": "Операції з профілем користувача, включаючи список бажань і корзину"
     },
     {
       "name": "Finance - Online",
@@ -46,6 +50,22 @@
     {
       "name": "Finance Settings",
       "description": "Фінансові налаштування, включаючи податки, витрати та бюджет."
+    },
+    {
+      "name": "Finance Overview",
+      "description": "Фінансовий огляд, аналіз та управління бюджетом."
+    },
+    {
+      "name": "Search",
+      "description": "Пошук товарів за запитом, включаючи фільтрацію."
+    },
+    {
+      "name": "Wishlist",
+      "description": "Список бажаних товарів користувача та управління ним."
+    },
+    {
+      "name": "Shopping",
+      "description": "Управління корзиною покупок, додавання та видалення товарів."
     }
   ],
 
@@ -518,7 +538,8 @@
     },
     "/api/user/auth/verify-email": {
       "get": {
-        "summary": "Verify user email",
+        "tags": ["User Auth"],
+        "summary": "Верифікація електронної пошти",
         "parameters": [
           {
             "name": "token",
@@ -531,17 +552,18 @@
         ],
         "responses": {
           "200": {
-            "description": "Email successfully verified"
+            "description": "Електронну пошту успішно підтверджено"
           },
           "400": {
-            "description": "Invalid or expired token"
+            "description": "Недійсний або прострочений токен"
           }
         }
       }
     },
     "/api/user/auth/register": {
       "post": {
-        "summary": "User registration",
+        "tags": ["User Auth"],
+        "summary": "Реєстрація користувача",
         "requestBody": {
           "required": true,
           "content": {
@@ -554,17 +576,18 @@
         },
         "responses": {
           "201": {
-            "description": "User registered successfully"
+            "description": "Користувача успішно зареєстровано"
           },
           "400": {
-            "description": "Invalid input data"
+            "description": "Невірні вхідні дані"
           }
         }
       }
     },
     "/api/user/auth/login": {
       "post": {
-        "summary": "User login",
+        "tags": ["User Auth"],
+        "summary": "Вхід користувача",
         "requestBody": {
           "required": true,
           "content": {
@@ -577,20 +600,21 @@
         },
         "responses": {
           "200": {
-            "description": "Login successful, returns access and refresh tokens"
+            "description": "Успішний вхід, повертає access і refresh токени"
           },
           "401": {
-            "description": "Invalid email or password"
+            "description": "Неправильна електронна пошта або пароль"
           },
           "403": {
-            "description": "Email not verified"
+            "description": "Електронна пошта не підтверджена"
           }
         }
       }
     },
     "/api/user/auth/logout": {
       "post": {
-        "summary": "User logout",
+        "tags": ["User Auth"],
+        "summary": "Вихід користувача",
         "requestBody": {
           "required": true,
           "content": {
@@ -608,20 +632,21 @@
         },
         "responses": {
           "200": {
-            "description": "User logged out successfully"
+            "description": "Користувача успішно вийшов"
           },
           "400": {
-            "description": "No refresh token provided"
+            "description": "Не вказано refresh токен"
           },
           "403": {
-            "description": "Invalid refresh token"
+            "description": "Недійсний refresh токен"
           }
         }
       }
     },
     "/api/user/auth/reset-password": {
       "post": {
-        "summary": "Password reset request",
+        "tags": ["User Auth"],
+        "summary": "Запит на скидання паролю",
         "requestBody": {
           "required": true,
           "content": {
@@ -640,20 +665,21 @@
         },
         "responses": {
           "200": {
-            "description": "Password reset link sent"
+            "description": "Посилання для скидання паролю надіслано"
           },
           "404": {
-            "description": "User not found"
+            "description": "Користувача не знайдено"
           },
           "500": {
-            "description": "Error sending reset email"
+            "description": "Помилка під час надсилання листа"
           }
         }
       }
     },
     "/api/user/auth/update-password": {
       "post": {
-        "summary": "Update user password",
+        "tags": ["User Auth"],
+        "summary": "Оновлення паролю користувача",
         "requestBody": {
           "required": true,
           "content": {
@@ -674,35 +700,18 @@
         },
         "responses": {
           "200": {
-            "description": "Password updated successfully"
+            "description": "Пароль успішно змінено"
           },
           "401": {
-            "description": "Incorrect old password"
+            "description": "Неправильний старий пароль"
           },
           "500": {
-            "description": "Error updating password"
+            "description": "Помилка при зміні паролю"
           }
         }
       }
     },
-    "/api/auth/user": {
-      "get": {
-        "tags": ["User"],
-        "summary": "Отримати дані користувача",
-        "responses": {
-          "200": {
-            "description": "Дані про користувача",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/User" }
-              }
-            }
-          },
-          "401": { "description": "Неавторизований користувач" },
-          "500": { "description": "Внутрішня помилка сервера" }
-        }
-      }
-    },
+
     "/api/admin/users": {
       "get": {
         "tags": ["Admin"],
