@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const User = require("../schemas/user");
 
 const extractToken = (req) => req.headers.authorization?.split(" ")[1];
 
