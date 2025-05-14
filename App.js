@@ -5,7 +5,7 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./swagger.json");
 const { cloudinary, storage, upload } = require("./src/config/cloudinary");
 const ProductRouter = require("./src/routes/productRouter");
-// const AuthRouter = require("./src/routes/authRouter");
+
 const ShoppingCartRouter = require("./src/routes/shoppingCartRouter");
 const WishlistRouter = require("./src/routes/wishlistRouter");
 const SearchRouter = require("./src/routes/searchRouter");
@@ -56,7 +56,7 @@ app.get("/test", (req, res) => {
 
 // Routes
 app.use("/api/products", ProductRouter);
-// app.use("/api/auth", AuthRouter);
+
 app.use("/api/admin/auth", AdminAuthRouter);
 app.use("/api/user/auth", UserAuthRouter);
 app.use("/api/shopping-cart", ShoppingCartRouter);
