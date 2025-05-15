@@ -29,8 +29,8 @@ router.post("/register", async (req, res) => {
     const newUser = new User({ email, username, password: hashedPassword });
 
     // Надсилання email-підтвердження
-    await sendVerificationEmail(newUser);
     await newUser.save();
+    await sendVerificationEmail(newUser);
 
     res
       .status(201)

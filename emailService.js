@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const crypto = require("crypto");
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
