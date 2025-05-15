@@ -43,12 +43,24 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    console.log("🔍 Checking admin with email:", email);
+
     const admin = await Admin.findOne({ email });
-    if (!admin || !(await bcrypt.compare(password, admin.password))) {
+    console.log("🛡️ Found admin in DB:", admin);
+
+    if (!admin) {
+      console.warn("❌ Admin not found!");
       return res.status(403).json({ message: "Invalid credentials" });
     }
 
-    // 🎟 Генеруємо токен
+    const isPasswordValid = await bcrypt.compare(password, admin.password);
+    console.log("🔑 Password comparison result:", isPasswordValid);
+
+    if (!isPasswordValid) {
+      console.warn("❌ Incorrect password!");
+      return res.status(403).json({ message: "Invalid credentials" });
+    }
+
     const token = jwt.sign(
       { id: admin._id, role: admin.role },
       process.env.JWT_SECRET,
@@ -61,8 +73,10 @@ router.post("/login", async (req, res) => {
       `Hello ${admin.username}, you have logged in successfully!`
     );
 
+    console.log("✅ Login successful!");
     res.json({ message: "Login successful", token });
   } catch (error) {
+    console.error("🔥 Login error:", error);
     res.status(500).json({ error: "Login failed", details: error.message });
   }
 });
