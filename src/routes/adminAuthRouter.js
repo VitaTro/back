@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const sendEmail = require("../../emailService");
+const { sendEmail } = require("../../emailService");
 const User = require("../schemas/user");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
