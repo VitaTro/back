@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
 const OnlineSale = require("../../schemas/finance/onlineSales");
 const OnlineOrder = require("../../schemas/finance/onlineOrders");
@@ -6,7 +7,9 @@ const Product = require("../../schemas/product");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 const { validate } = require("../../middleware/validateMiddleware");
 const validateOnlineSale = require("../../validation/onlineSalesJoi");
+const { isAdmin } = require("../../middleware/adminMiddleware");
 
+router.use(isAdmin);
 // 🔍 Отримати всі онлайн продажі
 router.get("/", async (req, res) => {
   try {

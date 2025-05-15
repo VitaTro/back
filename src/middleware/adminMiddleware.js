@@ -1,4 +1,4 @@
-const User = require("../schemas/user");
+const Admin = require("../schemas/adminSchema");
 
 const isAdmin = async (req, res, next) => {
   try {
@@ -6,8 +6,8 @@ const isAdmin = async (req, res, next) => {
       return res.status(403).json({ message: "Access denied: No user found" });
     }
 
-    const user = await User.findById(req.user.id);
-    if (!user || user.role !== "admin") {
+    const admin = await Admin.findById(req.user.id);
+    if (!admin || admin.role !== "admin") {
       return res.status(403).json({ message: "Access denied: Admins only" });
     }
 

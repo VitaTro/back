@@ -1,10 +1,11 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const { sendEmail } = require("../../emailService");
-const User = require("../schemas/user");
+
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const Auth = require("../schemas/auth");
+const Admin = mongoose.models.Admin || require("../schemas/adminSchema");
 
 router.post("/register", async (req, res) => {
   const { username, email, password, adminSecret } = req.body;
@@ -14,20 +15,16 @@ router.post("/register", async (req, res) => {
   }
 
   try {
-    const existingAdmin = await Auth.findOne({ email });
+    const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
       return res.status(400).json({ message: "Admin already exists" });
     }
 
-    // 🛡️ **Зберігаємо пароль у `Auth`**
-    const newAdminAuth = new Auth({ email });
-    newAdminAuth.setPassword(password);
-    await newAdminAuth.save();
+    // 🔐 **Хешуємо пароль і зберігаємо в `AdminSchema`**
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newAdmin = new Admin({ username, email, password: hashedPassword });
 
-    // 📌 **Зберігаємо загальні дані у `User`**
-    const newAdminUser = new User({ username, email, role: "admin" });
-    await newAdminUser.save();
-
+    await newAdmin.save();
     await sendEmail(
       email,
       "Welcome Admin!",
@@ -46,18 +43,14 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // 🔍 **Шукаємо адміна в `Auth`, бо там пароль**
-    const adminAuth = await Auth.findOne({ email });
-    if (!adminAuth || !adminAuth.validPassword(password)) {
+    const admin = await Admin.findOne({ email });
+    if (!admin || !(await bcrypt.compare(password, admin.password))) {
       return res.status(403).json({ message: "Invalid credentials" });
     }
 
-    // 🎫 **Шукаємо загальні дані в `User`**
-    const adminUser = await User.findOne({ email });
-
     // 🎟 Генеруємо токен
     const token = jwt.sign(
-      { id: adminUser._id, role: adminUser.role },
+      { id: admin._id, role: admin.role },
       process.env.JWT_SECRET,
       { expiresIn: "2h" }
     );
@@ -65,7 +58,7 @@ router.post("/login", async (req, res) => {
     await sendEmail(
       email,
       "Admin Login",
-      `Hello ${adminUser.username}, you have logged in successfully!`
+      `Hello ${admin.username}, you have logged in successfully!`
     );
 
     res.json({ message: "Login successful", token });
@@ -89,7 +82,6 @@ router.post("/send-email", async (req, res) => {
 
 router.post("/logout", async (req, res) => {
   try {
-    // 🔐 Очищуємо токен на клієнті
     res.json({ message: "Admin logged out successfully!" });
   } catch (error) {
     res.status(500).json({ error: "Logout failed", details: error.message });

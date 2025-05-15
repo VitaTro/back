@@ -3,12 +3,14 @@ const mongoose = require("mongoose");
 const router = express.Router();
 const { validate } = require("../../middleware/validateMiddleware");
 const Product = require("../../schemas/product");
-const offlineSaleValidationSchema = require("../../validation/offlineSalesJoi");
 const OfflineSale = require("../../schemas/finance/offlineSales");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 const FinanceSettings = require("../../schemas/finance/financeSettings");
+const offlineSaleValidationSchema = require("../../validation/offlineSalesJoi");
+const { isAdmin } = require("../../middleware/adminMiddleware");
 
-// Отримати всі офлайн-продажі
+router.use(isAdmin);
+
 router.get("/", async (req, res) => {
   try {
     console.log("🔍 Fetching offline sales...");
@@ -19,12 +21,10 @@ router.get("/", async (req, res) => {
       "name photoUrl price"
     );
 
-    if (!offlineSales || offlineSales.length === 0) {
-      console.warn("⚠️ No offline sales found.");
+    if (!offlineSales.length) {
       return res.status(404).json({ error: "No offline sales available" });
     }
 
-    console.log("✅ Offline sales fetched:", offlineSales);
     res.status(200).json(offlineSales);
   } catch (error) {
     console.error("🔥 Error fetching offline sales:", error);
@@ -35,41 +35,37 @@ router.get("/", async (req, res) => {
 router.post("/", validate(offlineSaleValidationSchema), async (req, res) => {
   try {
     console.log("➡️ Recording new offline sale...");
-
     const { products, totalAmount, paymentMethod, status } = req.body;
-    const offlineSaleProducts = [];
 
-    for (const product of products) {
-      const dbProduct = await Product.findById(product.productId);
-      if (!dbProduct || dbProduct.quantity < product.quantity) {
-        return res.status(400).json({
-          error: `Insufficient stock for product: ${
-            dbProduct?.name || product.productId
-          }`,
-        });
-      }
-      dbProduct.quantity -= product.quantity;
-      await dbProduct.save();
+    const offlineSaleProducts = await Promise.all(
+      products.map(async (product) => {
+        const dbProduct = await Product.findById(product.productId);
+        if (!dbProduct || dbProduct.quantity < product.quantity) {
+          throw new Error(
+            `Insufficient stock for ${dbProduct?.name || "product"}`
+          );
+        }
 
-      offlineSaleProducts.push({
-        productId: dbProduct._id,
-        quantity: product.quantity,
-        name: product.name,
-        price: product.price,
-        photoUrl: product.photoUrl,
-      });
-    }
+        dbProduct.quantity -= product.quantity;
+        await dbProduct.save();
 
-    const newOfflineSale = new OfflineSale({
+        return {
+          productId: dbProduct._id,
+          quantity: product.quantity,
+          name: dbProduct.name,
+          price: dbProduct.price,
+          photoUrl: dbProduct.photoUrl,
+        };
+      })
+    );
+
+    const newOfflineSale = await OfflineSale.create({
       products: offlineSaleProducts,
       totalAmount,
       paymentMethod,
       status: status || (paymentMethod !== "cash" ? "completed" : "pending"),
       saleDate: new Date(),
     });
-
-    await newOfflineSale.save();
-    console.log("✅ Offline sale recorded successfully!");
 
     if (newOfflineSale.status === "completed") {
       await FinanceOverview.updateOne(
@@ -80,7 +76,6 @@ router.post("/", validate(offlineSaleValidationSchema), async (req, res) => {
         },
         { upsert: true }
       );
-      console.log("✅ FinanceOverview updated!");
     }
 
     res.status(201).json({
@@ -89,12 +84,12 @@ router.post("/", validate(offlineSaleValidationSchema), async (req, res) => {
     });
   } catch (error) {
     console.error("🔥 Error recording offline sale:", error);
-    res.status(500).json({ error: "Failed to record offline sale" });
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to record offline sale" });
   }
 });
 
-const validSaleStatuses = ["pending", "completed", "cancelled"];
-// Оновити інформацію про офлайн-продаж
 router.patch("/:id", async (req, res) => {
   try {
     console.log(
@@ -102,6 +97,8 @@ router.patch("/:id", async (req, res) => {
     );
 
     const { status } = req.body;
+    const validSaleStatuses = ["pending", "completed", "cancelled"];
+
     if (!validSaleStatuses.includes(status)) {
       return res.status(400).json({ error: "Invalid status" });
     }
@@ -111,30 +108,9 @@ router.patch("/:id", async (req, res) => {
       return res.status(404).json({ error: "Offline sale not found" });
     }
 
-    if (offlineSale.status === status) {
-      return res.status(400).json({ error: "Sale already has this status" });
-    }
-
     offlineSale.status = status;
     await offlineSale.save();
-    console.log(`✅ Offline sale status updated to '${status}'`);
 
-    const financeSettings = await FinanceSettings.findOne({});
-    const expenses =
-      financeSettings.operatingCosts + financeSettings.budgetForProcurement;
-    const taxes = (financeSettings.taxRate / 100) * offlineSale.totalAmount;
-    const netProfit = offlineSale.totalAmount - expenses - taxes; // 💰 Формула чистого прибутку
-
-    await FinanceOverview.updateOne(
-      {},
-      {
-        $inc: { totalRevenue: offlineSale.totalAmount, totalProfit: netProfit },
-        $push: { completedOfflineSales: offlineSale._id },
-      },
-      { upsert: true }
-    );
-
-    console.log("✅ FinanceOverview updated with new offline sale data!");
     res.status(200).json({
       message: "Offline sale updated successfully",
       sale: offlineSale,
@@ -148,21 +124,26 @@ router.patch("/:id", async (req, res) => {
 router.put("/:id/return", async (req, res) => {
   try {
     const { refundAmount } = req.body;
-    const sale = await OfflineSale.findById(req.params.id);
-
-    if (!sale) return res.status(404).json({ error: "Продаж не знайдено" });
-    if (sale.status === "returned")
-      return res.status(400).json({ error: "Продаж вже повернуто" });
-
-    // 🔄 Повертаємо товари на склад
-    for (const product of sale.products) {
-      await Product.updateOne(
-        { _id: product.productId },
-        { $inc: { stock: product.quantity } }
-      );
+    if (refundAmount < 0) {
+      return res
+        .status(400)
+        .json({ error: "Refund amount cannot be negative" });
     }
 
-    // 💰 Оновлення фінансів
+    const sale = await OfflineSale.findById(req.params.id);
+    if (!sale) return res.status(404).json({ error: "Sale not found" });
+    if (sale.status === "returned")
+      return res.status(400).json({ error: "Sale already returned" });
+
+    await Promise.all(
+      sale.products.map(async (product) => {
+        await Product.updateOne(
+          { _id: product.productId },
+          { $inc: { stock: product.quantity } }
+        );
+      })
+    );
+
     await FinanceOverview.updateOne(
       {},
       { $inc: { totalRevenue: -refundAmount } }
@@ -172,10 +153,10 @@ router.put("/:id/return", async (req, res) => {
     sale.refundAmount = refundAmount;
     await sale.save();
 
-    res.status(200).json({ message: "Товар повернуто", sale });
+    res.status(200).json({ message: "Sale returned successfully", sale });
   } catch (error) {
     console.error("🔥 Error processing return:", error);
-    res.status(500).json({ error: "Не вдалося повернути товар" });
+    res.status(500).json({ error: "Failed to return sale" });
   }
 });
 

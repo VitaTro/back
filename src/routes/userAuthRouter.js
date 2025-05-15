@@ -1,7 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
-const User = require("../schemas/user");
-const Auth = require("../schemas/auth");
+const mongoose = require("mongoose");
+const User = mongoose.models.User || require("../schemas/userSchema");
 const jwt = require("jsonwebtoken");
 const router = express.Router();
 const { authenticateJWT } = require("../middleware/authenticateMiddleware");
@@ -18,17 +18,12 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     const { email, password, username } = req.body;
 
-    const existingUser = await Auth.findOne({ email });
+    const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(400).json({ message: "Email already exists" });
 
-    // 🛡️ **Зберігаємо пароль у `Auth`**
-    const newUserAuth = new Auth({ email });
-    newUserAuth.setPassword(password);
-    await newUserAuth.save();
-
-    // 📌 **Зберігаємо загальні дані у `User`**
-    const newUser = new User({ username, email });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ username, email, password: hashedPassword });
     await newUser.save();
 
     await sendVerificationEmail(newUser);
@@ -46,16 +41,9 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 🔍 Перевіряємо дані авторизації (пароль зберігається в Auth)
-    const authUser = await Auth.findOne({ email });
-    if (!authUser || !authUser.validPassword(password)) {
-      return res.status(401).json({ message: "Invalid email or password" });
-    }
-
-    // 📌 Отримуємо загальні дані користувача з User
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: "User data not found" });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
     if (!user.isVerified) {
@@ -74,7 +62,6 @@ router.post("/login", async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    // Зберігаємо refresh-токен у User
     user.refreshToken = refreshToken;
     await user.save();
 
@@ -135,19 +122,20 @@ router.post("/update-password", authenticateJWT, async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
 
-    const authUser = await Auth.findById(req.user.id);
-    if (!authUser || !authUser.validPassword(oldPassword)) {
+    const user = await User.findById(req.user.id);
+    if (!user || !(await bcrypt.compare(oldPassword, user.password))) {
       return res.status(401).json({ message: "Incorrect old password" });
     }
 
-    authUser.setPassword(newPassword);
-    await authUser.save();
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
 
     res.json({ message: "Password updated successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error updating password", error });
   }
 });
+
 router.get("/verify-email", async (req, res) => {
   try {
     const { token } = req.query;

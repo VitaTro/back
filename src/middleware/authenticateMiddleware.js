@@ -1,9 +1,11 @@
 const jwt = require("jsonwebtoken");
-const User = require("../schemas/user");
+const mongoose = require("mongoose");
+const User = mongoose.models.User || require("../schemas/userSchema");
+const Admin = mongoose.models.Admin || require("../schemas/adminSchema");
 
 const extractToken = (req) => req.headers.authorization?.split(" ")[1];
 
-const authenticateJWT = (req, res, next) => {
+const authenticateJWT = async (req, res, next) => {
   const token = extractToken(req);
   if (!token) {
     return res.status(401).json({ message: "Unauthorized: No token provided" });
@@ -11,6 +13,17 @@ const authenticateJWT = (req, res, next) => {
 
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (req.user.role === "admin") {
+      req.admin = await Admin.findById(req.user.id);
+    } else {
+      req.user = await User.findById(req.user.id);
+    }
+
+    if (!req.user && !req.admin) {
+      return res.status(403).json({ message: "User not found" });
+    }
+
     next();
   } catch (error) {
     console.error("JWT Error:", error);
