@@ -148,5 +148,28 @@ router.post("/update-password", authenticateJWT, async (req, res) => {
     res.status(500).json({ message: "Error updating password", error });
   }
 });
+router.get("/verify-email", async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    // 🔎 Шукаємо користувача за токеном
+    const user = await User.findOne({ verificationToken: token });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    // ✅ Верифікуємо email
+    user.isVerified = true;
+    user.verificationToken = undefined; // Видаляємо токен після перевірки
+    await user.save();
+
+    // 🔄 Редирект на фронт для логіну
+    res.redirect("https://nika-gold.netlify.app/user/auth/login");
+  } catch (error) {
+    console.error("Verification Error:", error);
+    res.status(500).json({ message: "Error verifying email" });
+  }
+});
 
 module.exports = router;
