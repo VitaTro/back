@@ -58,4 +58,38 @@ const sendVerificationEmail = async (user) => {
     console.error("🔥 Email sending error:", error);
   }
 };
-module.exports = { sendEmail, sendVerificationEmail };
+const sendResetPasswordEmail = async (user, resetLink) => {
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "Reset Your Password",
+      html: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+      <h2 style="color: #333; text-align: center;">Reset Your Password 🔑</h2>
+      <p style="color: #555; text-align: center;">Hello <strong>${user.username}</strong>,</p>
+      <p style="text-align: center; color: #777;">
+        You requested a password reset. Click the button below to proceed:
+      </p>
+      <div style="text-align: center; margin-top: 20px;">
+        <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; font-weight: bold; border-radius: 5px;">
+          Reset Password
+        </a>
+      </div>
+      <p style="text-align: center; margin-top: 20px; color: #888;">
+        If you did not request this, please ignore this email.
+      </p>
+    </div>
+  `,
+    });
+    console.log("✅ Reset password email sent successfully!");
+  } catch (error) {
+    console.error("🔥 Reset password email sending error:", error);
+  }
+};
+module.exports = {
+  transporter,
+  sendEmail,
+  sendVerificationEmail,
+  sendResetPasswordEmail,
+};

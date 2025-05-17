@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
-const { sendEmail } = require("../../emailService");
+const { sendEmail } = require("../config/emailService");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const Admin = mongoose.models.Admin || require("../schemas/adminSchema");
