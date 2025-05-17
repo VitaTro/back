@@ -7,6 +7,7 @@ const adminSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { type: String, default: "admin" },
   createdAt: { type: Date, default: Date.now },
+  isAdmin: { type: Boolean, default: true },
 });
 
 const Admin = mongoose.model("Admin", adminSchema);

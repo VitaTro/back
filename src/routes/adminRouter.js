@@ -1,10 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const User = require("../schemas/user");
+const User = require("../schemas/userSchema");
 const Product = require("../schemas/product");
 const Wishlist = require("../schemas/wishlist");
-// const { authenticateJWT } = require("../middleware/authMiddleware");
+const { isAdmin } = require("../middleware/adminMiddleware");
 
+router.use(isAdmin);
 // Маршрут для отримання користувачів
 router.get("/users", async (req, res) => {
   try {
