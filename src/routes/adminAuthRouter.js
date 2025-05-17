@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 const { sendEmail } = require("../../emailService");
-
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const Admin = mongoose.models.Admin || require("../schemas/adminSchema");
@@ -14,13 +13,17 @@ router.post("/register", async (req, res) => {
     return res.status(403).json({ message: "Invalid Admin Secret Key" });
   }
 
+  // (async () => {
+  //   const testPassword = "VitaSecure#2025";
+  //   const hashedPassword = await bcrypt.hash(testPassword, 10);
+  //   console.log("⚡️ New Hash for reference:", hashedPassword);
+  // })();
+
   try {
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
       return res.status(400).json({ message: "Admin already exists" });
     }
-
-    // 🔐 **Хешуємо пароль і зберігаємо в `AdminSchema`**
     const hashedPassword = await bcrypt.hash(password, 10);
     const newAdmin = new Admin({ username, email, password: hashedPassword });
 
@@ -43,36 +46,25 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    console.log("🔍 Checking admin with email:", email);
-
     const admin = await Admin.findOne({ email });
-    console.log("🛡️ Found admin in DB:", admin);
-
     if (!admin) {
-      console.warn("❌ Admin not found!");
       return res.status(403).json({ message: "Invalid credentials" });
     }
-
     const isPasswordValid = await bcrypt.compare(password, admin.password);
-    console.log("🔑 Password comparison result:", isPasswordValid);
-
     if (!isPasswordValid) {
       console.warn("❌ Incorrect password!");
       return res.status(403).json({ message: "Invalid credentials" });
     }
-
     const token = jwt.sign(
       { id: admin._id, role: admin.role },
       process.env.JWT_SECRET,
       { expiresIn: "2h" }
     );
-
     await sendEmail(
       email,
       "Admin Login",
       `Hello ${admin.username}, you have logged in successfully!`
     );
-
     console.log("✅ Login successful!");
     res.json({ message: "Login successful", token });
   } catch (error) {
