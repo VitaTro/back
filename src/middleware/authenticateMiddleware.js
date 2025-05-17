@@ -12,10 +12,14 @@ const authenticateJWT = async (req, res, next) => {
   }
 
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("🔍 Token Payload:", decoded); // ✅ Лог для перевірки ролі
+
+    req.user = decoded;
 
     if (req.user.role === "admin") {
       req.admin = await Admin.findById(req.user.id);
+      console.log("🔑 Admin Found:", req.admin);
     } else {
       req.user = await User.findById(req.user.id);
     }
@@ -26,7 +30,7 @@ const authenticateJWT = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error("JWT Error:", error);
+    console.error("🔥 JWT Error:", error);
     return res.status(403).json({ message: "Invalid or expired token" });
   }
 };

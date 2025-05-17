@@ -12,13 +12,6 @@ router.post("/register", async (req, res) => {
   if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET_KEY) {
     return res.status(403).json({ message: "Invalid Admin Secret Key" });
   }
-
-  // (async () => {
-  //   const testPassword = "VitaSecure#2025";
-  //   const hashedPassword = await bcrypt.hash(testPassword, 10);
-  //   console.log("⚡️ New Hash for reference:", hashedPassword);
-  // })();
-
   try {
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
@@ -55,6 +48,8 @@ router.post("/login", async (req, res) => {
       console.warn("❌ Incorrect password!");
       return res.status(403).json({ message: "Invalid credentials" });
     }
+    console.log("🛠 Admin Login Payload:", { id: admin._id, role: admin.role });
+
     const token = jwt.sign(
       { id: admin._id, role: admin.role },
       process.env.JWT_SECRET,
