@@ -4,7 +4,7 @@ const userValidationSchema = Joi.object({
   username: Joi.string()
     .min(3)
     .max(20)
-    .pattern(/^[a-zA-Z0-9_]+$/)
+    .pattern(/^(?!\s)[a-zA-Z0-9_ ]*(?<!\s)$/)
     .required()
     .messages({
       "string.empty": "Username cannot be empty",

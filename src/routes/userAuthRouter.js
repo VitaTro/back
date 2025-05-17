@@ -1,7 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
-const User = mongoose.models.User || require("../schemas/userSchema");
+const User = require("../schemas/userSchema");
 const jwt = require("jsonwebtoken");
 const router = express.Router();
 const { authenticateJWT } = require("../middleware/authenticateMiddleware");
@@ -23,8 +23,12 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Email already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const verificationToken = crypto.randomBytes(32).toString("hex");
     const newUser = new User({ username, email, password: hashedPassword });
+    console.log("🔑 Generated verification token:", verificationToken);
+
     await newUser.save();
+    console.log("✉️ Sending verification email to:", newUser.email);
 
     await sendVerificationEmail(newUser);
 
@@ -148,9 +152,14 @@ router.get("/verify-email", async (req, res) => {
     }
 
     // ✅ Верифікуємо email
+    console.log("✅ User verification status BEFORE save:", user.isVerified);
     user.isVerified = true;
-    user.verificationToken = undefined; // Видаляємо токен після перевірки
+    console.log(
+      "📌 User verification status BEFORE calling save():",
+      user.isVerified
+    );
     await user.save();
+    console.log("✅ User verification status AFTER save:", user.isVerified);
 
     // 🔄 Редирект на фронт для логіну
     res.redirect("https://nika-gold.netlify.app/user/auth/login");
