@@ -59,7 +59,7 @@ router.post("/login", async (req, res) => {
     );
     user.refreshToken = refreshToken;
     await user.save();
-    res.json({ accessToken, refreshToken });
+    res.json({ accessToken, refreshToken, isVerified: user.isVerified });
   } catch (error) {
     res.status(500).json({ message: "Login error", error: error.message });
   }
