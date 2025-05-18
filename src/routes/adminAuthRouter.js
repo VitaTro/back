@@ -46,12 +46,12 @@ router.post("/login", async (req, res) => {
     }
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     if (!isPasswordValid) {
-      console.warn("❌ Incorrect password!");
       return res.status(403).json({ message: "Invalid credentials" });
     }
+
     console.log("🛠 Admin Login Payload:", { id: admin._id, role: admin.role });
 
-    const accessToken = jwt.sign(
+    const token = jwt.sign(
       { id: admin._id, role: "admin", isAdmin: true },
       process.env.JWT_SECRET,
       { expiresIn: "2h" }
@@ -69,7 +69,8 @@ router.post("/login", async (req, res) => {
     );
     console.log("✅ Login successful!");
 
-    res.json({ message: "Login successful", accessToken, refreshToken });
+    // ✅ **Змінюємо відповідь — додаємо `token`**
+    res.json({ message: "Login successful", token, refreshToken });
   } catch (error) {
     console.error("🔥 Login error:", error);
     res.status(500).json({ error: "Login failed", details: error.message });
