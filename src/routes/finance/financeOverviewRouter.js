@@ -9,11 +9,9 @@ const OnlineSale = require("../../schemas/finance/onlineSales");
 const OfflineSale = require("../../schemas/finance/offlineSales");
 const FinanceSettings = require("../../schemas/finance/financeSettings");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
-const { isAdmin } = require("../../middleware/adminMiddleware");
+const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 
-router.use(isAdmin);
-
-router.get("/", async (req, res) => {
+router.get("/", authenticateAdmin, async (req, res) => {
   try {
     console.log("🔍 Fetching financial overview...");
 

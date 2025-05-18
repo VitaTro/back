@@ -7,11 +7,9 @@ const OfflineSale = require("../../schemas/finance/offlineSales");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 const { validate } = require("../../middleware/validateMiddleware");
 const offlineOrderValidationSchema = require("../../validation/offlineOrdersJoi");
-const { isAdmin } = require("../../middleware/adminMiddleware");
+const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 
-router.use(isAdmin);
-
-router.get("/", async (req, res) => {
+router.get("/", authenticateAdmin, async (req, res) => {
   try {
     console.log("🔍 Fetching offline orders...");
 
@@ -40,63 +38,66 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/", validate(offlineOrderValidationSchema), async (req, res) => {
-  try {
-    const { products, totalPrice, paymentMethod, paymentStatus } = req.body;
+router.post(
+  "/",
+  authenticateAdmin,
+  validate(offlineOrderValidationSchema),
+  async (req, res) => {
+    try {
+      const { products, totalPrice, paymentMethod, paymentStatus } = req.body;
 
-    const offlineOrderProducts = await Promise.all(
-      products.map(async (product) => {
-        const dbProduct = await Product.findById(product.productId);
-        if (!dbProduct || dbProduct.quantity < product.quantity) {
-          throw new Error(
-            `Insufficient stock for ${dbProduct?.name || "product"}`
-          );
-        }
+      const offlineOrderProducts = await Promise.all(
+        products.map(async (product) => {
+          const dbProduct = await Product.findById(product.productId);
+          if (!dbProduct || dbProduct.quantity < product.quantity) {
+            throw new Error(
+              `Insufficient stock for ${dbProduct?.name || "product"}`
+            );
+          }
 
-        dbProduct.quantity -= product.quantity;
-        await dbProduct.save();
+          dbProduct.quantity -= product.quantity;
+          await dbProduct.save();
 
-        return {
-          productId: dbProduct._id,
-          name: dbProduct.name,
-          price: dbProduct.price,
-          quantity: product.quantity,
-          photoUrl: dbProduct.photoUrl,
-        };
-      })
-    );
-
-    const newOfflineOrder = await OfflineOrder.create({
-      products: offlineOrderProducts,
-      totalPrice,
-      paymentMethod,
-      paymentStatus: paymentStatus || "pending",
-      status: "pending",
-    });
-
-    if (paymentStatus === "paid") {
-      await FinanceOverview.updateOne(
-        {},
-        { $push: { completedOrders: newOfflineOrder._id } },
-        { upsert: true }
+          return {
+            productId: dbProduct._id,
+            name: dbProduct.name,
+            price: dbProduct.price,
+            quantity: product.quantity,
+            photoUrl: dbProduct.photoUrl,
+          };
+        })
       );
-    }
 
-    res
-      .status(201)
-      .json({
+      const newOfflineOrder = await OfflineOrder.create({
+        products: offlineOrderProducts,
+        totalPrice,
+        paymentMethod,
+        paymentStatus: paymentStatus || "pending",
+        status: "pending",
+      });
+
+      if (paymentStatus === "paid") {
+        await FinanceOverview.updateOne(
+          {},
+          { $push: { completedOrders: newOfflineOrder._id } },
+          { upsert: true }
+        );
+      }
+
+      res.status(201).json({
         message: "Offline order created successfully",
         order: newOfflineOrder,
       });
-  } catch (error) {
-    console.error("🔥 Error creating offline order:", error);
-    res
-      .status(500)
-      .json({ error: error.message || "Failed to create offline order" });
+    } catch (error) {
+      console.error("🔥 Error creating offline order:", error);
+      res
+        .status(500)
+        .json({ error: error.message || "Failed to create offline order" });
+    }
   }
-});
+);
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", authenticateAdmin, async (req, res) => {
   try {
     const offlineOrder = await OfflineOrder.findById(req.params.id).populate(
       "products.productId",
@@ -114,7 +115,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", authenticateAdmin, async (req, res) => {
   try {
     const { status } = req.body;
     const validStatuses = ["pending", "completed", "cancelled"];
@@ -151,12 +152,10 @@ router.patch("/:id", async (req, res) => {
       );
     }
 
-    res
-      .status(200)
-      .json({
-        message: "Offline order updated successfully",
-        order: offlineOrder,
-      });
+    res.status(200).json({
+      message: "Offline order updated successfully",
+      order: offlineOrder,
+    });
   } catch (error) {
     console.error("🔥 Error updating offline order:", error);
     res.status(500).json({ error: "Failed to update offline order" });

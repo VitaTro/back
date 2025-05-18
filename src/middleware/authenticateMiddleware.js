@@ -17,8 +17,16 @@ const authenticateJWT = async (req, res, next) => {
 
     req.user = decoded;
 
+    if (!req.user.id) {
+      return res.status(403).json({ message: "Invalid token data" });
+    }
+
     if (req.user.role === "admin") {
+      console.log("🛠 Checking Admin ID:", req.user.id);
       req.admin = await Admin.findById(req.user.id);
+
+      console.log("✅ Admin Found:", req.admin);
+
       if (!req.admin) {
         return res
           .status(403)

@@ -4,7 +4,7 @@ const User = require("../schemas/userSchema");
 const Admin = require("../schemas/adminSchema");
 
 const generateAccessToken = (user) =>
-  jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "15m" });
+  jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "30d" });
 
 const refreshToken = async (req, res) => {
   const { refreshToken } = req.body;

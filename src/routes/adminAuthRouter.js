@@ -5,6 +5,7 @@ const { sendEmail } = require("../config/emailService");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const Admin = mongoose.models.Admin || require("../schemas/adminSchema");
+const { refreshToken } = require("../middleware/refreshTokenMiddleware");
 
 router.post("/register", async (req, res) => {
   const { username, email, password, adminSecret } = req.body;
@@ -50,23 +51,32 @@ router.post("/login", async (req, res) => {
     }
     console.log("🛠 Admin Login Payload:", { id: admin._id, role: admin.role });
 
-    const token = jwt.sign(
+    const accessToken = jwt.sign(
       { id: admin._id, role: "admin", isAdmin: true },
       process.env.JWT_SECRET,
       { expiresIn: "2h" }
     );
+    const refreshToken = jwt.sign(
+      { id: admin._id },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: "30d" }
+    );
+
     await sendEmail(
       email,
       "Admin Login",
       `Hello ${admin.username}, you have logged in successfully!`
     );
     console.log("✅ Login successful!");
-    res.json({ message: "Login successful", token });
+
+    res.json({ message: "Login successful", accessToken, refreshToken });
   } catch (error) {
     console.error("🔥 Login error:", error);
     res.status(500).json({ error: "Login failed", details: error.message });
   }
 });
+
+router.post("/refresh", refreshToken);
 
 router.post("/send-email", async (req, res) => {
   const { to, subject, text } = req.body;

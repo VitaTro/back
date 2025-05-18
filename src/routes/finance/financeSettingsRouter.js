@@ -1,10 +1,10 @@
 const express = require("express");
 const FinanceSettings = require("../../schemas/finance/financeSettings");
-const { isAdmin } = require("../../middleware/adminMiddleware");
 const router = express.Router();
+const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 
 // ✅ GET: Отримати фінансові налаштування
-router.get("/", async (req, res) => {
+router.get("/", authenticateAdmin, async (req, res) => {
   try {
     let financeSettings = await FinanceSettings.findOne();
 
@@ -25,7 +25,7 @@ router.get("/", async (req, res) => {
 });
 
 // ✅ PATCH: Оновити існуючі налаштування (лише для адмінів)
-router.patch("/", isAdmin, async (req, res) => {
+router.patch("/", authenticateAdmin, async (req, res) => {
   try {
     const { taxRate, operatingCosts, budgetForProcurement } = req.body;
 

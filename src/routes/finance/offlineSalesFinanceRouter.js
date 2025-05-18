@@ -7,11 +7,9 @@ const OfflineSale = require("../../schemas/finance/offlineSales");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 const FinanceSettings = require("../../schemas/finance/financeSettings");
 const offlineSaleValidationSchema = require("../../validation/offlineSalesJoi");
-const { isAdmin } = require("../../middleware/adminMiddleware");
+const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 
-router.use(isAdmin);
-
-router.get("/", async (req, res) => {
+router.get("/", authenticateAdmin, async (req, res) => {
   try {
     console.log("🔍 Fetching offline sales...");
 
@@ -32,65 +30,70 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/", validate(offlineSaleValidationSchema), async (req, res) => {
-  try {
-    console.log("➡️ Recording new offline sale...");
-    const { products, totalAmount, paymentMethod, status } = req.body;
+router.post(
+  "/",
+  authenticateAdmin,
+  validate(offlineSaleValidationSchema),
+  async (req, res) => {
+    try {
+      console.log("➡️ Recording new offline sale...");
+      const { products, totalAmount, paymentMethod, status } = req.body;
 
-    const offlineSaleProducts = await Promise.all(
-      products.map(async (product) => {
-        const dbProduct = await Product.findById(product.productId);
-        if (!dbProduct || dbProduct.quantity < product.quantity) {
-          throw new Error(
-            `Insufficient stock for ${dbProduct?.name || "product"}`
-          );
-        }
+      const offlineSaleProducts = await Promise.all(
+        products.map(async (product) => {
+          const dbProduct = await Product.findById(product.productId);
+          if (!dbProduct || dbProduct.quantity < product.quantity) {
+            throw new Error(
+              `Insufficient stock for ${dbProduct?.name || "product"}`
+            );
+          }
 
-        dbProduct.quantity -= product.quantity;
-        await dbProduct.save();
+          dbProduct.quantity -= product.quantity;
+          await dbProduct.save();
 
-        return {
-          productId: dbProduct._id,
-          quantity: product.quantity,
-          name: dbProduct.name,
-          price: dbProduct.price,
-          photoUrl: dbProduct.photoUrl,
-        };
-      })
-    );
-
-    const newOfflineSale = await OfflineSale.create({
-      products: offlineSaleProducts,
-      totalAmount,
-      paymentMethod,
-      status: status || (paymentMethod !== "cash" ? "completed" : "pending"),
-      saleDate: new Date(),
-    });
-
-    if (newOfflineSale.status === "completed") {
-      await FinanceOverview.updateOne(
-        {},
-        {
-          $inc: { totalRevenue: newOfflineSale.totalAmount },
-          $push: { completedOfflineSales: newOfflineSale._id },
-        },
-        { upsert: true }
+          return {
+            productId: dbProduct._id,
+            quantity: product.quantity,
+            name: dbProduct.name,
+            price: dbProduct.price,
+            photoUrl: dbProduct.photoUrl,
+          };
+        })
       );
+
+      const newOfflineSale = await OfflineSale.create({
+        products: offlineSaleProducts,
+        totalAmount,
+        paymentMethod,
+        status: status || (paymentMethod !== "cash" ? "completed" : "pending"),
+        saleDate: new Date(),
+      });
+
+      if (newOfflineSale.status === "completed") {
+        await FinanceOverview.updateOne(
+          {},
+          {
+            $inc: { totalRevenue: newOfflineSale.totalAmount },
+            $push: { completedOfflineSales: newOfflineSale._id },
+          },
+          { upsert: true }
+        );
+      }
+
+      res.status(201).json({
+        message: "Offline sale recorded successfully",
+        sale: newOfflineSale,
+      });
+    } catch (error) {
+      console.error("🔥 Error recording offline sale:", error);
+      res
+        .status(500)
+        .json({ error: error.message || "Failed to record offline sale" });
     }
-
-    res.status(201).json({
-      message: "Offline sale recorded successfully",
-      sale: newOfflineSale,
-    });
-  } catch (error) {
-    console.error("🔥 Error recording offline sale:", error);
-    res
-      .status(500)
-      .json({ error: error.message || "Failed to record offline sale" });
   }
-});
+);
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", authenticateAdmin, async (req, res) => {
   try {
     console.log(
       `🛠 Updating offline sale ID: ${req.params.id} with status: ${req.body.status}`
@@ -121,7 +124,7 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-router.put("/:id/return", async (req, res) => {
+router.put("/:id/return", authenticateAdmin, async (req, res) => {
   try {
     const { refundAmount } = req.body;
     if (refundAmount < 0) {

@@ -3,11 +3,11 @@ const router = express.Router();
 const User = require("../schemas/userSchema");
 const Product = require("../schemas/product");
 const Wishlist = require("../schemas/wishlist");
-const { isAdmin } = require("../middleware/adminMiddleware");
 
-router.use(isAdmin);
+const { authenticateAdmin } = require("../middleware/authenticateAdmin");
+
 // Маршрут для отримання користувачів
-router.get("/users", async (req, res) => {
+router.get("/users", authenticateAdmin, async (req, res) => {
   try {
     const users = await User.find();
     res.status(200).json(users);
@@ -17,7 +17,7 @@ router.get("/users", async (req, res) => {
 });
 
 // Маршрут для видалення користувача за ID
-router.delete("/users/:id", async (req, res) => {
+router.delete("/users/:id", authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await User.findByIdAndDelete(id);
@@ -30,7 +30,7 @@ router.delete("/users/:id", async (req, res) => {
   }
 });
 
-router.get("/products", async (req, res) => {
+router.get("/products", authenticateAdmin, async (req, res) => {
   try {
     const products = await Product.find();
     res.status(200).json(products);
@@ -40,7 +40,7 @@ router.get("/products", async (req, res) => {
 });
 
 // Маршрут для створення нового продукту
-router.post("/products", async (req, res) => {
+router.post("/products", authenticateAdmin, async (req, res) => {
   try {
     const product = new Product(req.body);
     await product.save();
@@ -53,7 +53,7 @@ router.post("/products", async (req, res) => {
 });
 
 // Маршрут для оновлення продукту за ID
-router.patch("/products/:id", async (req, res) => {
+router.patch("/products/:id", authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const updatedProduct = await Product.findByIdAndUpdate(id, req.body, {
@@ -69,7 +69,7 @@ router.patch("/products/:id", async (req, res) => {
 });
 
 // Маршрут для видалення продукту за ID
-router.delete("/products/:id", async (req, res) => {
+router.delete("/products/:id", authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await Product.findByIdAndDelete(id);
@@ -83,7 +83,7 @@ router.delete("/products/:id", async (req, res) => {
 });
 
 // Маршрут для адмін-панелі
-router.get("/dashboard", async (req, res) => {
+router.get("/dashboard", authenticateAdmin, async (req, res) => {
   try {
     // Загальна статистика
     const stats = {

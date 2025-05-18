@@ -7,11 +7,10 @@ const Product = require("../../schemas/product");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 const { validate } = require("../../middleware/validateMiddleware");
 const validateOnlineSale = require("../../validation/onlineSalesJoi");
-const { isAdmin } = require("../../middleware/adminMiddleware");
+const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 
-router.use(isAdmin);
 // 🔍 Отримати всі онлайн продажі
-router.get("/", async (req, res) => {
+router.get("/", authenticateAdmin, async (req, res) => {
   try {
     console.log("🔍 Fetching online sales...");
     const onlineSales = await OnlineSale.find()
@@ -29,55 +28,60 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/", validate(validateOnlineSale), async (req, res) => {
-  try {
-    console.log("➡️ Створюємо новий онлайн-продаж...");
+router.post(
+  "/",
+  authenticateAdmin,
+  validate(validateOnlineSale),
+  async (req, res) => {
+    try {
+      console.log("➡️ Створюємо новий онлайн-продаж...");
 
-    const { products, totalAmount, paymentMethod, status } = req.body;
-    const onlineSaleProducts = [];
+      const { products, totalAmount, paymentMethod, status } = req.body;
+      const onlineSaleProducts = [];
 
-    for (const product of products) {
-      const dbProduct = await Product.findById(product.productId);
-      if (!dbProduct || dbProduct.stock < product.quantity) {
-        return res.status(400).json({
-          error: `❌ Недостатня кількість товару: ${
-            dbProduct?.name || product.productId
-          }`,
+      for (const product of products) {
+        const dbProduct = await Product.findById(product.productId);
+        if (!dbProduct || dbProduct.stock < product.quantity) {
+          return res.status(400).json({
+            error: `❌ Недостатня кількість товару: ${
+              dbProduct?.name || product.productId
+            }`,
+          });
+        }
+        dbProduct.stock -= product.quantity;
+        await dbProduct.save();
+
+        onlineSaleProducts.push({
+          productId: dbProduct._id,
+          quantity: product.quantity,
+          salePrice: product.salePrice || dbProduct.price || 0,
         });
       }
-      dbProduct.stock -= product.quantity;
-      await dbProduct.save();
 
-      onlineSaleProducts.push({
-        productId: dbProduct._id,
-        quantity: product.quantity,
-        salePrice: product.salePrice || dbProduct.price || 0,
+      const newOnlineSale = new OnlineSale({
+        products: onlineSaleProducts,
+        totalAmount,
+        paymentMethod,
+        status: status || "received",
+        saleDate: new Date(),
       });
+
+      await newOnlineSale.save();
+      console.log("✅ Онлайн-продаж створено успішно!");
+
+      res.status(201).json({
+        message: "Продаж записано успішно",
+        sale: newOnlineSale,
+      });
+    } catch (error) {
+      console.error("🔥 Помилка створення онлайн-продажу:", error);
+      res.status(500).json({ error: "Не вдалося записати онлайн-продаж" });
     }
-
-    const newOnlineSale = new OnlineSale({
-      products: onlineSaleProducts,
-      totalAmount,
-      paymentMethod,
-      status: status || "received",
-      saleDate: new Date(),
-    });
-
-    await newOnlineSale.save();
-    console.log("✅ Онлайн-продаж створено успішно!");
-
-    res.status(201).json({
-      message: "Продаж записано успішно",
-      sale: newOnlineSale,
-    });
-  } catch (error) {
-    console.error("🔥 Помилка створення онлайн-продажу:", error);
-    res.status(500).json({ error: "Не вдалося записати онлайн-продаж" });
   }
-});
+);
 
 // 📌 Оновлення статусу онлайн-замовлення + автоматичне додавання у продажі
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", authenticateAdmin, async (req, res) => {
   try {
     console.log(
       `🛠 Updating online order ID: ${req.params.id} with status: ${req.body.status}`
@@ -170,7 +174,7 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-router.put("/:id/return", async (req, res) => {
+router.put("/:id/return", authenticateAdmin, async (req, res) => {
   try {
     const { returnedProducts, refundAmount } = req.body;
     const sale = await OnlineSale.findById(req.params.id);
