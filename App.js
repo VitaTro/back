@@ -23,6 +23,8 @@ const ProfileRouter = require("./src/routes/user/profileRouter");
 const RecentRouter = require("./src/routes/user/recentRouter");
 const { authenticateUser } = require("./src/middleware/authenticateUser");
 
+const app = express();
+
 const allowedOrigins = [
   "https://nika-gold.netlify.app",
   "http://localhost:5173",
