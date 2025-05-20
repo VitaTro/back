@@ -3,9 +3,9 @@ const router = express.Router();
 const User = require("../schemas/userSchema");
 const Product = require("../schemas/product");
 const Wishlist = require("../schemas/wishlist");
-
+const { sendAdminMessage } = require("../config/emailService");
 const { authenticateAdmin } = require("../middleware/authenticateAdmin");
-
+const { authenticateUser } = require("../middleware/authenticateUser");
 // Маршрут для отримання користувачів
 router.get("/users", authenticateAdmin, async (req, res) => {
   try {
@@ -132,4 +132,23 @@ router.get("/dashboard", authenticateAdmin, async (req, res) => {
   }
 });
 
+router.post("/email", authenticateUser, async (req, res) => {
+  try {
+    const { subject, message } = req.body;
+    if (!subject || !message)
+      return res
+        .status(400)
+        .json({ error: "Należy podać temat i treść wiadomości" });
+
+    await sendAdminMessage(subject, message);
+
+    res
+      .status(201)
+      .json({ message: "List do administratora został pomyślnie wysłany!" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Nie udało się wysłać wiadomości do administratora." });
+  }
+});
 module.exports = router;

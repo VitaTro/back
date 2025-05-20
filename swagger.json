@@ -58,14 +58,6 @@
     {
       "name": "Search",
       "description": "Пошук товарів за запитом, включаючи фільтрацію."
-    },
-    {
-      "name": "Wishlist",
-      "description": "Список бажаних товарів користувача та управління ним."
-    },
-    {
-      "name": "Shopping",
-      "description": "Управління корзиною покупок, додавання та видалення товарів."
     }
   ],
 
@@ -963,7 +955,68 @@
         }
       }
     },
-
+    "/api/admin/email": {
+      "post": {
+        "tags": ["Адміністраторські повідомлення"],
+        "summary": "Надсилання електронного листа адміністратору",
+        "description": "Дозволяє користувачеві надіслати повідомлення адміністратору.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Bearer-токен для авторизації користувача.",
+            "schema": { "type": "string", "example": "Bearer eyJhbGciOiJI..." }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "subject": {
+                    "type": "string",
+                    "description": "Тема повідомлення",
+                    "example": "Проблема із замовленням #12345"
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Текст повідомлення",
+                    "example": "У мене виникла проблема з виконанням мого замовлення. Чи можу я отримати допомогу?"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Повідомлення успішно надіслано адміністратору.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Лист адміну успішно надіслано!"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Не вказано тему або текст повідомлення."
+          },
+          "500": {
+            "description": "Помилка сервера під час надсилання повідомлення."
+          }
+        }
+      }
+    },
     "/api/admin/dashboard": {
       "get": {
         "tags": ["Admin"],
@@ -1999,6 +2052,7 @@
         }
       }
     },
+
     "/api/admin/finance/offline/orders": {
       "get": {
         "tags": ["Finance - Offline"],
@@ -2735,7 +2789,120 @@
         }
       }
     },
-
+    "/api/user/profile/email": {
+      "post": {
+        "tags": ["Профіль користувача"],
+        "summary": "Надсилання електронного листа адміністратору",
+        "description": "Дозволяє користувачеві надіслати повідомлення адміністратору зі сторінки профілю.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Bearer-токен для авторизації користувача.",
+            "schema": { "type": "string", "example": "Bearer eyJhbGciOiJI..." }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "subject": {
+                    "type": "string",
+                    "description": "Тема повідомлення",
+                    "example": "Проблема із замовленням #12345"
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Текст повідомлення",
+                    "example": "У мене виникла проблема з виконанням мого замовлення. Чи можу я отримати допомогу?"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Повідомлення успішно надіслано адміністратору.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Лист адміну успішно надіслано!"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Не вказано тему або текст повідомлення."
+          },
+          "500": {
+            "description": "Помилка сервера під час надсилання повідомлення."
+          }
+        }
+      }
+    },
+    "/api/user/recent": {
+      "get": {
+        "tags": ["Профіль користувача"],
+        "summary": "Отримати список останніх переглянутих товарів",
+        "description": "Повертає останні 10 товарів, які переглядав користувач.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Bearer-токен для авторизації користувача.",
+            "schema": { "type": "string", "example": "Bearer eyJhbGciOiJI..." }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Історія переглядів отримана.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "productId": {
+                        "type": "string",
+                        "example": "665acb1fd8477d002a8e2f49"
+                      },
+                      "name": {
+                        "type": "string",
+                        "example": "Золотий браслет"
+                      },
+                      "photoUrl": {
+                        "type": "string",
+                        "example": "https://example.com/image.jpg"
+                      },
+                      "price": { "type": "number", "example": 1500 },
+                      "viewedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-05-20T16:49:00Z"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "description": "Помилка отримання історії переглядів." }
+        }
+      }
+    },
     "/api/user/avatar": {
       "post": {
         "tags": ["User"],
@@ -2766,9 +2933,9 @@
         }
       }
     },
-    "/api/wishlist": {
+    "/api/user/wishlist": {
       "get": {
-        "tags": ["Wishlist"],
+        "tags": ["User"],
         "summary": "Отримати список бажань користувача",
         "responses": {
           "200": {
@@ -2788,9 +2955,9 @@
         }
       }
     },
-    "/api/wishlist/add": {
+    "/api/user/wishlist/add": {
       "post": {
-        "tags": ["Wishlist"],
+        "tags": ["User"],
         "summary": "Додати товар до списку бажань",
         "requestBody": {
           "required": true,
@@ -2817,9 +2984,9 @@
         }
       }
     },
-    "/api/wishlist/remove/{id}": {
+    "/api/user/wishlist/remove/{id}": {
       "delete": {
-        "tags": ["Wishlist"],
+        "tags": ["User"],
         "summary": "Видалити товар зі списку бажань",
         "parameters": [
           {
@@ -2841,9 +3008,9 @@
         }
       }
     },
-    "/api/wishlist/move-to-cart/{id}": {
+    "/api/user/wishlist/move-to-cart/{id}": {
       "post": {
-        "tags": ["Wishlist"],
+        "tags": ["User"],
         "summary": "Перемістити товар зі списку бажань до кошика",
         "parameters": [
           {
@@ -2919,9 +3086,9 @@
         }
       }
     },
-    "/api/shopping-cart": {
+    "/api/user/shopping-cart": {
       "get": {
-        "tags": ["Shopping"],
+        "tags": ["User"],
         "summary": "Отримати список товарів у корзині",
         "responses": {
           "200": {
@@ -2941,9 +3108,9 @@
         }
       }
     },
-    "/api/shopping-cart/add": {
+    "/api/user/shopping-cart/add": {
       "post": {
-        "tags": ["Shopping"],
+        "tags": ["User"],
         "summary": "Додати товар до корзини",
         "requestBody": {
           "required": true,
@@ -2975,9 +3142,9 @@
         }
       }
     },
-    "/api/shopping-cart/update/{id}": {
+    "/api/user/shopping-cart/update/{id}": {
       "patch": {
-        "tags": ["Shopping"],
+        "tags": ["User"],
         "summary": "Оновити кількість товару у корзині",
         "parameters": [
           {
@@ -3023,9 +3190,9 @@
         }
       }
     },
-    "/api/shopping-cart/remove/{id}": {
+    "/api/user/shopping-cart/remove/{id}": {
       "delete": {
-        "tags": ["Shopping"],
+        "tags": ["User"],
         "summary": "Видалити товар з корзини",
         "parameters": [
           {
@@ -3071,9 +3238,9 @@
         }
       }
     },
-    "/api/shopping-cart/move-to-wishlist/{id}": {
+    "/api/user/shopping-cart/move-to-wishlist/{id}": {
       "post": {
-        "tags": ["Shopping"],
+        "tags": ["User"],
         "summary": "Перемістити товар з корзини до списку бажань",
         "parameters": [
           {
@@ -3114,72 +3281,181 @@
       }
     },
     "/api/user/orders": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Отримати всі замовлення користувача",
+        "description": "Повертає список усіх замовлень, відсортованих за датою.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Bearer-токен для авторизації користувача.",
+            "schema": { "type": "string", "example": "Bearer eyJhbGciOiJI..." }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список замовлень отримано.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "type": "object" } }
+              }
+            }
+          },
+          "500": { "description": "Помилка отримання замовлень." }
+        }
+      },
       "post": {
         "tags": ["User"],
         "summary": "Створити нове замовлення",
-        "description": "Цей маршрут дозволяє користувачам створювати нові замовлення в системі.",
+        "description": "Додає нове замовлення в систему.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OrderRequest"
-              },
-              "example": {
-                "productId": "604b2f4a8fd3b341d8f9f2e7",
-                "userId": "604b2f4a8fd3b341d8f9f2e8",
-                "status": "new",
-                "totalPrice": 150.5,
-                "paymentStatus": "unpaid",
-                "paymentMethod": "нал",
-                "deliveryAddress": "123 Main St, City, Country",
-                "notes": "Будь ласка, доставте після 16:00"
+                "type": "object",
+                "properties": {
+                  "products": {
+                    "type": "array",
+                    "description": "Список товарів"
+                  },
+                  "totalPrice": {
+                    "type": "number",
+                    "description": "Загальна сума"
+                  },
+                  "paymentMethod": {
+                    "type": "string",
+                    "description": "Метод оплати"
+                  },
+                  "deliveryType": {
+                    "type": "string",
+                    "description": "Тип доставки"
+                  },
+                  "deliveryAddress": {
+                    "type": "string",
+                    "description": "Адреса доставки"
+                  }
+                }
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Замовлення успішно створено",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Order"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Некоректні дані запиту"
-          },
-          "500": {
-            "description": "Помилка сервера"
-          }
+          "201": { "description": "Замовлення створено." },
+          "500": { "description": "Помилка створення." }
+        }
+      }
+    },
+    "/api/user/orders/unpaid": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Отримати неоплачені замовлення",
+        "description": "Повертає список замовлень зі статусом `unpaid`.",
+        "responses": {
+          "200": { "description": "Успішно" },
+          "500": { "description": "Помилка" }
+        }
+      }
+    },
+    "/api/user/orders/processing": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Отримати оброблювані замовлення",
+        "description": "Повертає список замовлень зі статусом `processing`.",
+        "responses": {
+          "200": { "description": "Успішно" },
+          "500": { "description": "Помилка" }
+        }
+      }
+    },
+    "/api/user/orders/shipped": {
+      "get": {
+        "tags": ["User "],
+        "summary": "Отримати надіслані замовлення",
+        "description": "Повертає список замовлень зі статусом `shipped`.",
+        "responses": {
+          "200": { "description": "Успішно" },
+          "500": { "description": "Помилка" }
         }
       }
     },
 
-    "/api/user/purchase-history": {
-      "get": {
+    "/api/user/orders/{orderId}/return": {
+      "put": {
         "tags": ["User"],
-        "summary": "Отримати історію покупок користувача",
-        "description": "Цей маршрут повертає список усіх минулих покупок користувача.",
-        "responses": {
-          "200": {
-            "description": "Історію покупок успішно отримано.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Purchase"
+        "summary": "Запит на повернення замовлення",
+        "description": "Оновлює статус замовлення на `returned`, повертає товари на склад і коригує фінансові показники.",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "description": "ID замовлення, що повертається.",
+            "schema": {
+              "type": "string",
+              "example": "665acb1fd8477d002a8e2f49"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "returnedProducts": {
+                    "type": "array",
+                    "description": "Список повернутих товарів"
+                  },
+                  "refundAmount": {
+                    "type": "number",
+                    "description": "Сума повернення"
                   }
                 }
               }
             }
-          },
-          "401": { "description": "Неавторизований користувач." },
-          "500": { "description": "Внутрішня помилка сервера." }
+          }
+        },
+        "responses": {
+          "200": { "description": "Замовлення повернуто." },
+          "500": { "description": "Помилка повернення." }
+        }
+      }
+    },
+    "/api/user/orders/{id}/received": {
+      "patch": {
+        "tags": ["User"],
+        "summary": "Підтвердження отримання товару",
+        "description": "Оновлює статус замовлення на `completed`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID замовлення для підтвердження.",
+            "schema": {
+              "type": "string",
+              "example": "665acb1fd8477d002a8e2f49"
+            }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Отримання підтверджено." },
+          "500": { "description": "Помилка." }
+        }
+      }
+    },
+    "/api/user/orders/purchase-history": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Історія покупок користувача",
+        "description": "Повертає список завершених замовлень.",
+        "responses": {
+          "200": { "description": "Історія покупок отримана." },
+          "500": { "description": "Помилка." }
         }
       }
     },

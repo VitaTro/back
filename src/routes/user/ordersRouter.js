@@ -5,6 +5,10 @@ const OnlineOrder = require("../../schemas/finance/onlineOrders");
 const OnlineSale = require("../../schemas/finance/onlineSales");
 const Product = require("../../schemas/product");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
+const {
+  sendAdminOrderNotification,
+  sendAdminReturnNotification,
+} = require("../../config/emailService");
 
 router.get("/", authenticateUser, async (req, res) => {
   try {
@@ -76,7 +80,7 @@ router.post("/", authenticateUser, async (req, res) => {
       deliveryAddress,
       status: "new",
     });
-
+    await sendAdminOrderNotification(newOrder);
     res
       .status(201)
       .json({ message: "Order created successfully", order: newOrder });
@@ -120,7 +124,7 @@ router.put("/:orderId/return", authenticateUser, async (req, res) => {
     order.status = "returned";
     order.refundAmount = refundAmount;
     await order.save();
-
+    await sendAdminReturnNotification(order);
     res.status(200).json({ message: "Return processed successfully", order });
   } catch (error) {
     res.status(500).json({ error: "Failed to process return" });

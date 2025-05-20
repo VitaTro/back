@@ -20,6 +20,7 @@ const FinanceSettingsRouter = require("./src/routes/finance/financeSettingsRoute
 const AdminAuthRouter = require("./src/routes/auth/adminAuthRouter");
 const UserAuthRouter = require("./src/routes/auth/userAuthRouter");
 const ProfileRouter = require("./src/routes/user/profileRouter");
+const RecentRouter = require("./src/routes/user/recentRouter");
 const app = express();
 
 const allowedOrigins = [
@@ -61,6 +62,7 @@ app.get("/test", (req, res) => {
 app.use("/api/products", ProductRouter);
 app.use("/api/user/profile", ProfileRouter);
 app.use("/api/user/orders", OrdersRouter);
+app.use("/api/user/recent", RecentRouter);
 app.use("/api/admin/auth", AdminAuthRouter);
 app.use("/api/user/auth", UserAuthRouter);
 app.use("/api/user/shopping-cart", ShoppingCartRouter);

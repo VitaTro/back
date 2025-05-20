@@ -87,9 +87,86 @@ const sendResetPasswordEmail = async (user, resetLink) => {
     console.error("🔥 Reset password email sending error:", error);
   }
 };
+const sendAdminOrderNotification = async (order) => {
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: process.env.ADMIN_EMAIL,
+      subject: "📦 Nowe zamówienie w systemie!",
+      html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        <h2 style="color: #333; text-align: center;">Nowe zamówienie! 🚀</h2>
+        <p style="color: #555; text-align: center;">ID zamówienia: <strong>${order._id}</strong></p>
+        <p style="color: #777; text-align: center;">
+          Użytkownik <strong>${order.userId}</strong> złożył nowe zamówienie na kwotę <strong>${order.totalPrice} PLN</strong>.
+        </p>
+        <div style="text-align: center; margin-top: 20px;">
+          <a href="https://nika-gold-back-fe0ff35469d7.herokuapp.com/api/admin/finance/online/orders/${order._id}"
+             style="display: inline-block; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; font-weight: bold; border-radius: 5px;">
+            Sprawdź zamówienie
+          </a>
+        </div>
+      </div>
+    `,
+    });
+    console.log("✅ Administrator powiadomiony o nowym zamówieniu!");
+  } catch (error) {
+    console.error(
+      "🔥 Błąd podczas wysyłania powiadomienia do administratora:",
+      error
+    );
+  }
+};
+const sendAdminReturnNotification = async (order) => {
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: process.env.ADMIN_EMAIL, // Email administratora
+      subject: "🔄 Prośba o zwrot zamówienia!",
+      html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        <h2 style="color: #333; text-align: center;">Prośba o zwrot zamówienia! ❌</h2>
+        <p style="color: #555; text-align: center;">ID zamówienia: <strong>${order._id}</strong></p>
+        <p style="color: #777; text-align: center;">
+          Użytkownik <strong>${order.userId}</strong> zgłosił zwrot zamówienia o wartości <strong>${order.refundAmount} PLN</strong>.
+        </p>
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="https://nika-gold-back-fe0ff35469d7.herokuapp.com/api/admin/finance/online/orders/${order._id}"
+             style="display: inline-block; padding: 10px 20px; background-color: #ffc107; color: black; text-decoration: none; font-weight: bold; border-radius: 5px;">
+            Sprawdź zwrot
+          </a>
+        </div>
+      </div>
+    `,
+    });
+    console.log("✅ Administrator powiadomiony o zwrocie!");
+  } catch (error) {
+    console.error("🔥 Błąd podczas wysyłania powiadomienia o zwrocie:", error);
+  }
+};
+
+const sendAdminMessage = async (subject, message) => {
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: process.env.ADMIN_EMAIL, // Email адміністратора
+      subject,
+      text: message,
+    });
+    console.log(`✅ List do administratora został wysłany: ${subject}`);
+  } catch (error) {
+    console.error(
+      "🔥Wystąpił błąd podczas wysyłania e-maila do administratora:",
+      error
+    );
+  }
+};
+
 module.exports = {
   transporter,
   sendEmail,
   sendVerificationEmail,
   sendResetPasswordEmail,
+  sendAdminOrderNotification,
+  sendAdminReturnNotification,
 };
