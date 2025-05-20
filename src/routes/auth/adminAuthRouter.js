@@ -1,11 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
-const { sendEmail } = require("../config/emailService");
+const { sendEmail } = require("../../config/emailService");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const Admin = mongoose.models.Admin || require("../schemas/adminSchema");
-const { refreshToken } = require("../middleware/refreshTokenMiddleware");
+const Admin = mongoose.models.Admin || require("../../schemas/adminSchema");
+const { refreshToken } = require("../../middleware/refreshTokenMiddleware");
 
 router.post("/register", async (req, res) => {
   const { username, email, password, adminSecret } = req.body;

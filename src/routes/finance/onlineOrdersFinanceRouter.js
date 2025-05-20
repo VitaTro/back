@@ -4,6 +4,7 @@ const OnlineOrder = require("../../schemas/finance/onlineOrders");
 const OnlineSale = require("../../schemas/finance/onlineSales");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
+const { getIo } = require("../../config/socket");
 
 // ✅ Отримати всі онлайн-замовлення з пагінацією і фільтром
 router.get("/", authenticateAdmin, async (req, res) => {
@@ -83,29 +84,22 @@ router.post("/", authenticateAdmin, async (req, res) => {
 });
 
 // ✅ Оновити статус замовлення
+
 router.patch("/:id/status", authenticateAdmin, async (req, res) => {
   try {
     const { status, updatedBy } = req.body;
-    const validStatuses = [
-      "new",
-      "received",
-      "assembled",
-      "shipped",
-      "completed",
-      "cancelled",
-    ];
-
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: "Invalid status" });
-    }
-
     const order = await OnlineOrder.findById(req.params.id);
     if (!order) return res.status(404).json({ error: "Order not found" });
 
-    order.statusHistory.push({ status, updatedBy, updatedAt: new Date() });
     order.status = status;
-
+    order.statusHistory.push({ status, updatedBy, updatedAt: new Date() });
     await order.save();
+    const io = getIo();
+    io.emit(`orderStatusUpdate:${order.userId}`, {
+      orderId: order._id,
+      status,
+    });
+
     res.status(200).json({ message: "Order status updated", order });
   } catch (error) {
     res.status(500).json({ error: "Failed to update order status" });

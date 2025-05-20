@@ -540,7 +540,7 @@
       "post": {
         "summary": "Оновлення access-токена за допомогою refresh-токена",
         "description": "Використовується для отримання нового access-токена.",
-        "tags": ["Admin Authentication"],
+        "tags": ["Admin Auth"],
         "security": [{ "BearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -1637,7 +1637,7 @@
       "put": {
         "summary": "Конвертація онлайн-замовлення у продаж",
         "description": "Перетворює завершене замовлення (`status: completed`) у продаж та оновлює фінансові показники.",
-        "tags": ["Finance - Online Orders"],
+        "tags": ["Finance - Online "],
         "security": [{ "BearerAuth": [] }],
         "parameters": [
           {
@@ -2228,7 +2228,7 @@
       "get": {
         "summary": "Отримати офлайн-замовлення за ID",
         "description": "Повертає деталі офлайн-замовлення та список товарів.",
-        "tags": ["Finance - Offline Orders"],
+        "tags": ["Finance - Offline"],
         "security": [{ "BearerAuth": [] }],
         "parameters": [
           {
@@ -2635,14 +2635,13 @@
         ]
       }
     },
-
-    "/api/user/profile": {
+    "/api/user/profile/info": {
       "get": {
         "tags": ["User"],
-        "summary": "Отримати профіль користувача",
+        "summary": "Отримати особисті дані користувача",
         "responses": {
           "200": {
-            "description": "Профіль користувача отримано успішно.",
+            "description": "Успішне отримання інформації про користувача",
             "content": {
               "application/json": {
                 "schema": {
@@ -2651,13 +2650,13 @@
               }
             }
           },
-          "401": { "description": "Неавторизований користувач." },
-          "500": { "description": "Внутрішня помилка сервера." }
+          "401": { "description": "Неавторизований доступ" },
+          "500": { "description": "Помилка сервера" }
         }
       },
       "put": {
         "tags": ["User"],
-        "summary": "Оновити профіль користувача",
+        "summary": "Оновити особисті дані користувача",
         "requestBody": {
           "required": true,
           "content": {
@@ -2666,23 +2665,77 @@
                 "$ref": "#/components/schemas/UserProfile"
               },
               "example": {
-                "username": "NewUsername",
-                "email": "newemail@example.com",
-                "avatar": "https://example.com/new-avatar.jpg"
+                "name": "New Name",
+                "email": "newemail@example.com"
               }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "Профіль користувача оновлено успішно."
-          },
-          "400": { "description": "Некоректний формат запиту." },
-          "401": { "description": "Неавторизований користувач." },
-          "500": { "description": "Внутрішня помилка сервера." }
+          "200": { "description": "Дані успішно оновлені" },
+          "400": { "description": "Некоректний формат запиту" },
+          "401": { "description": "Неавторизований доступ" },
+          "500": { "description": "Помилка сервера" }
         }
       }
     },
+    "/api/user/profile/address": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Отримати адресу користувача",
+        "responses": {
+          "200": {
+            "description": "Успішне отримання адреси",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserAddress"
+                }
+              }
+            }
+          },
+          "401": { "description": "Неавторизований доступ" },
+          "500": { "description": "Помилка сервера" }
+        }
+      },
+      "put": {
+        "tags": ["User"],
+        "summary": "Оновити адресу користувача",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserAddress"
+              },
+              "example": {
+                "street": "Новий Адреса",
+                "city": "Місто",
+                "zip": "12345"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Адреса успішно оновлена" },
+          "400": { "description": "Некоректний формат запиту" },
+          "401": { "description": "Неавторизований доступ" },
+          "500": { "description": "Помилка сервера" }
+        }
+      }
+    },
+    "/api/user/profile": {
+      "delete": {
+        "tags": ["User"],
+        "summary": "Видалити акаунт користувача",
+        "responses": {
+          "200": { "description": "Акаунт успішно видалено" },
+          "401": { "description": "Неавторизований доступ" },
+          "500": { "description": "Помилка сервера" }
+        }
+      }
+    },
+
     "/api/user/avatar": {
       "post": {
         "tags": ["User"],

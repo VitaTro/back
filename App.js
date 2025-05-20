@@ -5,9 +5,9 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./swagger.json");
 const { cloudinary, storage, upload } = require("./src/config/cloudinary");
 const ProductRouter = require("./src/routes/productRouter");
-
-const ShoppingCartRouter = require("./src/routes/shoppingCartRouter");
-const WishlistRouter = require("./src/routes/wishlistRouter");
+const OrdersRouter = require("./src/routes/user/ordersRouter");
+const ShoppingCartRouter = require("./src/routes/user/shoppingCartRouter");
+const WishlistRouter = require("./src/routes/user/wishlistRouter");
 const SearchRouter = require("./src/routes/searchRouter");
 const FilterRouter = require("./src/routes/filterRouter");
 const AdminRouter = require("./src/routes/adminRouter");
@@ -17,8 +17,9 @@ const OfflineOrdersFinanceRouter = require("./src/routes/finance/offlineOrdersFi
 const OfflineSalesFinanceRouter = require("./src/routes/finance/offlineSalesFinanceRouter");
 const FinanceOverviewRouter = require("./src/routes/finance/financeOverviewRouter");
 const FinanceSettingsRouter = require("./src/routes/finance/financeSettingsRouter");
-const AdminAuthRouter = require("./src/routes/adminAuthRouter");
-const UserAuthRouter = require("./src/routes/userAuthRouter");
+const AdminAuthRouter = require("./src/routes/auth/adminAuthRouter");
+const UserAuthRouter = require("./src/routes/auth/userAuthRouter");
+const ProfileRouter = require("./src/routes/user/profileRouter");
 const app = express();
 
 const allowedOrigins = [
@@ -49,18 +50,21 @@ app.use(
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to the API. Please use frontend." });
 });
-
+app.get("/main", (req, res) => {
+  res.redirect("/");
+});
 app.get("/test", (req, res) => {
   res.send("This is a test route");
 });
 
 // Routes
 app.use("/api/products", ProductRouter);
-
+app.use("/api/user/profile", ProfileRouter);
+app.use("/api/user/orders", OrdersRouter);
 app.use("/api/admin/auth", AdminAuthRouter);
 app.use("/api/user/auth", UserAuthRouter);
-app.use("/api/shopping-cart", ShoppingCartRouter);
-app.use("/api/wishlist", WishlistRouter);
+app.use("/api/user/shopping-cart", ShoppingCartRouter);
+app.use("/api/user/wishlist", WishlistRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api", SearchRouter);
 app.use("/api/products", FilterRouter);

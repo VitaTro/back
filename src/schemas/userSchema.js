@@ -11,6 +11,10 @@ const userSchema = new mongoose.Schema({
   verificationToken: { type: String },
   refreshToken: { type: String },
   createdAt: { type: Date, default: Date.now },
+  firstName: { type: String },
+  lastName: { type: String },
+  phone: { type: String },
+  address: { type: String },
 });
 
 userSchema.methods.generateVerificationToken = function () {

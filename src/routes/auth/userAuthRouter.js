@@ -1,16 +1,16 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
-const User = require("../schemas/userSchema");
+const User = require("../../schemas/userSchema");
 const jwt = require("jsonwebtoken");
 const router = express.Router();
-const { authenticateJWT } = require("../middleware/authenticateMiddleware");
-const { refreshToken } = require("../middleware/refreshTokenMiddleware");
+const { authenticateJWT } = require("../../middleware/authenticateMiddleware");
+const { refreshToken } = require("../../middleware/refreshTokenMiddleware");
 const {
   sendVerificationEmail,
   sendResetPasswordEmail,
-} = require("../config/emailService");
-const { userValidationSchema } = require("../validation/userJoi");
+} = require("../../config/emailService");
+const { userValidationSchema } = require("../../validation/userJoi");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 

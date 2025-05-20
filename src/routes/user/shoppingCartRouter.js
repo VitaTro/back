@@ -1,9 +1,10 @@
 const express = require("express");
-const ShoppingCart = require("../schemas/shopping");
+const ShoppingCart = require("../../schemas/shopping");
 const router = express.Router();
-const Product = require("../schemas/product");
+const Product = require("../../schemas/product");
 const mongoose = require("mongoose");
-const Wishlist = require("../schemas/wishlist");
+const Wishlist = require("../../schemas/wishlist");
+
 router.get("/", async (req, res) => {
   try {
     const cartItems = await ShoppingCart.find().populate("productId");

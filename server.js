@@ -1,10 +1,14 @@
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
+const { initSocket } = require("./src/config/socket");
+const http = require("http");
+
 const dotenv = require("dotenv");
 const app = require("./App");
 require("./cronTasks");
-
+const server = http.createServer(app);
+initSocket(server);
 const PORT = process.env.PORT || 5000;
 
 mongoose
