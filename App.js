@@ -21,7 +21,7 @@ const AdminAuthRouter = require("./src/routes/auth/adminAuthRouter");
 const UserAuthRouter = require("./src/routes/auth/userAuthRouter");
 const ProfileRouter = require("./src/routes/user/profileRouter");
 const RecentRouter = require("./src/routes/user/recentRouter");
-const app = express();
+const { authenticateUser } = require("./src/middleware/authenticateUser");
 
 const allowedOrigins = [
   "https://nika-gold.netlify.app",
@@ -48,11 +48,12 @@ app.use(
   express.static(path.join(__dirname, "public", "favicon.ico"))
 );
 
-app.get("/", (req, res) => {
-  res.json({ message: "Welcome to the API. Please use frontend." });
-});
-app.get("/main", (req, res) => {
-  res.redirect("/");
+app.get("/main", authenticateUser, (req, res) => {
+  if (req.user) {
+    res.redirect("/api/user/main"); // 🔹 Перенаправлення для залогованих
+  } else {
+    res.json({ message: "Welcome! Log in to access full features." }); // 🔹 Повідомлення для гостей
+  }
 });
 app.get("/test", (req, res) => {
   res.send("This is a test route");
