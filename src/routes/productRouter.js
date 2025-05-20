@@ -3,7 +3,7 @@ const router = express.Router();
 const Product = require("../schemas/product");
 const { cloudinary, upload } = require("../config/cloudinary");
 const searchController = require("../controller/searchController");
-const RecentView = require("../schemas/recentViews");
+const RecentView = require("../schemas/recent");
 // Маршрут для отримання всіх продуктів
 router.get("/", async (req, res) => {
   try {

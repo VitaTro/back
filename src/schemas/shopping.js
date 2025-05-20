@@ -1,11 +1,17 @@
 const mongoose = require("mongoose");
 const Product = require("./product");
+const User = require("./userSchema");
 
 // Схема для елементів кошика
 const shoppingCartSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
   productId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Product", // Посилання на колекцію "Product"
+    ref: "Product",
     required: true,
     unique: true,
   },
