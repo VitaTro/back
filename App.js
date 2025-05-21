@@ -22,6 +22,7 @@ const UserAuthRouter = require("./src/routes/auth/userAuthRouter");
 const ProfileRouter = require("./src/routes/user/profileRouter");
 const RecentRouter = require("./src/routes/user/recentRouter");
 const { authenticateUser } = require("./src/middleware/authenticateUser");
+const MainRouter = require("./src/routes/mainRouter");
 
 const app = express();
 
@@ -64,18 +65,12 @@ app.use(
   express.static(path.join(__dirname, "public", "favicon.ico"))
 );
 
-app.get("/main", authenticateUser, (req, res) => {
-  if (req.user) {
-    res.redirect("/api/user/main"); // 🔹 Перенаправлення для залогованих
-  } else {
-    res.json({ message: "Welcome! Log in to access full features." }); // 🔹 Повідомлення для гостей
-  }
-});
 app.get("/test", (req, res) => {
   res.send("This is a test route");
 });
 
 // Routes
+app.use("/", MainRouter);
 app.use("/api/products", ProductRouter);
 app.use("/api/user/profile", ProfileRouter);
 app.use("/api/user/orders", OrdersRouter);

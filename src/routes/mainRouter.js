@@ -3,28 +3,25 @@ const { authenticateUser } = require("../../middleware/authenticateUser");
 const router = express.Router();
 
 // ✅ Отримати основну інформацію для користувача (гості)
-router.get("/", async (req, res) => {
+router.get(["/", "/main"], (req, res) => {
   res.json({
-    message: "Witamy! Zaloguj się, aby uzyskać więcej możliwości.",
-    features: ["Przegląd produktów, Ogólne informacje, Kontakt"],
+    message: "Witamy!",
+    products: [
+      { name: "Product 1", description: "Opis produktu" },
+      { name: "Product 2", description: "Opis produktu" },
+    ],
+    note: "Zaloguj się, aby zobaczyć więcej szczegółów.",
   });
 });
 
-// ✅ Повний доступ для залогованого користувача
-router.get("/user", authenticateUser, async (req, res) => {
-  try {
-    res.json({
-      message: `Witamy, ${req.user.name}!Uzyskałeś pełny dostęp.`,
-      features: ["Wishlist", "Shopping Cart", "Orders", "Profile"],
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Błąd serwera" });
-  }
-});
-
-// ✅ Автоматичне перенаправлення залогованого юзера на `/api/user/main`
-router.get("/main", authenticateUser, async (req, res) => {
-  res.redirect("/api/user/main");
+router.get("/api/user/main", authenticateUser, (req, res) => {
+  res.json({
+    message: `Witamy, ${req.user.name}!`,
+    products: [
+      { name: "Product 1", price: "$10", wishlist: true },
+      { name: "Product 2", price: "$20", wishlist: false },
+    ],
+  });
 });
 
 module.exports = router;
