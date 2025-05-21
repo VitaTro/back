@@ -39,7 +39,40 @@ router.post("/register", async (req, res) => {
 
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, refreshToken } = req.body;
+
+    // 🔹 Якщо refreshToken є, перевіряємо його замість логіну
+    if (refreshToken) {
+      try {
+        const decoded = jwt.verify(
+          refreshToken,
+          process.env.JWT_REFRESH_SECRET
+        );
+        const user = await User.findById(decoded.id);
+        if (!user || user.refreshToken !== refreshToken) {
+          return res.status(403).json({ message: "Invalid refresh token" });
+        }
+
+        // Генеруємо новий accessToken
+        const accessToken = jwt.sign(
+          { id: user._id, role: user.role },
+          process.env.JWT_SECRET,
+          { expiresIn: "15m" }
+        );
+
+        return res.json({
+          accessToken,
+          refreshToken,
+          isVerified: user.isVerified,
+        });
+      } catch (error) {
+        return res
+          .status(403)
+          .json({ message: "Refresh token expired or invalid" });
+      }
+    }
+
+    // 🔹 Якщо refreshToken немає, використовуємо стандартний логін
     const user = await User.findOne({ email });
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -47,22 +80,55 @@ router.post("/login", async (req, res) => {
     if (!user.isVerified) {
       return res.status(403).json({ message: "Email not verified" });
     }
+
+    // Генеруємо нові токени
     const accessToken = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "15m" }
     );
-    const refreshToken = jwt.sign(
+    const newRefreshToken = jwt.sign(
       { id: user._id },
       process.env.JWT_REFRESH_SECRET,
       { expiresIn: "7d" }
     );
-    user.refreshToken = refreshToken;
+    user.refreshToken = newRefreshToken;
     await user.save();
-    res.json({ accessToken, refreshToken, isVerified: user.isVerified });
+
+    res.json({
+      accessToken,
+      refreshToken: newRefreshToken,
+      isVerified: user.isVerified,
+    });
   } catch (error) {
     res.status(500).json({ message: "Login error", error: error.message });
   }
+  // try {
+
+  //   const { email, password } = req.body;
+  //   const user = await User.findOne({ email });
+  //   if (!user || !(await bcrypt.compare(password, user.password))) {
+  //     return res.status(401).json({ message: "Invalid email or password" });
+  //   }
+  //   if (!user.isVerified) {
+  //     return res.status(403).json({ message: "Email not verified" });
+  //   }
+  //   const accessToken = jwt.sign(
+  //     { id: user._id, role: user.role },
+  //     process.env.JWT_SECRET,
+  //     { expiresIn: "15m" }
+  //   );
+  //   const refreshToken = jwt.sign(
+  //     { id: user._id },
+  //     process.env.JWT_REFRESH_SECRET,
+  //     { expiresIn: "7d" }
+  //   );
+  //   user.refreshToken = refreshToken;
+  //   await user.save();
+  //   res.json({ accessToken, refreshToken, isVerified: user.isVerified });
+  // } catch (error) {
+  //   res.status(500).json({ message: "Login error", error: error.message });
+  // }
 });
 
 router.post("/logout", async (req, res) => {
@@ -129,5 +195,6 @@ router.get("/verify-email", async (req, res) => {
     res.status(500).json({ message: "Error verifying email" });
   }
 });
+router.post("/refresh", refreshToken);
 
 module.exports = router;

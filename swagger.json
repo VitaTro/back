@@ -686,6 +686,57 @@
         }
       }
     },
+    "/api/user/auth/refresh": {
+      "post": {
+        "summary": "Оновлення access-токена за допомогою refresh-токена",
+        "description": "Використовується для отримання нового access-токена.",
+        "tags": ["User Auth"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "description": "Refresh-токен, виданий під час логіну",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR..."
+                  }
+                },
+                "required": ["refreshToken"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Успішне оновлення access-токена",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessToken": {
+                      "type": "string",
+                      "description": "Новий access-токен",
+                      "example": "eyJhbGciOiJIUzI1NiIsInR..."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Немає refresh-токена у запиті"
+          },
+          "403": {
+            "description": "Refresh-токен недійсний або прострочений"
+          }
+        }
+      }
+    },
     "/api/user/auth/reset-password": {
       "post": {
         "tags": ["User Auth"],
