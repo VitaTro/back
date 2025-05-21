@@ -21,7 +21,7 @@ const AdminAuthRouter = require("./src/routes/auth/adminAuthRouter");
 const UserAuthRouter = require("./src/routes/auth/userAuthRouter");
 const ProfileRouter = require("./src/routes/user/profileRouter");
 const RecentRouter = require("./src/routes/user/recentRouter");
-const { authenticateUser } = require("./src/middleware/authenticateUser");
+// const { authenticateUser } = require("./src/middleware/authenticateUser");
 const MainRouter = require("./src/routes/mainRouter");
 
 const app = express();

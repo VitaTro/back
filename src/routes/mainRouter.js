@@ -1,5 +1,5 @@
 const express = require("express");
-const { authenticateUser } = require("../../middleware/authenticateUser");
+const { authenticateUser } = require("../middleware/authenticateUser");
 const router = express.Router();
 
 // ✅ Отримати основну інформацію для користувача (гості)
