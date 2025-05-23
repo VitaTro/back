@@ -12,6 +12,7 @@ router.get("/", async (req, res) => {
     let filteredProducts = products.map((product) => ({
       name: product.name,
       category: product.category,
+      subcategory: product.subcategory,
       description: product.description,
       photoUrl: product.photoUrl,
       size: product.size,
