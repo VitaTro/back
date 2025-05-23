@@ -8,7 +8,20 @@ const RecentView = require("../schemas/recent");
 router.get("/", async (req, res) => {
   try {
     const products = await Product.find({});
-    res.json(products);
+
+    let filteredProducts = products.map((product) => ({
+      name: product.name,
+      category: product.category,
+      description: product.description,
+      photoUrl: product.photoUrl,
+      size: product.size,
+      inStock: product.inStock,
+      visible: product.visible,
+      createdAt: product.createdAt,
+      price: req.user?.role === "admin" ? product.price : undefined, // ✅ Ціна доступна тільки адмінам
+    }));
+
+    res.json(filteredProducts);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

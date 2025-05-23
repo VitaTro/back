@@ -15,6 +15,8 @@ const userSchema = new mongoose.Schema({
   lastName: { type: String },
   phone: { type: String },
   address: { type: String },
+  shoppingCart: [{ productId: String, quantity: Number }],
+  wishlist: [{ productId: String }],
 });
 
 userSchema.methods.generateVerificationToken = function () {

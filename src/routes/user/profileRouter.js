@@ -1,11 +1,13 @@
 const express = require("express");
 const User = require("../../schemas/userSchema");
+const Product = require("../../schemas/product");
 const { authenticateUser } = require("../../middleware/authenticateUser");
 const { sendAdminMessage } = require("../../config/emailService");
+const Recent = require("../../schemas/recent");
 const router = express.Router();
 
 // 📌 Отримати особисті дані
-router.get("/info", authenticateUser, async (req, res) => {
+router.get("/profile/info", authenticateUser, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("name email");
     if (!user) {
@@ -21,7 +23,7 @@ router.get("/info", authenticateUser, async (req, res) => {
 });
 
 // ✏️ Оновити особисті дані
-router.put("/info", authenticateUser, async (req, res) => {
+router.put("/profile/info", authenticateUser, async (req, res) => {
   try {
     const { name, email } = req.body;
     const updatedUser = await User.findByIdAndUpdate(
@@ -44,7 +46,7 @@ router.put("/info", authenticateUser, async (req, res) => {
 });
 
 // 🏠 Отримати адресу
-router.get("/address", authenticateUser, async (req, res) => {
+router.get("/profile/address", authenticateUser, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("address");
     if (!user) {
@@ -60,7 +62,7 @@ router.get("/address", authenticateUser, async (req, res) => {
 });
 
 // ✏️ Оновити адресу
-router.put("/address", authenticateUser, async (req, res) => {
+router.put("/profile/address", authenticateUser, async (req, res) => {
   try {
     const { address } = req.body;
     const updatedUser = await User.findByIdAndUpdate(
@@ -83,7 +85,7 @@ router.put("/address", authenticateUser, async (req, res) => {
 });
 
 // ❌ Видалити акаунт
-router.delete("/", authenticateUser, async (req, res) => {
+router.delete("/profile", authenticateUser, async (req, res) => {
   try {
     const deletedUser = await User.findByIdAndDelete(req.user.id);
     if (!deletedUser) {
@@ -97,7 +99,7 @@ router.delete("/", authenticateUser, async (req, res) => {
     res.status(500).json({ message: "Błąd serwera" });
   }
 });
-router.post("/email", authenticateUser, async (req, res) => {
+router.post("/profile/email", authenticateUser, async (req, res) => {
   try {
     const { subject, message } = req.body;
     if (!subject || !message)
@@ -114,6 +116,29 @@ router.post("/email", authenticateUser, async (req, res) => {
     res
       .status(500)
       .json({ error: "Nie udało się wysłać wiadomości do administratora." });
+  }
+});
+router.get("/recent", authenticateUser, async (req, res) => {
+  try {
+    const recentViews = await Recent.find({ userId: req.user.id })
+      .populate("productId", "name photoUrl price")
+      .sort({ viewedAt: -1 })
+      .limit(20); // Показати останні 10 переглядів
+
+    res.status(200).json(recentViews);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Nie udało się pobrać historii przeglądania" });
+  }
+});
+// 📌 Всі продукти для авторизованих користувачів (ціни доступні)
+router.get("/products", authenticateUser, async (req, res) => {
+  try {
+    const products = await Product.find({});
+    res.json(products); // ✅ Відправляємо повну інформацію, включаючи ціну
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 module.exports = router;

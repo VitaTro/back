@@ -1,20 +1,23 @@
 const express = require("express");
 const Wishlist = require("../../schemas/wishlist");
+const { authenticateUser } = require("../../middleware/authenticateUser");
 const router = express.Router();
 const Product = require("../../schemas/product");
 const ShoppingCart = require("../../schemas/shopping");
 
-router.get("/", async (req, res) => {
+router.get("/", authenticateUser, async (req, res) => {
   try {
-    const wishlist = await Wishlist.find().populate("productId");
-    res.json({ wishlist });
+    const wishlist = await Wishlist.find({ userId: req.user.id }).populate(
+      "productId"
+    );
+    res.json({ wishlist }); // ✅ Віддаємо повні дані тільки авторизованим
   } catch (error) {
-    console.error("Error fetching wishlist:", error.message);
+    console.error("Error fetching user wishlist:", error.message);
     res.status(500).json({ error: "Failed to retrieve wishlist items" });
   }
 });
 
-router.post("/add", async (req, res) => {
+router.post("/add", authenticateUser, async (req, res) => {
   try {
     const { productId, quantity } = req.body;
     if (!productId) {
@@ -29,12 +32,13 @@ router.post("/add", async (req, res) => {
     }
 
     // Перевірка, чи продукт вже є у списку бажань
-    const exists = await Wishlist.findOne({ productId });
+    const exists = await Wishlist.findOne({ userId: req.user.id, productId });
     if (exists) {
       return res.status(400).json({ error: "Product is already in wishlist" });
     }
 
     const newItem = new Wishlist({
+      userId: req.user.id,
       productId,
       name: product.name,
       photoUrl: product.photoUrl,
@@ -51,15 +55,20 @@ router.post("/add", async (req, res) => {
   }
 });
 
-router.delete("/remove/:id", async (req, res) => {
+router.delete("/remove/:id", authenticateUser, async (req, res) => {
   try {
     const itemId = req.params.id;
 
     console.log("Deleting item with ID:", itemId);
 
-    const item = await Wishlist.findByIdAndDelete(itemId);
+    const item = await Wishlist.findOneAndDelete({
+      _id: itemId,
+      userId: req.user.id,
+    });
     if (!item) {
-      return res.status(404).json({ error: "Item not found" });
+      return res
+        .status(404)
+        .json({ error: "Item not found or does not belong to user" });
     }
 
     res.json({ message: `Item with ID ${itemId} removed from wishlist` });
@@ -69,18 +78,24 @@ router.delete("/remove/:id", async (req, res) => {
   }
 });
 
-router.post("/move-to-cart/:id", async (req, res) => {
+router.post("/move-to-cart/:id", authenticateUser, async (req, res) => {
   try {
     const wishlistItemId = req.params.id;
 
     // Знаходимо елемент у списку бажань
-    const wishlistItem = await Wishlist.findById(wishlistItemId);
+    const wishlistItem = await Wishlist.findOne({
+      _id: wishlistItemId,
+      userId: req.user.id,
+    });
     if (!wishlistItem) {
-      return res.status(404).json({ error: "Item not found in wishlist" });
+      return res
+        .status(404)
+        .json({ error: "Item not found in user's wishlist" });
     }
 
     // Додаємо елемент до кошика
     const newCartItem = new ShoppingCart({
+      userId: req.user.id,
       productId: wishlistItem.productId,
       name: wishlistItem.name,
       photoUrl: wishlistItem.photoUrl,
