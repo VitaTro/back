@@ -18,7 +18,7 @@ router.get("/", async (req, res) => {
       inStock: product.inStock,
       visible: product.visible,
       createdAt: product.createdAt,
-      price: req.user?.role === "admin" ? product.price : undefined, // ✅ Ціна доступна тільки адмінам
+      price: req.user ? product.price : undefined,
     }));
 
     res.json(filteredProducts);
