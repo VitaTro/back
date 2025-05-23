@@ -70,7 +70,7 @@ app.get("/test", (req, res) => {
 });
 
 // Routes
-app.use("/", MainRouter);
+app.use("/api", MainRouter);
 app.use("/api/products", ProductRouter);
 app.use("/api/user", ProfileRouter);
 app.use("/api/user/orders", OrdersRouter);
