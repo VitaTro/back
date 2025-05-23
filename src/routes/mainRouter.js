@@ -24,7 +24,8 @@ router.get("/main", async (req, res) => {
 // ✅ Дані для авторизованих користувачів (повний доступ)
 router.get("/user/main", authenticateUser, async (req, res) => {
   try {
-    console.log("🟢 Fetching data for user:", req.user); // ✅ Логування для перевірки
+    console.log("🟢 Fetching data for user:", req.user);
+
     if (!req.user || !req.user.id) {
       return res
         .status(401)
@@ -38,22 +39,24 @@ router.get("/user/main", authenticateUser, async (req, res) => {
       return res.status(404).json({ message: "User not found." });
     }
 
-    const products = await Product.find({});
-
     return res.json({
       message: `Witamy, ${user.username}!`,
-      shoppingCart: user.shoppingCart,
-      wishlist: user.wishlist,
-      products,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        isVerified: user.isVerified,
+        shoppingCart: user.shoppingCart || [],
+        wishlist: user.wishlist || [],
+      },
     });
   } catch (error) {
-    console.error("🔥 Error fetching user main data:", error);
-    return res
-      .status(500)
-      .json({
-        message: "Błąd pobierania danych użytkownika.",
-        details: error.message,
-      });
+    console.error("🔥 Error fetching user data:", error);
+    return res.status(500).json({
+      message: "Błąd pobierania danych użytkownika.",
+      details: error.message,
+    });
   }
 });
 

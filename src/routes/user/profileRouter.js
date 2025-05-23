@@ -132,13 +132,40 @@ router.get("/recent", authenticateUser, async (req, res) => {
       .json({ error: "Nie udało się pobrać historii przeglądania" });
   }
 });
+
 // 📌 Всі продукти для авторизованих користувачів (ціни доступні)
 router.get("/products", authenticateUser, async (req, res) => {
   try {
+    console.log("🛍 Fetching products for user:", req.user);
+
+    if (!req.user || !req.user.id) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized: No user ID found." });
+    }
+
     const products = await Product.find({});
-    res.json(products); // ✅ Відправляємо повну інформацію, включаючи ціну
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const formattedProducts = products.map((product) => ({
+      _id: product._id,
+      name: product.name,
+      category: product.category,
+      description: product.description,
+      photoUrl: product.photoUrl,
+      size: product.size,
+      inStock: product.inStock,
+      visible: product.visible,
+      createdAt: product.createdAt,
+      price: product.price, // ✅ Тепер ціна завжди передається!
+    }));
+
+    return res.json(formattedProducts);
+  } catch (error) {
+    console.error("🔥 Error fetching products:", error);
+    return res.status(500).json({
+      message: "Błąd pobierania produktów.",
+      details: error.message,
+    });
   }
 });
+
 module.exports = router;
