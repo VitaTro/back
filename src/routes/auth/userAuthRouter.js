@@ -155,7 +155,7 @@ router.post("/reset-password", async (req, res) => {
     const resetToken = crypto.randomBytes(32).toString("hex");
     user.resetTokenExpires = Date.now() + 600000;
     await user.save();
-    const resetLink = `https://nika-gold-back-fe0ff35469d7.herokuapp.com/api/user/auth/reset-password?token=${resetToken}`;
+    const resetLink = `https://nika-gold-front.netlify.app/user/auth/reset-password?token=${resetToken}`;
     await sendResetPasswordEmail(user, resetLink);
     res.json({ message: "Password reset link sent" });
   } catch (error) {
