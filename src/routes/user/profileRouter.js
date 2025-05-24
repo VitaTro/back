@@ -144,27 +144,10 @@ router.get("/products", authenticateUser, async (req, res) => {
         .json({ message: "Unauthorized: No user ID found." });
     }
 
-    const products = await Product.find({});
-    const formattedProducts = products.map((product) => ({
-      _id: product._id,
-      name: product.name,
-      category: product.category,
-      description: product.description,
-      photoUrl: product.photoUrl,
-      size: product.size,
-      inStock: product.inStock,
-      visible: product.visible,
-      createdAt: product.createdAt,
-      price: product.price, // ✅ Тепер ціна завжди передається!
-    }));
-
-    return res.json(formattedProducts);
+    const products = await Product.find();
+    res.status(200).json(products);
   } catch (error) {
-    console.error("🔥 Error fetching products:", error);
-    return res.status(500).json({
-      message: "Błąd pobierania produktów.",
-      details: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch products" });
   }
 });
 

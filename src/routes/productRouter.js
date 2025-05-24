@@ -7,24 +7,10 @@ const RecentView = require("../schemas/recent");
 // Маршрут для отримання всіх продуктів
 router.get("/", async (req, res) => {
   try {
-    const products = await Product.find({});
-
-    let filteredProducts = products.map((product) => ({
-      name: product.name,
-      category: product.category,
-      subcategory: product.subcategory,
-      description: product.description,
-      photoUrl: product.photoUrl,
-      size: product.size,
-      inStock: product.inStock,
-      visible: product.visible,
-      createdAt: product.createdAt,
-      price: req.user ? product.price : undefined,
-    }));
-
-    res.json(filteredProducts);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const products = await Product.find();
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch products" });
   }
 });
 
