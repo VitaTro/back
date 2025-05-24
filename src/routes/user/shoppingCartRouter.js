@@ -123,6 +123,17 @@ router.post("/move-to-wishlist/:id", authenticateUser, async (req, res) => {
     if (!cartItem) {
       return res.status(404).json({ error: "Item not found in user's cart" });
     }
+    const existsInWishlist = await Wishlist.findOne({
+      userId: req.user.id,
+      productId: cartItem.productId,
+    });
+    if (existsInWishlist) {
+      console.log("⚠️ Item is already in wishlist:", cartItem.productId);
+      await ShoppingCart.findByIdAndDelete(cartItem._id); // ✅ Видаляємо з кошика
+      return res.json({
+        message: "Item already in wishlist, removed from cart",
+      });
+    }
 
     const newWishlistItem = new Wishlist({
       userId: req.user.id, // ✅ Прив’язуємо до користувача

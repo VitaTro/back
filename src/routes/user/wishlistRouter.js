@@ -104,6 +104,20 @@ router.post("/move-to-cart/:id", authenticateUser, async (req, res) => {
       inStock: wishlistItem.inStock,
       addedAt: new Date(),
     });
+    const existsInCart = await ShoppingCart.findOne({
+      userId: req.user.id,
+      productId: wishlistItem.productId,
+    });
+    if (existsInCart) {
+      existsInCart.quantity += 1; // ✅ Оновлюємо кількість замість дублювання
+      await existsInCart.save();
+      await Wishlist.findByIdAndDelete(req.params.id); // ✅ Видаляємо з вішліста
+      return res.json({
+        message: "Item quantity updated in cart",
+        item: existsInCart,
+      });
+    }
+
     await newCartItem.save();
 
     // Видаляємо елемент зі списку бажань

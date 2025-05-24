@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const Wishlist = require("../schemas/wishlist");
+const ShoppingCart = require("../schemas/shopping");
 
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
@@ -15,8 +17,8 @@ const userSchema = new mongoose.Schema({
   lastName: { type: String },
   phone: { type: String },
   address: { type: String },
-  shoppingCart: [{ productId: String, quantity: Number }],
-  wishlist: [{ productId: String }],
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Wishlist" }],
+  shoppingCart: [{ type: mongoose.Schema.Types.ObjectId, ref: "ShoppingCart" }],
 });
 
 userSchema.methods.generateVerificationToken = function () {
