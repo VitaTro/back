@@ -153,7 +153,7 @@ router.post("/reset-password", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
     const resetToken = crypto.randomBytes(32).toString("hex");
-    user.resetToken = resetToken;
+    user.resetTokenExpires = Date.now() + 600000;
     await user.save();
     const resetLink = `https://nika-gold-back-fe0ff35469d7.herokuapp.com/api/user/auth/reset-password?token=${resetToken}`;
     await sendResetPasswordEmail(user, resetLink);
@@ -165,19 +165,27 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
-router.post("/update-password", authenticateJWT, async (req, res) => {
+router.post("/update-password", async (req, res) => {
   try {
-    const { oldPassword, newPassword } = req.body;
-    const user = await User.findById(req.user.id);
-    if (!user || !(await bcrypt.compare(oldPassword, user.password))) {
-      return res.status(401).json({ message: "Incorrect old password" });
-    }
+    const { resetToken, newPassword } = req.body;
+    const user = await User.findOne({
+      resetToken,
+      resetTokenExpires: { $gt: Date.now() },
+    });
+
+    if (!user)
+      return res.status(400).json({ message: "Invalid or expired token" });
 
     user.password = await bcrypt.hash(newPassword, 10);
+    user.resetToken = null; // 🧹 Видаляємо токен після скидання
+    user.resetTokenExpires = null;
     await user.save();
+
     res.json({ message: "Password updated successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Error updating password", error });
+    res
+      .status(500)
+      .json({ message: "Error updating password", error: error.message });
   }
 });
 

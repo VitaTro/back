@@ -19,6 +19,8 @@ const userSchema = new mongoose.Schema({
   address: { type: String },
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Wishlist" }],
   shoppingCart: [{ type: mongoose.Schema.Types.ObjectId, ref: "ShoppingCart" }],
+  resetToken: { type: String },
+  resetTokenExpires: { type: Date },
 });
 
 userSchema.methods.generateVerificationToken = function () {
