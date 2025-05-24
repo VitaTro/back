@@ -9,7 +9,9 @@ const router = express.Router();
 // 📌 Отримати особисті дані
 router.get("/profile/info", authenticateUser, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("name email");
+    const user = await User.findById(req.user.id).select(
+      "username email firstName lastName phone"
+    );
     if (!user) {
       return res
         .status(404)
@@ -25,12 +27,12 @@ router.get("/profile/info", authenticateUser, async (req, res) => {
 // ✏️ Оновити особисті дані
 router.put("/profile/info", authenticateUser, async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { username, email, firstName, lastName, phone } = req.body;
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
-      { name, email },
+      { username, email, firstName, lastName, phone },
       { new: true, runValidators: true }
-    ).select("name email");
+    ).select("username email firstName lastName phone");
 
     if (!updatedUser) {
       return res
@@ -121,7 +123,7 @@ router.post("/profile/email", authenticateUser, async (req, res) => {
 router.get("/recent", authenticateUser, async (req, res) => {
   try {
     const recentViews = await Recent.find({ userId: req.user.id })
-      .populate("productId", "name photoUrl price")
+      .populate("productId", "name photoUrl price category subcategory")
       .sort({ viewedAt: -1 })
       .limit(20); // Показати останні 10 переглядів
 
