@@ -40,6 +40,7 @@ router.post("/add", authenticateUser, async (req, res) => {
 
     const product = await Product.findById(productId);
     if (!product) {
+      console.error("🚨 Product not found! ID:", productId);
       return res.status(404).json({ error: "Product not found" });
     }
 
@@ -51,7 +52,13 @@ router.post("/add", authenticateUser, async (req, res) => {
       price: product.price,
       quantity: quantity || 1,
       inStock: product.inStock,
+      color: product.color,
     });
+    console.log("🛒 Received productId:", productId);
+    console.log(
+      "🔍 Checking database for product:",
+      await Product.findById(productId)
+    );
 
     await newItem.save();
     res.status(201).json({ message: "Item added to cart", item: newItem });
