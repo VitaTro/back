@@ -49,8 +49,16 @@ router.post("/login", async (req, res) => {
           process.env.JWT_REFRESH_SECRET
         );
         const user = await User.findById(decoded.id);
-        if (!user || user.refreshToken !== refreshToken) {
-          return res.status(403).json({ message: "Invalid refresh token" });
+
+        // 🔹 Якщо пароль був змінений, очищаємо refreshToken та примушуємо новий логін
+        if (
+          !user ||
+          user.refreshToken !== refreshToken ||
+          user.passwordChangedAt > decoded.iat
+        ) {
+          return res
+            .status(403)
+            .json({ message: "Session expired. Please log in again." });
         }
 
         // Генеруємо новий accessToken
@@ -72,7 +80,7 @@ router.post("/login", async (req, res) => {
       }
     }
 
-    // 🔹 Якщо refreshToken немає, використовуємо стандартний логін
+    // 🔹 Використовуємо стандартний логін
     const user = await User.findOne({ email });
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -80,6 +88,9 @@ router.post("/login", async (req, res) => {
     if (!user.isVerified) {
       return res.status(403).json({ message: "Email not verified" });
     }
+
+    // 🔹 Очищаємо старий refreshToken після скидання пароля
+    await User.findOneAndUpdate({ email }, { refreshToken: null });
 
     // Генеруємо нові токени
     const accessToken = jwt.sign(
@@ -93,6 +104,7 @@ router.post("/login", async (req, res) => {
       { expiresIn: "7d" }
     );
     user.refreshToken = newRefreshToken;
+    user.passwordChangedAt = Date.now(); // 🔹 Фіксуємо час зміни пароля
     await user.save();
 
     res.json({
@@ -103,32 +115,6 @@ router.post("/login", async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Login error", error: error.message });
   }
-  // try {
-
-  //   const { email, password } = req.body;
-  //   const user = await User.findOne({ email });
-  //   if (!user || !(await bcrypt.compare(password, user.password))) {
-  //     return res.status(401).json({ message: "Invalid email or password" });
-  //   }
-  //   if (!user.isVerified) {
-  //     return res.status(403).json({ message: "Email not verified" });
-  //   }
-  //   const accessToken = jwt.sign(
-  //     { id: user._id, role: user.role },
-  //     process.env.JWT_SECRET,
-  //     { expiresIn: "15m" }
-  //   );
-  //   const refreshToken = jwt.sign(
-  //     { id: user._id },
-  //     process.env.JWT_REFRESH_SECRET,
-  //     { expiresIn: "7d" }
-  //   );
-  //   user.refreshToken = refreshToken;
-  //   await user.save();
-  //   res.json({ accessToken, refreshToken, isVerified: user.isVerified });
-  // } catch (error) {
-  //   res.status(500).json({ message: "Login error", error: error.message });
-  // }
 });
 
 router.post("/logout", async (req, res) => {
@@ -171,6 +157,7 @@ router.post("/reset-password", async (req, res) => {
 router.post("/update-password", async (req, res) => {
   try {
     const { email, resetCode, newPassword } = req.body;
+
     const user = await User.findOne({
       email,
       resetCode,
@@ -180,10 +167,18 @@ router.post("/update-password", async (req, res) => {
     if (!user)
       return res.status(400).json({ message: "Invalid or expired code" });
 
-    user.password = await bcrypt.hash(newPassword, 10);
-    user.resetCode = null;
-    user.resetCodeExpires = null;
-    await user.save();
+    const newHashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await User.findOneAndUpdate(
+      { email },
+      {
+        password: newHashedPassword,
+        resetCode: null,
+        resetCodeExpires: null,
+        token: null,
+      },
+      { new: true }
+    );
 
     res.json({ message: "Password updated successfully" });
   } catch (error) {
