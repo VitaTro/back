@@ -19,15 +19,22 @@ router.post("/register", async (req, res) => {
     const { error } = userValidationSchema.validate(req.body);
     if (error)
       return res.status(400).json({ message: error.details[0].message });
-    const { email, password, username } = req.body;
+
+    const { email, password, confirmPassword, username } = req.body;
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(400).json({ message: "Email already exists" });
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const newUser = new User({ username, email, password: hashedPassword });
     await newUser.save();
     await sendVerificationEmail(newUser);
+
     res
       .status(201)
       .json({ message: "Registration successful. Please verify your email." });
@@ -138,12 +145,17 @@ router.post("/reset-password", async (req, res) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
+    // console.log("Введений resetCode:", resetCode);
+    // console.log("Збережений в базі:", user.resetToken);
+    // console.log("Чи ще дійсний:", user.resetTokenExpires > Date.now());
 
     const resetCode = Math.floor(100000 + Math.random() * 900000);
     user.resetCode = resetCode;
     user.resetCodeExpires = Date.now() + 600000;
     await user.save();
-
+    console.log("Введений resetCode:", resetCode);
+    console.log("Збережений в базі:", user.resetToken);
+    console.log("Чи ще дійсний:", user.resetTokenExpires > Date.now());
     await sendResetPasswordEmail(user, resetCode);
 
     res.json({ message: "Password reset code sent" });
@@ -156,7 +168,11 @@ router.post("/reset-password", async (req, res) => {
 
 router.post("/update-password", async (req, res) => {
   try {
-    const { email, resetCode, newPassword } = req.body;
+    const { email, resetCode, newPassword, confirmNewPassword } = req.body;
+
+    if (newPassword !== confirmNewPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
+    }
 
     const user = await User.findOne({
       email,
@@ -171,12 +187,7 @@ router.post("/update-password", async (req, res) => {
 
     await User.findOneAndUpdate(
       { email },
-      {
-        password: newHashedPassword,
-        resetCode: null,
-        resetCodeExpires: null,
-        token: null,
-      },
+      { password: newHashedPassword, resetCode: null, resetCodeExpires: null },
       { new: true }
     );
 

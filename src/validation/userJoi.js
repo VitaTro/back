@@ -23,6 +23,7 @@ const userValidationSchema = Joi.object({
     "string.empty": "Password cannot be empty",
     "string.min": "Password must be at least 10 characters long",
   }),
+  confirmPassword: Joi.ref("password"),
 });
 
 const adminValidationSchema = Joi.object({
