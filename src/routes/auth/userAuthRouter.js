@@ -152,33 +152,37 @@ router.post("/reset-password", async (req, res) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    user.resetTokenExpires = Date.now() + 600000;
+
+    const resetCode = Math.floor(100000 + Math.random() * 900000);
+    user.resetCode = resetCode;
+    user.resetCodeExpires = Date.now() + 600000;
     await user.save();
-    const resetLink = `https://nika-gold-front.netlify.app/user/auth/reset-password?token=${resetToken}`;
-    await sendResetPasswordEmail(user, resetLink);
-    res.json({ message: "Password reset link sent" });
+
+    await sendResetPasswordEmail(user, resetCode);
+
+    res.json({ message: "Password reset code sent" });
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error sending reset email", error: error.message });
+      .json({ message: "Error sending reset code", error: error.message });
   }
 });
 
 router.post("/update-password", async (req, res) => {
   try {
-    const { resetToken, newPassword } = req.body;
+    const { email, resetCode, newPassword } = req.body;
     const user = await User.findOne({
-      resetToken,
-      resetTokenExpires: { $gt: Date.now() },
+      email,
+      resetCode,
+      resetCodeExpires: { $gt: Date.now() },
     });
 
     if (!user)
-      return res.status(400).json({ message: "Invalid or expired token" });
+      return res.status(400).json({ message: "Invalid or expired code" });
 
     user.password = await bcrypt.hash(newPassword, 10);
-    user.resetToken = null; // 🧹 Видаляємо токен після скидання
-    user.resetTokenExpires = null;
+    user.resetCode = null;
+    user.resetCodeExpires = null;
     await user.save();
 
     res.json({ message: "Password updated successfully" });
