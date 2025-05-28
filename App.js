@@ -27,6 +27,7 @@ const MainRouter = require("./src/routes/mainRouter");
 const app = express();
 
 const allowedOrigins = [
+  "https://nika-gold.net",
   "https://nika-gold.netlify.app",
   "http://localhost:5173",
 ];
@@ -48,7 +49,7 @@ app.use((req, res, next) => {
     "Access-Control-Allow-Origin",
     allowedOrigins.includes(req.headers.origin)
       ? req.headers.origin
-      : "https://nika-gold.netlify.app"
+      : "https://nika-gold.net"
   );
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header(
