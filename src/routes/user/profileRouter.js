@@ -153,4 +153,36 @@ router.get("/products", authenticateUser, async (req, res) => {
   }
 });
 
+router.get("/products/:id", authenticateUser, async (req, res) => {
+  try {
+    console.log(
+      "🔍 Fetching product for user:",
+      req.user,
+      "ID:",
+      req.params.id
+    );
+
+    if (!req.user || !req.user.id) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized: No user ID found." });
+    }
+
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found." });
+    }
+
+    res.status(200).json(product);
+  } catch (error) {
+    console.error("❌ Error fetching product:", error.message);
+    res
+      .status(500)
+      .json({
+        error: "Failed to fetch product details.",
+        details: error.message,
+      });
+  }
+});
+
 module.exports = router;
