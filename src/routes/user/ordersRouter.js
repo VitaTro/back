@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const { getPoints, trackShipment } = require("../../config/inpostService");
+
 const { authenticateUser } = require("../../middleware/authenticateUser");
 const OnlineOrder = require("../../schemas/finance/onlineOrders");
 const OnlineSale = require("../../schemas/finance/onlineSales");
@@ -60,27 +62,32 @@ router.get("/shipped", authenticateUser, async (req, res) => {
   }
 });
 
-// ✅ Створити нове замовлення
 router.post("/", authenticateUser, async (req, res) => {
   try {
-    const {
-      products,
-      totalPrice,
-      paymentMethod,
-      deliveryType,
-      deliveryAddress,
-    } = req.body;
+    const { products, totalPrice, paymentMethod, pickupPointId } = req.body;
+
+    if (!pickupPointId) {
+      return res.status(400).json({ error: "Pickup point is required" });
+    }
+
+    const pickupPoint = await getPoints();
+    const selectedPoint = pickupPoint.items.find(
+      (p) => p.name === pickupPointId
+    );
+
+    if (!selectedPoint) {
+      return res.status(404).json({ error: "Invalid pickup point ID" });
+    }
 
     const newOrder = await OnlineOrder.create({
       userId: req.user.id,
       products,
       totalPrice,
       paymentMethod,
-      deliveryType: deliveryType || "courier",
-      deliveryAddress,
+      pickupPointId,
       status: "new",
     });
-    await sendAdminOrderNotification(newOrder);
+
     res
       .status(201)
       .json({ message: "Order created successfully", order: newOrder });
@@ -187,5 +194,19 @@ router.get("/purchase-history", authenticateUser, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch purchase history" });
   }
 });
+router.get("/track/:trackingNumber", authenticateUser, async (req, res) => {
+  try {
+    const { trackingNumber } = req.params;
 
+    const shipmentStatus = await trackShipment(trackingNumber);
+
+    if (!shipmentStatus) {
+      return res.status(404).json({ error: "Tracking number not found" });
+    }
+
+    res.status(200).json(shipmentStatus);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch tracking status" });
+  }
+});
 module.exports = router;

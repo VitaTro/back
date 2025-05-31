@@ -2740,6 +2740,75 @@
         ]
       }
     },
+    "/api/user": {
+      "get": {
+        "summary": "Get all products",
+        "description": "Fetches all available products.",
+        "tags": ["User"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successfully fetched the product list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "_id": { "type": "string" },
+                      "name": { "type": "string" },
+                      "price": { "type": "number" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized - No user ID found" },
+          "500": { "description": "Server error" }
+        }
+      }
+    },
+    "/api/user/products/{id}": {
+      "get": {
+        "summary": "Get product details by ID",
+        "description": "Fetches product details for a specific ID.",
+        "tags": ["User"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Product ID"
+          }
+        ],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Successfully fetched the product",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "_id": { "type": "string" },
+                    "name": { "type": "string" },
+                    "price": { "type": "number" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized - No user ID found" },
+          "404": { "description": "Product not found" },
+          "500": { "description": "Server error" }
+        }
+      }
+    },
     "/api/user/profile/info": {
       "get": {
         "tags": ["User"],
@@ -3510,7 +3579,41 @@
         }
       }
     },
-
+    "/api/user/orders/track/{trackingNumber}": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Відстеження замовлення",
+        "description": "Дозволяє користувачу перевірити статус свого замовлення за номером відстеження.",
+        "parameters": [
+          {
+            "name": "trackingNumber",
+            "in": "path",
+            "required": true,
+            "description": "Унікальний номер відстеження замовлення.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Статус відстеження успішно отримано.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "trackingNumber": "123456789",
+                  "status": "In transit",
+                  "expectedDelivery": "2025-06-05",
+                  "location": "Warsaw, Poland"
+                }
+              }
+            }
+          },
+          "404": { "description": "Номер відстеження не знайдено." },
+          "500": { "description": "Помилка серверу." }
+        }
+      }
+    },
     "/api/subscribe": {
       "post": {
         "tags": ["Subscription"],
