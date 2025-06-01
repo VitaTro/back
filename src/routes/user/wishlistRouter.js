@@ -111,7 +111,7 @@ router.post("/move-to-cart/:id", authenticateUser, async (req, res) => {
     if (existsInCart) {
       existsInCart.quantity += 1; // ✅ Оновлюємо кількість замість дублювання
       await existsInCart.save();
-      await Wishlist.findByIdAndDelete(req.params.id); // ✅ Видаляємо з вішліста
+      await Wishlist.findByIdAndDelete(wishlistItem._id); // ✅ Видаляємо з вішліста
       return res.json({
         message: "Item quantity updated in cart",
         item: existsInCart,
