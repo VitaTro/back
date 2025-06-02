@@ -236,13 +236,13 @@ router.get("/purchase-history", authenticateUser, async (req, res) => {
 router.get("/pickup-points", authenticateUser, async (req, res) => {
   try {
     const pickupPoints = await getAllPoints();
-    if (!pickupPoints || !pickupPoints.items.length) {
+    if (!pickupPoints || pickupPoints.length === 0) {
       return res.status(404).json({ error: "No pickup points found" });
     }
 
-    res.status(200).json({ points: pickupPoints.items });
+    res.status(200).json({ points: pickupPoints });
   } catch (error) {
-    console.error("❌ Помилка отримання поштоматів:", error.message);
+    console.error("❌ Помилка отримання поштоматів:", error); // 🔍 Виводимо повний лог
     res.status(500).json({ error: "Failed to fetch pickup points" });
   }
 });

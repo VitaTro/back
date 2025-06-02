@@ -17,6 +17,7 @@ async function getAllPoints() {
         }
       );
 
+      console.log(`✅ Отримано ${response.data.points.length} точок з API`);
       allPoints = [...allPoints, ...response.data.points];
 
       if (page === 1) {
@@ -27,10 +28,10 @@ async function getAllPoints() {
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
-    console.log(`✅ Завантажено ${allPoints.length} точок`);
+    console.log(`🔥 Загалом отримано ${allPoints.length} точок`);
     return allPoints;
   } catch (error) {
-    console.error("❌ Помилка API:", error.message);
+    console.error("❌ Помилка API:", error);
     return [];
   }
 }
