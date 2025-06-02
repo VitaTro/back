@@ -243,6 +243,7 @@ router.get("/pickup-points", authenticateUser, async (req, res) => {
 
     res.status(200).json({ points: pickupPoints.items });
   } catch (error) {
+    console.error("❌ Помилка отримання поштоматів:", error.message);
     res.status(500).json({ error: "Failed to fetch pickup points" });
   }
 });

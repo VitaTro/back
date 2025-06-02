@@ -3,7 +3,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const { initSocket } = require("./src/config/socket");
 const http = require("http");
-const { getPoints } = require("./src/config/inpostService");
+const { getAllPoints } = require("./src/config/inpostService");
 const app = require("./App");
 require("./cronTasks");
 
