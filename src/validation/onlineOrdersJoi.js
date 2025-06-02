@@ -38,8 +38,16 @@ const onlineOrderValidationSchema = Joi.object({
   ),
   totalPrice: Joi.number().min(0).required(),
   paymentStatus: Joi.string().valid("paid", "unpaid").required(),
-  paymentMethod: Joi.string().valid("cash", "card", "bank_transfer").required(),
+  paymentMethod: Joi.string().valid("card", "bank_transfer").required(),
   deliveryType: Joi.string().valid("courier", "smartbox", "pickup").required(),
+  postalCode: Joi.string()
+    .pattern(/^\d{5}$/)
+    .required(),
+  city: Joi.string().required(),
+  street: Joi.string().required(),
+  houseNumber: Joi.string().required(),
+  apartmentNumber: Joi.string().optional(),
+  isPrivateHouse: Joi.boolean().required(),
   smartboxDetails: Joi.object({
     boxId: Joi.string().required(),
     location: Joi.string().required(),

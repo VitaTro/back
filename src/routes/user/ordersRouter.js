@@ -85,6 +85,12 @@ router.post("/", authenticateUser, async (req, res) => {
       totalPrice,
       paymentMethod,
       pickupPointId,
+      postalCode: user.address.postalCode, // Беремо адресу з профілю
+      city: user.address.city,
+      street: user.address.street,
+      houseNumber: user.address.houseNumber,
+      apartmentNumber: user.address.apartmentNumber,
+      isPrivateHouse: user.address.isPrivateHouse,
       status: "new",
     });
 
