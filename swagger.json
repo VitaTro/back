@@ -3579,6 +3579,39 @@
         }
       }
     },
+    "/api/user/pickup-points": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Отримання списку поштоматів",
+        "description": "Повертає список доступних поштоматів для вибору у замовленні.",
+        "responses": {
+          "200": {
+            "description": "Список поштоматів успішно отриманий.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "points": [
+                    {
+                      "id": "PL123456",
+                      "name": "InPost - Warszawa",
+                      "location": "Warsaw, Poland"
+                    },
+                    {
+                      "id": "PL654321",
+                      "name": "InPost - Kraków",
+                      "location": "Kraków, Poland"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": { "description": "Поштомати не знайдено." },
+          "500": { "description": "Помилка серверу." }
+        }
+      }
+    },
+
     "/api/user/orders/track/{trackingNumber}": {
       "get": {
         "tags": ["User"],

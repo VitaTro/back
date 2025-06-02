@@ -194,6 +194,21 @@ router.get("/purchase-history", authenticateUser, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch purchase history" });
   }
 });
+
+router.get("/pickup-points", authenticateUser, async (req, res) => {
+  try {
+    const pickupPoints = await getPoints(); // Виклик API або бази даних для отримання поштоматів
+
+    if (!pickupPoints || !pickupPoints.items.length) {
+      return res.status(404).json({ error: "No pickup points found" });
+    }
+
+    res.status(200).json({ points: pickupPoints.items });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch pickup points" });
+  }
+});
+
 router.get("/track/:trackingNumber", authenticateUser, async (req, res) => {
   try {
     const { trackingNumber } = req.params;
