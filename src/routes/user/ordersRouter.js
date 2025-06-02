@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { getPoints, trackShipment } = require("../../config/inpostService");
+const { getAllPoints, trackShipment } = require("../../config/inpostService");
 
 const { authenticateUser } = require("../../middleware/authenticateUser");
 const OnlineOrder = require("../../schemas/finance/onlineOrders");
@@ -235,8 +235,7 @@ router.get("/purchase-history", authenticateUser, async (req, res) => {
 
 router.get("/pickup-points", authenticateUser, async (req, res) => {
   try {
-    const pickupPoints = await getPoints(); // Виклик API або бази даних для отримання поштоматів
-
+    const pickupPoints = await getAllPoints();
     if (!pickupPoints || !pickupPoints.items.length) {
       return res.status(404).json({ error: "No pickup points found" });
     }
