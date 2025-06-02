@@ -64,7 +64,18 @@ router.get("/shipped", authenticateUser, async (req, res) => {
 
 router.post("/", authenticateUser, async (req, res) => {
   try {
-    const { products, totalPrice, paymentMethod, pickupPointId } = req.body;
+    const {
+      products,
+      totalPrice,
+      paymentMethod,
+      pickupPointId,
+      postalCode,
+      city,
+      street,
+      houseNumber,
+      apartmentNumber,
+      isPrivateHouse,
+    } = req.body;
 
     if (!pickupPointId) {
       return res.status(400).json({ error: "Pickup point is required" });
@@ -79,18 +90,39 @@ router.post("/", authenticateUser, async (req, res) => {
       return res.status(404).json({ error: "Invalid pickup point ID" });
     }
 
+    // 📌 Перевіряємо профіль користувача
+    const user = await User.findById(req.user.id);
+
+    const orderAddress = user.address?.postalCode
+      ? user.address // Використовуємо адресу з профілю
+      : {
+          postalCode,
+          city,
+          street,
+          houseNumber,
+          apartmentNumber,
+          isPrivateHouse,
+        }; // Використовуємо введені дані
+
+    // 📌 Перевіряємо, чи всі обов’язкові поля адреси заповнені
+    if (
+      !orderAddress.postalCode ||
+      !orderAddress.city ||
+      !orderAddress.street ||
+      !orderAddress.houseNumber
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Address is required to place an order" });
+    }
+
     const newOrder = await OnlineOrder.create({
       userId: req.user.id,
       products,
       totalPrice,
       paymentMethod,
       pickupPointId,
-      postalCode: user.address.postalCode, // Беремо адресу з профілю
-      city: user.address.city,
-      street: user.address.street,
-      houseNumber: user.address.houseNumber,
-      apartmentNumber: user.address.apartmentNumber,
-      isPrivateHouse: user.address.isPrivateHouse,
+      ...orderAddress, // Передаємо адресу
       status: "new",
     });
 
@@ -98,10 +130,10 @@ router.post("/", authenticateUser, async (req, res) => {
       .status(201)
       .json({ message: "Order created successfully", order: newOrder });
   } catch (error) {
+    console.error("❌ Order creation error:", error);
     res.status(500).json({ error: "Failed to create order" });
   }
 });
-
 // ❌ Запит на повернення замовлення
 router.put("/:orderId/return", authenticateUser, async (req, res) => {
   try {
