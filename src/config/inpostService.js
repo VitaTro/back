@@ -4,7 +4,7 @@ require("dotenv").config();
 async function getAllPoints() {
   let allPoints = [];
   let page = 1;
-  let totalPages = 10; // Почнемо з 10 сторінок, потім можна збільшити
+  let totalPages = 10;
 
   try {
     while (page <= totalPages) {
@@ -20,12 +20,10 @@ async function getAllPoints() {
       allPoints = [...allPoints, ...response.data.points];
 
       if (page === 1) {
-        totalPages = response.data.total_pages; // Оновлюємо загальну кількість сторінок
+        totalPages = response.data.total_pages;
       }
 
       page++;
-
-      // 🔹 Додаємо паузу 500 мс між запитами, щоб сервер не "впав"
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
