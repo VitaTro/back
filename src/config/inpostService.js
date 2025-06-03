@@ -17,8 +17,8 @@ async function getAllPoints() {
         }
       );
 
-      console.log(`✅ Отримано ${response.data.points.length} точок з API`);
-      allPoints = [...allPoints, ...response.data.points];
+      console.log(`✅ Отримано ${response.data.items.length} точок з API`);
+      allPoints = [...allPoints, ...response.data.items];
 
       if (page === 1) {
         totalPages = response.data.total_pages;
