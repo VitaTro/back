@@ -4,14 +4,14 @@ require("dotenv").config();
 async function getAllPoints() {
   let allPoints = [];
   let page = 1;
-  let totalPages = 10;
+  let totalPages = 1307;
 
   try {
     while (page <= totalPages) {
       console.log(`🔄 Запит сторінки ${page} з ${totalPages}...`);
 
       const response = await axios.get(
-        `https://api-pl-points.easypack24.net/v1/points?page=${page}&per_page=100`,
+        `https://api-pl-points.easypack24.net/v1/points?page=${page}&per_page=25`,
         {
           headers: { Authorization: `Bearer ${process.env.INPOST_API_TOKEN}` },
         }

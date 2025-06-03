@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { getAllPoints, trackShipment } = require("../../config/inpostService");
-
+const User = require("../../schemas/userSchema");
 const { authenticateUser } = require("../../middleware/authenticateUser");
 const OnlineOrder = require("../../schemas/finance/onlineOrders");
 const OnlineSale = require("../../schemas/finance/onlineSales");
