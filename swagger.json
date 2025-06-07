@@ -58,6 +58,10 @@
     {
       "name": "Search",
       "description": "Пошук товарів за запитом, включаючи фільтрацію."
+    },
+    {
+      "name": "Payment",
+      "description": "Операції, пов'язані з оплатою користувача: ініціація платежу, перевірка статусу, повернення коштів."
     }
   ],
 
@@ -3647,6 +3651,116 @@
         }
       }
     },
+    "/api/user/payments/initiate": {
+      "post": {
+        "tags": ["Payment"],
+        "summary": "Ініціювання платежу",
+        "description": "Користувач ініціює оплату замовлення.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "orderId": "64f1a2b3c4d5e6f7g8h9i0",
+                "amount": 199.99,
+                "paymentMethod": "BLIK"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Платіж успішно ініційовано.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "Payment initiated",
+                  "paymentId": "abc123xyz"
+                }
+              }
+            }
+          },
+          "400": { "description": "Невірні дані платежу." },
+          "500": { "description": "Помилка серверу." }
+        }
+      }
+    },
+
+    "/api/user/payments/status/{orderId}": {
+      "get": {
+        "tags": ["Payment"],
+        "summary": "Перевірка статусу платежу",
+        "description": "Користувач перевіряє статус оплати замовлення.",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Статус оплати успішно отримано.",
+            "content": {
+              "application/json": {
+                "example": { "status": "paid" }
+              }
+            }
+          },
+          "404": { "description": "Платіж не знайдено." },
+          "500": { "description": "Помилка серверу." }
+        }
+      }
+    },
+
+    "/api/user/payments/cancel/{orderId}": {
+      "post": {
+        "tags": ["Payment"],
+        "summary": "Скасування платежу",
+        "description": "Користувач може скасувати неоплачений платіж.",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Платіж успішно скасований.",
+            "content": {
+              "application/json": {
+                "example": { "message": "Payment cancelled successfully" }
+              }
+            }
+          },
+          "400": { "description": "Неможливо скасувати оплату." },
+          "404": { "description": "Платіж не знайдено." }
+        }
+      }
+    },
+
+    "/api/user/payments/methods": {
+      "get": {
+        "tags": ["Payment"],
+        "summary": "Отримання доступних методів оплати",
+        "description": "Повертає список доступних варіантів оплати для користувача.",
+        "responses": {
+          "200": {
+            "description": "Список методів успішно отриманий.",
+            "content": {
+              "application/json": {
+                "example": { "methods": ["BLIK", "bank transfer"] }
+              }
+            }
+          },
+          "500": { "description": "Помилка серверу." }
+        }
+      }
+    },
+
     "/api/subscribe": {
       "post": {
         "tags": ["Subscription"],

@@ -20,7 +20,7 @@ const FinanceSettingsRouter = require("./src/routes/finance/financeSettingsRoute
 const AdminAuthRouter = require("./src/routes/auth/adminAuthRouter");
 const UserAuthRouter = require("./src/routes/auth/userAuthRouter");
 const ProfileRouter = require("./src/routes/user/profileRouter");
-
+const PaymentRouter = require("./src/routes/paymentRouter");
 const { authenticateUser } = require("./src/middleware/authenticateUser");
 const MainRouter = require("./src/routes/mainRouter");
 
@@ -75,6 +75,7 @@ app.use("/api", MainRouter);
 app.use("/api/products", ProductRouter);
 app.use("/api/user", ProfileRouter);
 app.use("/api/user/orders", OrdersRouter);
+app.use("/api/user/payments", PaymentRouter);
 app.use("/api/admin/auth", AdminAuthRouter);
 app.use("/api/user/auth", UserAuthRouter);
 app.use("/api/user/shopping-cart", ShoppingCartRouter);

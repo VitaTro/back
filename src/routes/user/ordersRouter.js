@@ -142,9 +142,13 @@ router.put("/:orderId/return", authenticateUser, async (req, res) => {
     const order = await OnlineOrder.findOne({
       _id: req.params.orderId,
       userId: req.user.id,
+      status: "paid",
     });
 
-    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!order)
+      return res
+        .status(404)
+        .json({ error: "Order not found or not eligible for return" });
 
     if (!returnedProducts || returnedProducts.length === 0) {
       return res.status(400).json({ error: "No products selected for return" });
@@ -160,17 +164,20 @@ router.put("/:orderId/return", authenticateUser, async (req, res) => {
       })
     );
 
-    // 💰 Оновлення фінансів
-    await FinanceOverview.updateOne(
-      {},
-      { $inc: { totalRevenue: -refundAmount } }
-    );
+    const payment = await Payment.findOne({ orderId: req.params.orderId });
+    if (payment) {
+      payment.status = "refunded"; // Оновлюємо статус
+      payment.refundAmount = refundAmount;
+      await payment.save();
+    }
 
     order.status = "returned";
     order.refundAmount = refundAmount;
     await order.save();
-    await sendAdminReturnNotification(order);
-    res.status(200).json({ message: "Return processed successfully", order });
+
+    res
+      .status(200)
+      .json({ message: "Return processed successfully with refund", order });
   } catch (error) {
     res.status(500).json({ error: "Failed to process return" });
   }
@@ -219,16 +226,41 @@ router.patch(
 // ✅ Історія покупок
 router.get("/purchase-history", authenticateUser, async (req, res) => {
   try {
-    const purchaseHistory = await OnlineSale.find({ userId: req.user.id })
-      .populate("orderId", "totalAmount paymentMethod saleDate")
-      .sort({ saleDate: -1 });
+    const { startDate, endDate, status, page = 1, limit = 25 } = req.query; // ✅ Додаємо пагінацію
+
+    let filter = { userId: req.user.id };
+
+    if (startDate && endDate) {
+      filter.saleDate = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    }
+    if (status) {
+      filter.status = status; // ✅ Фільтр за статусом
+    }
+
+    const skip = (page - 1) * limit;
+
+    const purchaseHistory = await OnlineSale.find(filter)
+      .populate("orderId", "totalAmount paymentMethod saleDate status") // ✅ Додаємо статус
+      .populate("products", "name price quantity")
+      .sort({ saleDate: -1 })
+      .skip(skip)
+      .limit(parseInt(limit)); // ✅ Додаємо `limit` та `skip`
+
+    const totalOrders = await OnlineSale.countDocuments(filter);
 
     if (!purchaseHistory.length) {
       return res.status(404).json({ error: "No purchase history found" });
     }
 
-    res.status(200).json(purchaseHistory);
+    res.status(200).json({
+      message: "Purchase history retrieved successfully",
+      totalOrders,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalOrders / limit),
+      purchaseHistory,
+    });
   } catch (error) {
+    console.error("❌ Purchase history error:", error);
     res.status(500).json({ error: "Failed to fetch purchase history" });
   }
 });
