@@ -8,6 +8,7 @@ const FinanceOverview = require("../../schemas/finance/financeOverview");
 const FinanceSettings = require("../../schemas/finance/financeSettings");
 const offlineSaleValidationSchema = require("../../validation/offlineSalesJoi");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
+const generateInvoicePDFOffline = require("../../config/invoicePdfGeneratorOffline");
 
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
@@ -36,8 +37,21 @@ router.post(
   validate(offlineSaleValidationSchema),
   async (req, res) => {
     try {
-      console.log("➡️ Recording new offline sale...");
-      const { products, totalAmount, paymentMethod, status } = req.body;
+      const {
+        products,
+        totalAmount,
+        paymentMethod,
+        status,
+        buyerType,
+        buyerName,
+        buyerAddress,
+        buyerNIP,
+      } = req.body;
+
+      const validPaymentMethods = ["BLIK", "bank transfer", "cash"];
+      if (!validPaymentMethods.includes(paymentMethod)) {
+        return res.status(400).json({ error: "Invalid payment method" });
+      }
 
       const offlineSaleProducts = await Promise.all(
         products.map(async (product) => {
@@ -47,10 +61,8 @@ router.post(
               `Insufficient stock for ${dbProduct?.name || "product"}`
             );
           }
-
           dbProduct.quantity -= product.quantity;
           await dbProduct.save();
-
           return {
             productId: dbProduct._id,
             quantity: product.quantity,
@@ -78,21 +90,44 @@ router.post(
           },
           { upsert: true }
         );
+
+        let invoiceData = {
+          invoiceNumber: `INV-${Date.now()}`,
+          totalAmount,
+          paymentMethod,
+          issueDate: new Date(),
+        };
+
+        if (buyerType === "przedsiębiorca") {
+          invoiceData.buyerType = buyerType;
+          invoiceData.buyerName = buyerName;
+          invoiceData.buyerAddress = buyerAddress;
+          invoiceData.buyerNIP = buyerNIP;
+        }
+
+        const invoice = await Invoice.create(invoiceData);
+
+        // 🔹 Генеруємо PDF-фактуру **спеціально для офлайну**
+        const pdfPath = await generateInvoicePDFOffline(
+          invoice,
+          buyerType || "anonim"
+        );
+        invoice.filePath = pdfPath;
+        await invoice.save();
       }
 
       res.status(201).json({
         message: "Offline sale recorded successfully",
         sale: newOfflineSale,
+        invoice,
       });
     } catch (error) {
-      console.error("🔥 Error recording offline sale:", error);
       res
         .status(500)
         .json({ error: error.message || "Failed to record offline sale" });
     }
   }
 );
-
 router.patch("/:id", authenticateAdmin, async (req, res) => {
   try {
     console.log(

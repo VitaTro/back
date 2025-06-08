@@ -62,6 +62,10 @@
     {
       "name": "Payment",
       "description": "Операції, пов'язані з оплатою користувача: ініціація платежу, перевірка статусу, повернення коштів."
+    },
+    {
+      "name": "Invoices",
+      "description": "Операції, пов'язані з фактурами: генерація, отримання даних, завантаження PDF-файлів."
     }
   ],
 
@@ -3760,7 +3764,184 @@
         }
       }
     },
-
+    "/api/user/payments/refund/{orderId}": {
+      "post": {
+        "tags": ["Payment"],
+        "summary": "Запит на повернення грошей",
+        "description": "Створює запит на повернення платежу для певного `orderId`.",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "refundAmount": 50.0
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Запит на повернення грошей успішно створений.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "Refund request submitted",
+                  "status": "refund_requested"
+                }
+              }
+            }
+          },
+          "400": { "description": "Неможливо повернути кошти." },
+          "404": { "description": "Платіж не знайдено." },
+          "500": { "description": "Помилка серверу." }
+        }
+      }
+    },
+    "/api/user/payments/confirm/{orderId}": {
+      "post": {
+        "tags": ["Payment"],
+        "summary": "Підтвердження платежу",
+        "description": "Підтверджує оплату та оновлює статус замовлення.",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "paymentCode": "123456"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Оплата підтверджена та оновлена.",
+            "content": {
+              "application/json": {
+                "example": { "message": "Payment confirmed", "status": "paid" }
+              }
+            }
+          },
+          "404": { "description": "Платіж не знайдено." },
+          "500": { "description": "Помилка серверу." }
+        }
+      }
+    },
+    "/api/user/invoices/generate/{orderId}": {
+      "post": {
+        "tags": ["Invoices"],
+        "summary": "Генерація фактури після оплати",
+        "description": "Створює PDF-фактуру для оплаченого замовлення.",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "buyerType": "company",
+                "buyerName": "ООО Тест",
+                "buyerAddress": "Testowa 123, Warszawa",
+                "buyerNIP": "1234567890"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Фактура успішно згенерована.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "Invoice generated",
+                  "invoice": {
+                    "invoiceNumber": "INV-1717465271",
+                    "totalAmount": 100.5,
+                    "paymentMethod": "BLIK"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Фактуру можна згенерувати тільки після оплати."
+          },
+          "500": { "description": "Помилка серверу." }
+        }
+      }
+    },
+    "/api/user/invoices/{orderId}": {
+      "get": {
+        "tags": ["Invoices"],
+        "summary": "Отримати фактуру за замовленням",
+        "description": "Повертає дані фактури для певного `orderId`.",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Фактура знайдена.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "invoiceNumber": "INV-1717465271",
+                  "totalAmount": 100.5,
+                  "paymentMethod": "BLIK"
+                }
+              }
+            }
+          },
+          "404": { "description": "Фактура не знайдена." },
+          "500": { "description": "Помилка серверу." }
+        }
+      }
+    },
+    "/api/user/invoices/download/{orderId}": {
+      "get": {
+        "tags": ["Invoices"],
+        "summary": "Завантажити PDF-фактуру",
+        "description": "Завантажує файл PDF для фактури за `orderId`.",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "PDF-файл успішно завантажено." },
+          "404": { "description": "Файл фактури не знайдено." },
+          "500": { "description": "Помилка серверу." }
+        }
+      }
+    },
     "/api/subscribe": {
       "post": {
         "tags": ["Subscription"],

@@ -8,6 +8,8 @@ const FinanceOverview = require("../../schemas/finance/financeOverview");
 const { validate } = require("../../middleware/validateMiddleware");
 const offlineOrderValidationSchema = require("../../validation/offlineOrdersJoi");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
+const invoicePdfGeneratorOffline = require("../../config/invoicePdfGeneratorOffline");
+const Invoice = require("../../schemas/InvoiceSchema");
 
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
@@ -44,8 +46,23 @@ router.post(
   validate(offlineOrderValidationSchema),
   async (req, res) => {
     try {
-      const { products, totalPrice, paymentMethod, paymentStatus } = req.body;
+      const {
+        products,
+        totalPrice,
+        paymentMethod,
+        buyerType,
+        buyerName,
+        buyerAddress,
+        buyerNIP,
+      } = req.body;
 
+      // ✅ Дозволені методи оплати (без готівки)
+      const validPaymentMethods = ["BLIK", "bank transfer"];
+      if (!validPaymentMethods.includes(paymentMethod)) {
+        return res.status(400).json({ error: "Invalid payment method" });
+      }
+
+      // ✅ Створюємо список товарів
       const offlineOrderProducts = await Promise.all(
         products.map(async (product) => {
           const dbProduct = await Product.findById(product.productId);
@@ -54,45 +71,70 @@ router.post(
               `Insufficient stock for ${dbProduct?.name || "product"}`
             );
           }
-
           dbProduct.quantity -= product.quantity;
           await dbProduct.save();
-
           return {
             productId: dbProduct._id,
+            quantity: product.quantity,
             name: dbProduct.name,
             price: dbProduct.price,
-            quantity: product.quantity,
             photoUrl: dbProduct.photoUrl,
           };
         })
       );
 
-      const newOfflineOrder = await OfflineOrder.create({
+      // ✅ Створюємо **офлайн-продаж**
+      const newOfflineSale = await OfflineSale.create({
         products: offlineOrderProducts,
-        totalPrice,
+        totalAmount,
         paymentMethod,
-        paymentStatus: paymentStatus || "pending",
-        status: "pending",
+        status: "completed",
+        saleDate: new Date(),
       });
 
-      if (paymentStatus === "paid") {
-        await FinanceOverview.updateOne(
-          {},
-          { $push: { completedOrders: newOfflineOrder._id } },
-          { upsert: true }
-        );
+      // ✅ Оновлюємо фінансовий огляд
+      await FinanceOverview.updateOne(
+        {},
+        { $inc: { totalRevenue: newOfflineSale.totalAmount } },
+        { upsert: true }
+      );
+
+      // ✅ Формуємо дані для фактури
+      let invoiceData = {
+        invoiceNumber: `INV-${Date.now()}`,
+        totalAmount,
+        paymentMethod,
+        issueDate: new Date(),
+      };
+
+      if (buyerType === "przedsiębiorca") {
+        invoiceData.buyerType = buyerType;
+        invoiceData.buyerName = buyerName;
+        invoiceData.buyerAddress = buyerAddress;
+        invoiceData.buyerNIP = buyerNIP;
+      }
+
+      // ✅ Створюємо фактуру тільки якщо це підприємець
+      const invoice =
+        buyerType === "przedsiębiorca"
+          ? await Invoice.create(invoiceData)
+          : null;
+
+      if (invoice) {
+        const pdfPath = await invoicePdfGeneratorOffline(invoice, buyerType);
+        invoice.filePath = pdfPath;
+        await invoice.save();
       }
 
       res.status(201).json({
-        message: "Offline order created successfully",
-        order: newOfflineOrder,
+        message: "Offline sale recorded successfully",
+        sale: newOfflineSale,
+        invoice,
       });
     } catch (error) {
-      console.error("🔥 Error creating offline order:", error);
       res
         .status(500)
-        .json({ error: error.message || "Failed to create offline order" });
+        .json({ error: error.message || "Failed to record offline sale" });
     }
   }
 );

@@ -70,6 +70,7 @@ router.post("/", authenticateUser, async (req, res) => {
       paymentMethod,
       pickupPointId,
       postalCode,
+      deliveryType,
       city,
       street,
       houseNumber,
@@ -81,14 +82,14 @@ router.post("/", authenticateUser, async (req, res) => {
       return res.status(400).json({ error: "Pickup point is required" });
     }
 
-    const pickupPoint = await getPoints();
-    const selectedPoint = pickupPoint.items.find(
-      (p) => p.name === pickupPointId
-    );
+    // const pickupPoint = await getPoints();
+    // const selectedPoint = pickupPoint.items.find(
+    //   (p) => p.name === pickupPointId
+    // );
 
-    if (!selectedPoint) {
-      return res.status(404).json({ error: "Invalid pickup point ID" });
-    }
+    // if (!selectedPoint) {
+    //   return res.status(404).json({ error: "Invalid pickup point ID" });
+    // }
 
     // 📌 Перевіряємо профіль користувача
     const user = await User.findById(req.user.id);
@@ -122,6 +123,7 @@ router.post("/", authenticateUser, async (req, res) => {
       totalPrice,
       paymentMethod,
       pickupPointId,
+      deliveryType,
       ...orderAddress, // Передаємо адресу
       status: "new",
     });

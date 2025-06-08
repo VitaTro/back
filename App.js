@@ -23,7 +23,7 @@ const ProfileRouter = require("./src/routes/user/profileRouter");
 const PaymentRouter = require("./src/routes/paymentRouter");
 const { authenticateUser } = require("./src/middleware/authenticateUser");
 const MainRouter = require("./src/routes/mainRouter");
-
+const InvoicesRouter = require("./src/routes/invoiceRouter");
 const app = express();
 
 const allowedOrigins = [
@@ -76,6 +76,7 @@ app.use("/api/products", ProductRouter);
 app.use("/api/user", ProfileRouter);
 app.use("/api/user/orders", OrdersRouter);
 app.use("/api/user/payments", PaymentRouter);
+app.use("/api/user/invoices", InvoicesRouter);
 app.use("/api/admin/auth", AdminAuthRouter);
 app.use("/api/user/auth", UserAuthRouter);
 app.use("/api/user/shopping-cart", ShoppingCartRouter);

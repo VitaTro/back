@@ -25,7 +25,7 @@ const offlineOrderSchema = new mongoose.Schema(
     // Метод оплати
     paymentMethod: {
       type: String,
-      enum: ["cash", "card", "bank_transfer"], // Додаємо гнучкість
+      enum: ["BLIK", "bank_transfer"], // Додаємо гнучкість
       required: true,
     },
 

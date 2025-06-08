@@ -10,6 +10,7 @@ const OfflineSale = require("../../schemas/finance/offlineSales");
 const FinanceSettings = require("../../schemas/finance/financeSettings");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
+const Invoice = require("../../schemas/InvoiceSchema");
 
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
@@ -21,12 +22,18 @@ router.get("/", authenticateAdmin, async (req, res) => {
       totalOnlineSales,
       totalOfflineSales,
       totalRevenue,
+      totalInvoices,
     ] = await Promise.all([
       Admin.countDocuments(),
       Product.countDocuments(),
       OnlineSale.countDocuments({ status: "completed" }),
       OfflineSale.countDocuments({ status: "completed" }),
       FinanceOverview.findOne().select("totalRevenue"),
+      Invoice.aggregate([
+        {
+          $group: { _id: null, totalInvoicesAmount: { $sum: "$totalAmount" } },
+        },
+      ]).then((data) => data[0]?.totalInvoicesAmount || 0),
     ]);
 
     // ✅ Продажі за методами оплати
@@ -108,6 +115,7 @@ router.get("/", authenticateAdmin, async (req, res) => {
         totalOnlineSales,
         totalOfflineSales,
         totalRevenue: totalRevenue?.totalRevenue || 0,
+        totalInvoices,
       },
       paymentMethods,
       completedSales,

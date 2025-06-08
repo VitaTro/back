@@ -8,6 +8,7 @@ const FinanceOverview = require("../../schemas/finance/financeOverview");
 const { validate } = require("../../middleware/validateMiddleware");
 const validateOnlineSale = require("../../validation/onlineSalesJoi");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
+const SalesInvoice = require("../../schemas/SalesInvoiceSchema");
 
 // 🔍 Отримати всі онлайн продажі
 router.get("/", authenticateAdmin, async (req, res) => {
@@ -68,10 +69,17 @@ router.post(
 
       await newOnlineSale.save();
       console.log("✅ Онлайн-продаж створено успішно!");
+      const salesInvoice = await SalesInvoice.create({
+        totalAmount,
+        paymentMethod,
+        saleDate: new Date(),
+      });
 
+      console.log("✅ Faktura przychodowa створена:", salesInvoice);
       res.status(201).json({
         message: "Продаж записано успішно",
         sale: newOnlineSale,
+        invoice: salesInvoice,
       });
     } catch (error) {
       console.error("🔥 Помилка створення онлайн-продажу:", error);
@@ -231,6 +239,14 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
   } catch (error) {
     console.error("🔥 Помилка повернення:", error);
     res.status(500).json({ error: "❌ Не вдалося повернути товар" });
+  }
+});
+router.get("/invoices", authenticateAdmin, async (req, res) => {
+  try {
+    const invoices = await SalesInvoice.find().sort({ saleDate: -1 });
+    res.status(200).json(invoices);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch invoices" });
   }
 });
 

@@ -42,9 +42,13 @@ const authenticateUser = async (req, res, next) => {
         const newAccessToken = jwt.sign(
           { id: user.id, username: user.username, role: user.role },
           process.env.JWT_SECRET,
-          { expiresIn: "15m" }
+          { expiresIn: "30d" }
         );
-
+        const refreshToken = jwt.sign(
+          { id: user.id },
+          process.env.JWT_REFRESH_SECRET,
+          { expiresIn: "90d" } // 🔹 Запасний варіант на 3 місяці
+        );
         req.user = decodedRefresh; // ✅ Оновлюємо користувача
         res.setHeader("x-access-token", newAccessToken); // Надсилаємо новий токен у заголовку
         return next(); // ✅ Продовжуємо запит після оновлення токена
