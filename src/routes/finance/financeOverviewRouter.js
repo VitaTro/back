@@ -38,15 +38,15 @@ router.get("/", authenticateAdmin, async (req, res) => {
 
     // ✅ Продажі за методами оплати
     const paymentMethods = await Promise.all([
-      OfflineSale.aggregate([
-        { $match: { paymentMethod: "cash" } },
-        { $group: { _id: null, totalCash: { $sum: "$totalAmount" } } },
-      ]).then((data) => data[0]?.totalCash || 0),
+      // OfflineSale.aggregate([
+      //   { $match: { paymentMethod: "cash" } },
+      //   { $group: { _id: null, totalCash: { $sum: "$totalAmount" } } },
+      // ]).then((data) => data[0]?.totalCash || 0),
 
       OnlineSale.aggregate([
-        { $match: { paymentMethod: "card" } },
-        { $group: { _id: null, totalCard: { $sum: "$totalAmount" } } },
-      ]).then((data) => data[0]?.totalCard || 0),
+        { $match: { paymentMethod: "BLIK" } },
+        { $group: { _id: null, totalBlik: { $sum: "$totalAmount" } } },
+      ]).then((data) => data[0]?.totalBlik || 0),
 
       OnlineSale.aggregate([
         { $match: { paymentMethod: "bank_transfer" } },

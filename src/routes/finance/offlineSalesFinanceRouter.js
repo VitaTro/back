@@ -48,7 +48,7 @@ router.post(
         buyerNIP,
       } = req.body;
 
-      const validPaymentMethods = ["BLIK", "bank transfer", "cash"];
+      const validPaymentMethods = ["BLIK", "bank transfer"];
       if (!validPaymentMethods.includes(paymentMethod)) {
         return res.status(400).json({ error: "Invalid payment method" });
       }
@@ -77,7 +77,7 @@ router.post(
         products: offlineSaleProducts,
         totalAmount,
         paymentMethod,
-        status: status || (paymentMethod !== "cash" ? "completed" : "pending"),
+        status: status || (paymentMethod !== "BLIK" ? "completed" : "pending"),
         saleDate: new Date(),
       });
 

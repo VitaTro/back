@@ -25,7 +25,7 @@ const offlineSaleSchema = new mongoose.Schema(
     totalAmount: { type: Number, required: true },
     paymentMethod: {
       type: String,
-      enum: ["cash", "bank_transfer", "card"],
+      enum: ["BLIK", "bank_transfer"],
       required: true,
     },
     status: {
