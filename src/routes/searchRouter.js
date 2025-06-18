@@ -36,7 +36,7 @@ router.get("/search", async (req, res) => {
         product.description.toLowerCase().includes(query.toLowerCase())
     );
     // Перевірка результатів
-    if (!products.length) {
+    if (!filteredProducts.length) {
       console.log(`No products found for query: "${query}"`);
       return res.status(404).json({
         status: "error",
