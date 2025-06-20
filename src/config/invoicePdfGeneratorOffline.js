@@ -14,10 +14,6 @@ async function invoicePdfGeneratorOffline(invoiceData, type) {
   doc.registerFont("Noto", fontPath);
   doc.font("Noto");
 
-  const safeFileName = invoiceData.invoiceNumber.replace(/\//g, "_");
-  const fileName = path.join(invoicesDir, `${safeFileName}.pdf`);
-  doc.pipe(fs.createWriteStream(fileName));
-
   doc
     .fontSize(16)
     .text(`FAKTURA VAT: ${invoiceData.invoiceNumber}`, { align: "center" });

@@ -1,7 +1,6 @@
 const fs = require("fs");
 const path = require("path");
 const PDFDocument = require("pdfkit");
-
 async function invoicePdfGenerator(invoiceData, buyerType = "anonim") {
   const doc = new PDFDocument();
   const invoicesDir = path.join(__dirname, "../invoices");

@@ -93,8 +93,8 @@ router.get("/dashboard", authenticateAdmin, async (req, res) => {
     };
 
     // Огляд продуктів
-    const lowStockItems = await Product.find({ stock: { $lt: 5 } }).select(
-      "name stock photo index"
+    const lowStockItems = await Product.find({ quantity: { $lte: 1 } }).select(
+      "name quantity photo index"
     );
     const popularItems = [
       {

@@ -177,7 +177,7 @@ router.post("/refund/:orderId", authenticateUser, async (req, res) => {
 // ✅ Отримати доступні методи оплати
 router.get("/methods", authenticateUser, async (req, res) => {
   try {
-    res.status(200).json({ methods: ["BLIK", "bank transfer"] });
+    res.status(200).json({ methods: ["BLIK", "bank_transfer"] });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch payment methods" });
   }

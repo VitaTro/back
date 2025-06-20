@@ -85,6 +85,14 @@ const productSchema = new mongoose.Schema(
   },
   { collection: "products" }
 );
+productSchema.pre("save", function (next) {
+  if (this.quantity <= 0) {
+    this.inStock = false;
+  } else {
+    this.inStock = true;
+  }
+  next();
+});
 
 // Індекс для пошуку по тексту
 productSchema.index({ name: "text", description: "text" });
