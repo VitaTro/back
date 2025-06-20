@@ -57,7 +57,7 @@ router.post(
       } = req.body;
 
       // ✅ Дозволені методи оплати (без готівки)
-      const validPaymentMethods = ["BLIK", "bank transfer"];
+      const validPaymentMethods = ["BLIK", "bank_transfer"];
       if (!validPaymentMethods.includes(paymentMethod)) {
         return res.status(400).json({ error: "Invalid payment method" });
       }
