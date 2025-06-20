@@ -10,7 +10,7 @@ const offlineOrderValidationSchema = require("../../validation/offlineOrdersJoi"
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 const invoicePdfGeneratorOffline = require("../../config/invoicePdfGeneratorOffline");
 const Invoice = require("../../schemas/InvoiceSchema");
-
+const generateUniversalInvoice = require("../../services/generateUniversalInvoice");
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
     console.log("🔍 Fetching offline orders...");
@@ -115,21 +115,13 @@ router.post(
       // 🔸 Формуємо інвойс (якщо покупець — підприємець)
       let invoice = null;
       if (buyerType === "przedsiębiorca") {
-        const invoiceData = {
-          invoiceNumber: `INV-${Date.now()}`,
-          totalAmount: totalPrice,
-          paymentMethod,
-          issueDate: new Date(),
+        invoice = await generateUniversalInvoice(newOfflineSale, {
+          mode: "offline",
           buyerType,
           buyerName,
           buyerAddress,
           buyerNIP,
-        };
-
-        invoice = await Invoice.create(invoiceData);
-        const pdfPath = await invoicePdfGeneratorOffline(invoice, buyerType);
-        invoice.filePath = pdfPath;
-        await invoice.save();
+        });
       }
 
       res.status(201).json({
@@ -140,11 +132,9 @@ router.post(
       });
     } catch (error) {
       console.error("🔥 Error in POST /offline/orders:", error);
-      res
-        .status(500)
-        .json({
-          error: error.message || "Failed to create offline order & sale",
-        });
+      res.status(500).json({
+        error: error.message || "Failed to create offline order & sale",
+      });
     }
   }
 );

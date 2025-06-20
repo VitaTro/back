@@ -1,16 +1,16 @@
 const mongoose = require("mongoose");
 
 const InvoiceSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // опціонально для офлайну
   orderId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Order",
     required: true,
   },
+  invoiceType: { type: String, enum: ["online", "offline"], required: true },
+
   paymentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Payment",
-    required: true,
   },
   totalAmount: { type: Number, required: true },
   paymentMethod: { type: String, required: true },
@@ -18,28 +18,29 @@ const InvoiceSchema = new mongoose.Schema({
   invoiceNumber: { type: String, required: true, unique: true },
   filePath: { type: String },
 
-  // 🔹 Додаємо інформацію про покупця
-  buyerType: { type: String, enum: ["company", "individual"], required: true },
-  buyerName: { type: String, required: true },
-  buyerAddress: { type: String, required: true },
-  buyerNIP: { type: String, required: false }, // Тільки для компаній
+  buyerType: {
+    type: String,
+    enum: ["company", "individual", "anonim"],
+    required: true,
+  },
+  buyerName: { type: String },
+  buyerAddress: { type: String },
+  buyerNIP: { type: String },
 });
 
-// 🔹 Автоматична генерація номера фактури перед збереженням
-InvoiceSchema.pre("save", async function (next) {
-  const currentMonth = new Date().getMonth() + 1;
-  const currentYear = new Date().getFullYear();
-  const monthString = currentMonth.toString().padStart(2, "0");
+// 🛡️ Кастомна перевірка згідно типу покупця
+InvoiceSchema.pre("validate", function (next) {
+  if (this.buyerType === "company") {
+    if (!this.buyerName || !this.buyerAddress || !this.buyerNIP) {
+      return next(
+        new Error(
+          "Для компанії потрібно вказати buyerName, buyerAddress та buyerNIP"
+        )
+      );
+    }
+  }
 
-  // 📌 Рахуємо кількість вже існуючих фактур у цьому місяці
-  const invoiceCount = await mongoose.model("Invoice").countDocuments({
-    issueDate: {
-      $gte: new Date(`${currentYear}-${monthString}-01T00:00:00Z`),
-      $lt: new Date(`${currentYear}-${monthString}-31T23:59:59Z`),
-    },
-  });
-
-  this.invoiceNumber = `${invoiceCount + 1}/${monthString}/${currentYear}`;
+  // для individual або anonim — нічого не перевіряємо
   next();
 });
 

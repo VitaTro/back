@@ -4,11 +4,14 @@ const PDFDocument = require("pdfkit");
 
 async function invoicePdfGeneratorOffline(invoiceData, type) {
   const doc = new PDFDocument();
-  const fileName = path.join(
-    __dirname,
-    "../invoices/",
-    `${invoiceData.invoiceNumber}.pdf`
-  );
+  const invoicesDir = path.join(__dirname, "./invoices");
+
+  if (!fs.existsSync(invoicesDir)) {
+    fs.mkdirSync(invoicesDir, { recursive: true });
+  }
+
+  const fileName = path.join(invoicesDir, `${invoiceData.invoiceNumber}.pdf`);
+
   doc.pipe(fs.createWriteStream(fileName));
 
   doc
