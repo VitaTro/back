@@ -38,6 +38,7 @@ router.post(
   async (req, res) => {
     try {
       const {
+        orderId,
         products,
         totalAmount,
         paymentMethod,
@@ -74,6 +75,7 @@ router.post(
       );
 
       const newOfflineSale = await OfflineSale.create({
+        orderId,
         products: offlineSaleProducts,
         totalAmount,
         paymentMethod,

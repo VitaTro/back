@@ -54,15 +54,15 @@ router.post(
         buyerName,
         buyerAddress,
         buyerNIP,
+        notes,
       } = req.body;
 
-      // ✅ Дозволені методи оплати (без готівки)
       const validPaymentMethods = ["BLIK", "bank_transfer"];
       if (!validPaymentMethods.includes(paymentMethod)) {
         return res.status(400).json({ error: "Invalid payment method" });
       }
 
-      // ✅ Створюємо список товарів
+      // 🔸 Створюємо список товарів
       const offlineOrderProducts = await Promise.all(
         products.map(async (product) => {
           const dbProduct = await Product.findById(product.productId);
@@ -83,8 +83,18 @@ router.post(
         })
       );
 
-      // ✅ Створюємо **офлайн-продаж**
+      // 🔸 Створюємо офлайн-замовлення (totalPrice)
+      const newOfflineOrder = await OfflineOrder.create({
+        products: offlineOrderProducts,
+        totalPrice,
+        paymentMethod,
+        notes,
+        status: "completed", // або pending, залежно від логіки
+      });
+
+      // 🔸 Створюємо офлайн-продаж (totalAmount = totalPrice)
       const newOfflineSale = await OfflineSale.create({
+        orderId: newOfflineOrder._id,
         products: offlineOrderProducts,
         totalAmount: totalPrice,
         paymentMethod,
@@ -92,49 +102,49 @@ router.post(
         saleDate: new Date(),
       });
 
-      // ✅ Оновлюємо фінансовий огляд
+      // 🔸 Оновлюємо фінансовий огляд
       await FinanceOverview.updateOne(
         {},
-        { $inc: { totalRevenue: newOfflineSale.totalAmount } },
+        {
+          $inc: { totalRevenue: totalPrice },
+          $push: { completedOrders: newOfflineOrder._id },
+        },
         { upsert: true }
       );
 
-      // ✅ Формуємо дані для фактури
-      let invoiceData = {
-        invoiceNumber: `INV-${Date.now()}`,
-        totalAmount: totalPrice,
-        paymentMethod,
-        issueDate: new Date(),
-      };
-
+      // 🔸 Формуємо інвойс (якщо покупець — підприємець)
+      let invoice = null;
       if (buyerType === "przedsiębiorca") {
-        invoiceData.buyerType = buyerType;
-        invoiceData.buyerName = buyerName;
-        invoiceData.buyerAddress = buyerAddress;
-        invoiceData.buyerNIP = buyerNIP;
-      }
+        const invoiceData = {
+          invoiceNumber: `INV-${Date.now()}`,
+          totalAmount: totalPrice,
+          paymentMethod,
+          issueDate: new Date(),
+          buyerType,
+          buyerName,
+          buyerAddress,
+          buyerNIP,
+        };
 
-      // ✅ Створюємо фактуру тільки якщо це підприємець
-      const invoice =
-        buyerType === "przedsiębiorca"
-          ? await Invoice.create(invoiceData)
-          : null;
-
-      if (invoice) {
+        invoice = await Invoice.create(invoiceData);
         const pdfPath = await invoicePdfGeneratorOffline(invoice, buyerType);
         invoice.filePath = pdfPath;
         await invoice.save();
       }
 
       res.status(201).json({
-        message: "Offline sale recorded successfully",
+        message: "Offline order and sale recorded successfully",
+        order: newOfflineOrder,
         sale: newOfflineSale,
         invoice,
       });
     } catch (error) {
+      console.error("🔥 Error in POST /offline/orders:", error);
       res
         .status(500)
-        .json({ error: error.message || "Failed to record offline sale" });
+        .json({
+          error: error.message || "Failed to create offline order & sale",
+        });
     }
   }
 );
