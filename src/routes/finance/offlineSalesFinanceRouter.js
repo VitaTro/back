@@ -9,7 +9,7 @@ const FinanceSettings = require("../../schemas/finance/financeSettings");
 const offlineSaleValidationSchema = require("../../validation/offlineSalesJoi");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 const generateInvoicePDFOffline = require("../../config/invoicePdfGeneratorOffline");
-
+const Invoice = require("../../schemas/InvoiceSchema");
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
     console.log("🔍 Fetching offline sales...");
@@ -48,7 +48,7 @@ router.post(
         buyerNIP,
       } = req.body;
 
-      const validPaymentMethods = ["BLIK", "bank transfer"];
+      const validPaymentMethods = ["BLIK", "bank_transfer"];
       if (!validPaymentMethods.includes(paymentMethod)) {
         return res.status(400).json({ error: "Invalid payment method" });
       }

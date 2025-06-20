@@ -86,7 +86,7 @@ router.post(
       // ✅ Створюємо **офлайн-продаж**
       const newOfflineSale = await OfflineSale.create({
         products: offlineOrderProducts,
-        totalAmount,
+        totalAmount: totalPrice,
         paymentMethod,
         status: "completed",
         saleDate: new Date(),
@@ -102,7 +102,7 @@ router.post(
       // ✅ Формуємо дані для фактури
       let invoiceData = {
         invoiceNumber: `INV-${Date.now()}`,
-        totalAmount,
+        totalAmount: totalPrice,
         paymentMethod,
         issueDate: new Date(),
       };
