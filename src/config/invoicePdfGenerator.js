@@ -2,17 +2,22 @@ const fs = require("fs");
 const path = require("path");
 const PDFDocument = require("pdfkit");
 
-async function generateInvoicePDF(invoiceData, type) {
+async function invoicePdfGenerator(invoiceData, buyerType = "anonim") {
   const doc = new PDFDocument();
-  const fileName = path.join(
-    __dirname,
-    "../invoices/",
-    `${invoiceData.invoiceNumber}.pdf`
-  );
+  const invoicesDir = path.join(__dirname, "../invoices");
 
-  doc.pipe(fs.createWriteStream(fileName));
+  if (!fs.existsSync(invoicesDir)) {
+    fs.mkdirSync(invoicesDir, { recursive: true });
+  }
 
-  // 🔹 Заголовок
+  const fontPath = path.join(__dirname, "../fonts/NotoSans-Regular.ttf");
+  doc.registerFont("Noto", fontPath);
+  doc.font("Noto");
+
+  const safeFileName = invoiceData.invoiceNumber.replace(/\//g, "_");
+  const filePath = path.join(invoicesDir, `${safeFileName}.pdf`);
+  doc.pipe(fs.createWriteStream(filePath));
+
   doc
     .fontSize(16)
     .text(`FAKTURA VAT: ${invoiceData.invoiceNumber}`, { align: "center" });
@@ -22,20 +27,21 @@ async function generateInvoicePDF(invoiceData, type) {
   doc.text(`Kwota brutto: ${invoiceData.totalAmount} PLN`);
   doc.moveDown();
 
-  // 🔹 **Дані продавця (Твоєї компанії)**
-  doc.fontSize(12).text(`Sprzedawca:`);
+  doc.text(`Sprzedawca:`);
   doc.text(`Nika Gold - Vitaliia Troian`);
   doc.text(`NIP: 9121950449`);
   doc.text(`ul. Świeradowska 51/57, 50-559 Wrocław`);
   doc.moveDown();
 
-  // 🔹 Інформація про покупця
-  doc.fontSize(12).text(`Nabywca:`);
-  doc.text(`${invoiceData.buyerName}`);
-  doc.text(`${invoiceData.buyerAddress}`);
-
-  if (type === "przedsiębiorca") {
+  if (buyerType === "company" || buyerType === "przedsiębiorca") {
+    doc.text(`Nabywca: ${invoiceData.buyerName}`);
+    doc.text(`Adres: ${invoiceData.buyerAddress}`);
     doc.text(`NIP: ${invoiceData.buyerNIP}`);
+  } else if (buyerType === "individual") {
+    doc.text(`Nabywca: ${invoiceData.buyerName}`);
+    doc.text(`Adres: ${invoiceData.buyerAddress}`);
+  } else {
+    doc.text(`Nabywca: Anonimowy klient`);
   }
 
   doc.moveDown();
@@ -59,10 +65,9 @@ async function generateInvoicePDF(invoiceData, type) {
 
   doc.text(`Wystawił(a): AUTOMAT Nika Gold - Vitaliia Troian`);
   doc.text(`Odebrał(a): ________________________`);
-  doc.moveDown();
 
   doc.end();
-  return fileName;
+  return filePath;
 }
 
-module.exports = generateInvoicePDF;
+module.exports = invoicePdfGenerator;

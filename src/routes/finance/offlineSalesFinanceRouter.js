@@ -1,19 +1,18 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const router = express.Router();
+const mongoose = require("mongoose");
+const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 const { validate } = require("../../middleware/validateMiddleware");
+const offlineSaleValidationSchema = require("../../validation/offlineSalesJoi");
+
 const Product = require("../../schemas/product");
 const OfflineSale = require("../../schemas/finance/offlineSales");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
-const FinanceSettings = require("../../schemas/finance/financeSettings");
-const offlineSaleValidationSchema = require("../../validation/offlineSalesJoi");
-const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
-const generateInvoicePDFOffline = require("../../config/invoicePdfGeneratorOffline");
 const Invoice = require("../../schemas/InvoiceSchema");
+const generateInvoicePDFOffline = require("../../config/invoicePdfGeneratorOffline");
+
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
-    console.log("🔍 Fetching offline sales...");
-
     const filter = req.query.status ? { status: req.query.status } : {};
     const offlineSales = await OfflineSale.find(filter).populate(
       "products.productId",
@@ -83,6 +82,8 @@ router.post(
         saleDate: new Date(),
       });
 
+      let invoice = null;
+
       if (newOfflineSale.status === "completed") {
         await FinanceOverview.updateOne(
           {},
@@ -93,26 +94,26 @@ router.post(
           { upsert: true }
         );
 
-        let invoiceData = {
-          invoiceNumber: `INV-${Date.now()}`,
+        const invoiceData = {
+          invoiceType: "offline",
           totalAmount,
           paymentMethod,
+          buyerType: buyerType || "anonim",
           issueDate: new Date(),
         };
 
         if (buyerType === "przedsiębiorca") {
-          invoiceData.buyerType = buyerType;
           invoiceData.buyerName = buyerName;
           invoiceData.buyerAddress = buyerAddress;
           invoiceData.buyerNIP = buyerNIP;
         }
 
-        const invoice = await Invoice.create(invoiceData);
+        invoice = new Invoice(invoiceData);
+        await invoice.validate();
 
-        // 🔹 Генеруємо PDF-фактуру **спеціально для офлайну**
         const pdfPath = await generateInvoicePDFOffline(
           invoice,
-          buyerType || "anonim"
+          invoiceData.buyerType
         );
         invoice.filePath = pdfPath;
         await invoice.save();
@@ -124,37 +125,32 @@ router.post(
         invoice,
       });
     } catch (error) {
+      console.error("🔥 Error recording offline sale:", error);
       res
         .status(500)
         .json({ error: error.message || "Failed to record offline sale" });
     }
   }
 );
+
 router.patch("/:id", authenticateAdmin, async (req, res) => {
   try {
-    console.log(
-      `🛠 Updating offline sale ID: ${req.params.id} with status: ${req.body.status}`
-    );
-
     const { status } = req.body;
-    const validSaleStatuses = ["pending", "completed", "cancelled"];
+    const validStatuses = ["pending", "completed", "cancelled"];
 
-    if (!validSaleStatuses.includes(status)) {
+    if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: "Invalid status" });
     }
 
-    const offlineSale = await OfflineSale.findById(req.params.id);
-    if (!offlineSale) {
-      return res.status(404).json({ error: "Offline sale not found" });
-    }
+    const sale = await OfflineSale.findById(req.params.id);
+    if (!sale) return res.status(404).json({ error: "Offline sale not found" });
 
-    offlineSale.status = status;
-    await offlineSale.save();
+    sale.status = status;
+    await sale.save();
 
-    res.status(200).json({
-      message: "Offline sale updated successfully",
-      sale: offlineSale,
-    });
+    res
+      .status(200)
+      .json({ message: "Offline sale updated successfully", sale });
   } catch (error) {
     console.error("🔥 Error updating offline sale:", error);
     res.status(500).json({ error: "Failed to update offline sale" });

@@ -4,7 +4,7 @@ const { authenticateUser } = require("../middleware/authenticateUser");
 const Payment = require("../schemas/paymentSchema");
 const OnlineOrder = require("../schemas/finance/onlineOrders");
 const OnlineSale = require("../schemas/finance/onlineSales");
-const SalesInvoice = require("../schemas/SalesInvoiceSchema");
+
 const Invoice = require("../schemas/InvoiceSchema");
 
 // ✅ Ініціювати оплату
@@ -87,26 +87,44 @@ router.post("/confirm/:orderId", authenticateUser, async (req, res) => {
     });
 
     // 🔹 **Фактура для юзера**
-    const userInvoice = await Invoice.create({
+    const invoice = new Invoice({
       userId: req.user.id,
       orderId: order._id,
       paymentId: payment._id,
-      invoiceNumber: `INV-${Date.now()}`,
+      invoiceType: "online",
       totalAmount: payment.amount,
       paymentMethod: payment.paymentMethod,
-      issueDate: new Date(),
+      buyerType: "individual",
+      buyerName: order.buyerName || "Klient indywidualny",
+      buyerAddress: order.buyerAddress || "",
     });
 
-    order.invoice = userInvoice._id;
+    await invoice.validate();
+
+    // 🧾 Створення PDF-фактури
+    const pdfPath = await generateInvoicePDF(invoice, "individual");
+    invoice.filePath = pdfPath;
+
+    // ☁️ Завантаження в Google Drive
+    const fileUrl = await uploadToDrive(
+      pdfPath,
+      `${invoice.invoiceNumber}.pdf`
+    );
+    invoice.fileUrl = fileUrl;
+
+    await invoice.save();
+
+    // 🔗 Запис у замовлення
+    order.invoice = invoice._id;
     await order.save();
 
     res.status(200).json({
-      message: "Payment confirmed, user invoice generated",
-      userInvoice,
+      message: "✅ Оплата підтверджена, інвойс створено",
+      invoice,
     });
   } catch (error) {
     console.error("❌ Error processing payment:", error);
-    res.status(500).json({ error: "Failed to confirm payment" });
+    res.status(500).json({ error: "Не вдалося завершити оплату" });
   }
 });
 

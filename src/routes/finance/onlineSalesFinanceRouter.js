@@ -8,7 +8,7 @@ const FinanceOverview = require("../../schemas/finance/financeOverview");
 const { validate } = require("../../middleware/validateMiddleware");
 const validateOnlineSale = require("../../validation/onlineSalesJoi");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
-const SalesInvoice = require("../../schemas/SalesInvoiceSchema");
+const Invoice = require("../../schemas/InvoiceSchema");
 
 // 🔍 Отримати всі онлайн продажі
 router.get("/", authenticateAdmin, async (req, res) => {
@@ -243,9 +243,14 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
 });
 router.get("/invoices", authenticateAdmin, async (req, res) => {
   try {
-    const invoices = await SalesInvoice.find().sort({ saleDate: -1 });
+    const invoices = await Invoice.find()
+      .sort({ issueDate: -1 })
+      .populate("userId", "fullName email") // якщо хочеш бачити юзера
+      .populate("orderId", "products totalPrice"); // якщо потрібно підтягнути замовлення
+
     res.status(200).json(invoices);
   } catch (error) {
+    console.error("❌ Failed to fetch invoices:", error);
     res.status(500).json({ error: "Failed to fetch invoices" });
   }
 });

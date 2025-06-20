@@ -1,20 +1,18 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const router = express.Router();
-const OfflineOrder = require("../../schemas/finance/offlineOrders");
-const Product = require("../../schemas/product");
-const OfflineSale = require("../../schemas/finance/offlineSales");
-const FinanceOverview = require("../../schemas/finance/financeOverview");
+const mongoose = require("mongoose");
+const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 const { validate } = require("../../middleware/validateMiddleware");
 const offlineOrderValidationSchema = require("../../validation/offlineOrdersJoi");
-const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
-const invoicePdfGeneratorOffline = require("../../config/invoicePdfGeneratorOffline");
-const Invoice = require("../../schemas/InvoiceSchema");
+
+const Product = require("../../schemas/product");
+const OfflineOrder = require("../../schemas/finance/offlineOrders");
+const OfflineSale = require("../../schemas/finance/offlineSales");
+const FinanceOverview = require("../../schemas/finance/financeOverview");
 const generateUniversalInvoice = require("../../services/generateUniversalInvoice");
+
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
-    console.log("🔍 Fetching offline orders...");
-
     const filter = req.query.status
       ? { status: req.query.status }
       : { status: { $ne: "archived" } };
@@ -62,7 +60,6 @@ router.post(
         return res.status(400).json({ error: "Invalid payment method" });
       }
 
-      // 🔸 Створюємо список товарів
       const offlineOrderProducts = await Promise.all(
         products.map(async (product) => {
           const dbProduct = await Product.findById(product.productId);
@@ -83,16 +80,14 @@ router.post(
         })
       );
 
-      // 🔸 Створюємо офлайн-замовлення (totalPrice)
       const newOfflineOrder = await OfflineOrder.create({
         products: offlineOrderProducts,
         totalPrice,
         paymentMethod,
         notes,
-        status: "completed", // або pending, залежно від логіки
+        status: "completed",
       });
 
-      // 🔸 Створюємо офлайн-продаж (totalAmount = totalPrice)
       const newOfflineSale = await OfflineSale.create({
         orderId: newOfflineOrder._id,
         products: offlineOrderProducts,
@@ -102,7 +97,6 @@ router.post(
         saleDate: new Date(),
       });
 
-      // 🔸 Оновлюємо фінансовий огляд
       await FinanceOverview.updateOne(
         {},
         {
@@ -112,17 +106,16 @@ router.post(
         { upsert: true }
       );
 
-      // 🔸 Формуємо інвойс (якщо покупець — підприємець)
-      let invoice = null;
-      if (buyerType === "przedsiębiorca") {
-        invoice = await generateUniversalInvoice(newOfflineSale, {
-          mode: "offline",
-          buyerType,
+      // Генеруємо інвойс
+      const invoice = await generateUniversalInvoice(newOfflineSale, {
+        mode: "offline",
+        buyerType: buyerType || "anonim",
+        ...(buyerType === "przedsiębiorca" && {
           buyerName,
           buyerAddress,
           buyerNIP,
-        });
-      }
+        }),
+      });
 
       res.status(201).json({
         message: "Offline order and sale recorded successfully",
@@ -131,7 +124,7 @@ router.post(
         invoice,
       });
     } catch (error) {
-      console.error("🔥 Error in POST /offline/orders:", error);
+      console.error("🔥 Error creating offline order:", error);
       res.status(500).json({
         error: error.message || "Failed to create offline order & sale",
       });
@@ -161,7 +154,6 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
   try {
     const { status } = req.body;
     const validStatuses = ["pending", "completed", "cancelled"];
-
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: "Invalid status" });
     }
@@ -174,12 +166,16 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
     offlineOrder.status = status;
     await offlineOrder.save();
 
+    let newSale = null;
+    let invoice = null;
+
     if (status === "completed") {
-      await OfflineSale.create({
+      newSale = await OfflineSale.create({
         orderId: offlineOrder._id,
+        products: offlineOrder.products,
         totalAmount: offlineOrder.totalPrice,
         paymentMethod: offlineOrder.paymentMethod,
-        products: offlineOrder.products,
+        status: "completed",
         saleDate: new Date(),
       });
 
@@ -192,11 +188,19 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
         },
         { upsert: true }
       );
+
+      // Генеруємо інвойс при завершенні
+      invoice = await generateUniversalInvoice(newSale, {
+        mode: "offline",
+        buyerType: "anonim", // або витягати зі старого замовлення, якщо потрібно
+      });
     }
 
     res.status(200).json({
       message: "Offline order updated successfully",
       order: offlineOrder,
+      sale: newSale,
+      invoice,
     });
   } catch (error) {
     console.error("🔥 Error updating offline order:", error);

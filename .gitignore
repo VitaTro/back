@@ -3,3 +3,5 @@ node_modules/
 # Optional npm cache directory
 .npm
 .env
+# Google Drive credentials
+src/config/driveCredentials.json

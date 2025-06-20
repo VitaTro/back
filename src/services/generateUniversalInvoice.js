@@ -1,17 +1,15 @@
 const Invoice = require("../schemas/InvoiceSchema");
-const generateInvoiceOffline = require("../config/invoicePdfGeneratorOffline");
-const generateInvoiceOnline = require("../config/invoicePdfGenerator");
-
+const generateInvoicePDF = require("../config/invoicePdfGenerator");
+const uploadToDrive = require("../services/uploadToDrive");
 async function generateUniversalInvoice(source, options = {}) {
   const {
-    mode = "offline", // "online" або "offline"
+    mode = "offline",
     buyerType = "anonim",
     buyerName = "",
     buyerAddress = "",
     buyerNIP = "",
   } = options;
 
-  // 🧾 Формуємо номер фактури (INV-5/06/2025)
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const year = now.getFullYear();
@@ -25,7 +23,6 @@ async function generateUniversalInvoice(source, options = {}) {
   const invoiceNumber = `INV-${existingCount + 1}/${month}/${year}`;
   const issueDate = now.toISOString().split("T")[0];
 
-  // 🧾 Формуємо дані для PDF
   const items = source.products.map((p) => ({
     name: p.name,
     quantity: p.quantity,
@@ -47,15 +44,20 @@ async function generateUniversalInvoice(source, options = {}) {
     invoiceData.buyerName = buyerName;
     invoiceData.buyerAddress = buyerAddress;
     invoiceData.buyerNIP = buyerNIP;
+  } else {
+    invoiceData.buyerName = buyerName;
+    invoiceData.buyerAddress = buyerAddress;
   }
 
-  // 📄 Генеруємо PDF
-  const generateFn =
-    mode === "online" ? generateInvoiceOnline : generateInvoiceOffline;
-  const pdfPath = await generateFn(invoiceData, buyerType);
+  const pdfPath = await generateInvoicePDF(invoiceData, buyerType);
   invoiceData.filePath = pdfPath;
+  console.log("⚡ Завантажуємо файл в Google Drive...");
 
-  // 💾 Зберігаємо в базу
+  const publicUrl = await uploadToDrive(pdfPath, `${invoiceNumber}.pdf`);
+  console.log("✅ Файл завантажено, лінк:", publicUrl);
+
+  invoiceData.fileUrl = publicUrl;
+
   const newInvoice = await Invoice.create({
     invoiceNumber,
     orderId: source.orderId || source._id,
@@ -72,6 +74,7 @@ async function generateUniversalInvoice(source, options = {}) {
         : undefined,
     filePath: pdfPath,
     userId: source.userId || null,
+    fileUrl: publicUrl,
   });
 
   return newInvoice;
