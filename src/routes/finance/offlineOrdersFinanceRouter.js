@@ -113,6 +113,7 @@ router.post(
       );
 
       // Генеруємо інвойс
+      console.log("🧾 Старт генерації інвойсу");
       const invoice = await generateUniversalInvoice(newOfflineSale, {
         mode: "offline",
         buyerType: buyerType || "anonim",
@@ -122,7 +123,7 @@ router.post(
           buyerNIP,
         }),
       });
-
+      console.log("📄 Інвойс створено:", invoice);
       res.status(201).json({
         message: "Offline order and sale recorded successfully",
         order: newOfflineOrder,

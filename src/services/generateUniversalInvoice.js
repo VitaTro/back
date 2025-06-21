@@ -1,7 +1,10 @@
 const Invoice = require("../schemas/InvoiceSchema");
 const generateInvoicePDF = require("../config/invoicePdfGenerator");
 const uploadToDrive = require("../services/uploadToDrive");
+
 async function generateUniversalInvoice(source, options = {}) {
+  console.log("🔧 Виклик генерації: source=", source, "options=", options);
+
   const {
     mode = "offline",
     buyerType = "anonim",
@@ -52,6 +55,11 @@ async function generateUniversalInvoice(source, options = {}) {
   const pdfPath = await generateInvoicePDF(invoiceData, buyerType);
   invoiceData.filePath = pdfPath;
   console.log("⚡ Завантажуємо файл в Google Drive...");
+
+  if (!pdfPath) {
+    console.error("❌ PDF шлях не отримано! Генерація провалилася.");
+    return null;
+  }
 
   const publicUrl = await uploadToDrive(pdfPath, `${invoiceNumber}.pdf`);
   console.log("✅ Файл завантажено, лінк:", publicUrl);
