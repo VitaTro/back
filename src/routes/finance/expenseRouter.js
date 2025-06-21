@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const Expense = require("../../schemas/finance/expenseRouter");
+const Expense = require("../../schemas/finance/expense");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 
 // ✅ Додати нову витрату

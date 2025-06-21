@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 const Admin = require("../../schemas/adminSchema");
+const Expense = require("../../schemas/finance/expense");
 const Product = require("../../schemas/product");
 const OnlineOrder = require("../../schemas/finance/onlineOrders");
 const OfflineOrder = require("../../schemas/finance/offlineOrders");
@@ -121,13 +122,18 @@ router.get("/", authenticateAdmin, async (req, res) => {
       operatingCosts: 0,
       budgetForProcurement: 0,
     };
+    const expensesData = await Expense.aggregate([
+      { $group: { _id: null, totalExpenses: { $sum: "$amount" } } },
+    ]);
+    const totalExpensesFromRecords = expensesData[0]?.totalExpenses || 0;
 
     // ✅ Розрахунок `profitForecast`
-    const totalExpenses =
-      financeSettings.operatingCosts +
-      financeSettings.budgetForProcurement +
-      (refundsData[0]?.totalRefunds || 0);
-    const profitForecast = (totalRevenue?.totalRevenue || 0) - totalExpenses;
+    // const totalExpenses =
+    //   financeSettings.operatingCosts +
+    //   financeSettings.budgetForProcurement +
+    //   (refundsData[0]?.totalRefunds || 0);
+    const profitForecast =
+      (totalRevenue?.totalRevenue || 0) - totalExpensesFromRecords;
 
     // ✅ Формуємо фінансовий огляд
     const financialOverview = {
@@ -156,6 +162,9 @@ router.get("/", authenticateAdmin, async (req, res) => {
         profitForecast,
       },
       financeSettings,
+      expenses: {
+        totalFromRecords: totalExpensesFromRecords,
+      },
     };
 
     console.log("✅ Financial overview fetched:", financialOverview);
