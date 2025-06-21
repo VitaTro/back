@@ -20,7 +20,7 @@ const offlineSaleValidationSchema = Joi.object({
     .valid("pending", "completed", "cancelled", "returned")
     .required(),
   refundAmount: Joi.number().min(0).optional(), // 💸 для повернень
-  notes: Joi.string().optional(),
+
   buyerType: Joi.string().valid("anonim", "przedsiębiorca").optional(),
   buyerName: Joi.when("buyerType", {
     is: "przedsiębiorca",

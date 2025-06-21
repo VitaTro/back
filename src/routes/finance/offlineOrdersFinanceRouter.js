@@ -52,7 +52,7 @@ router.post(
         buyerName,
         buyerAddress,
         buyerNIP,
-        notes,
+        // notes,
       } = req.body;
 
       const validPaymentMethods = ["BLIK", "bank_transfer"];
@@ -84,7 +84,7 @@ router.post(
         products: offlineOrderProducts,
         totalPrice,
         paymentMethod,
-        notes,
+        // notes,
         status: "completed",
         buyerType,
         ...(buyerType === "przedsiębiorca" && {
