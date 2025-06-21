@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const expenseSchema = new mongoose.Schema({
   category: { type: String, required: true },
   amount: { type: Number, required: true },
+  invoiceNumber: { type: String },
   date: { type: Date, default: Date.now },
   note: { type: String },
 });

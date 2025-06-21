@@ -17,6 +17,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
     const newExpense = await Expense.create({
       category,
       amount,
+      invoiceNumber,
       date,
       note,
     });
