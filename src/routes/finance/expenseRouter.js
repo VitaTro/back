@@ -6,7 +6,7 @@ const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 // ✅ Додати нову витрату
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
-    const { category, amount, date, note } = req.body;
+    const { category, amount, invoiceNumber, date, note } = req.body;
 
     if (!category || !amount) {
       return res
