@@ -28,6 +28,14 @@ const offlineOrderSchema = new mongoose.Schema(
       enum: ["BLIK", "bank_transfer"], // Додаємо гнучкість
       required: true,
     },
+    buyerType: {
+      type: String,
+      enum: ["anonim", "przedsiębiorca"],
+      default: "anonim",
+    },
+    buyerName: { type: String }, // Обовʼязкові лише при buyerType === 'przedsiębiorca'
+    buyerAddress: { type: String },
+    buyerNIP: { type: String },
 
     // Примітки до замовлення
     notes: { type: String }, // Нехай буде опціональним

@@ -80,6 +80,12 @@ router.post(
         paymentMethod,
         status: status || (paymentMethod !== "BLIK" ? "completed" : "pending"),
         saleDate: new Date(),
+        buyerType,
+        ...(buyerType === "przedsiębiorca" && {
+          buyerName,
+          buyerAddress,
+          buyerNIP,
+        }),
       });
 
       let invoice = null;

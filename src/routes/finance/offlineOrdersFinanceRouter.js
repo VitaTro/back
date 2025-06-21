@@ -86,6 +86,12 @@ router.post(
         paymentMethod,
         notes,
         status: "completed",
+        buyerType,
+        ...(buyerType === "przedsiębiorca" && {
+          buyerName,
+          buyerAddress,
+          buyerNIP,
+        }),
       });
 
       const newOfflineSale = await OfflineSale.create({
@@ -192,7 +198,12 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
       // Генеруємо інвойс при завершенні
       invoice = await generateUniversalInvoice(newSale, {
         mode: "offline",
-        buyerType: "anonim", // або витягати зі старого замовлення, якщо потрібно
+        buyerType: offlineOrder.buyerType || "anonim",
+        ...(offlineOrder.buyerType === "przedsiębiorca" && {
+          buyerName: offlineOrder.buyerName,
+          buyerAddress: offlineOrder.buyerAddress,
+          buyerNIP: offlineOrder.buyerNIP,
+        }),
       });
     }
 

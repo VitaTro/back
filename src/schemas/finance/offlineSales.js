@@ -28,6 +28,15 @@ const offlineSaleSchema = new mongoose.Schema(
       enum: ["BLIK", "bank_transfer"],
       required: true,
     },
+    buyerType: {
+      type: String,
+      enum: ["anonim", "przedsiębiorca"],
+      default: "anonim",
+    },
+    buyerName: String,
+    buyerAddress: String,
+    buyerNIP: String,
+
     status: {
       type: String,
       enum: ["completed", "pending", "cancelled", "returned"],

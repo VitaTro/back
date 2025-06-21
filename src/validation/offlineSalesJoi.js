@@ -21,6 +21,22 @@ const offlineSaleValidationSchema = Joi.object({
     .required(),
   refundAmount: Joi.number().min(0).optional(), // 💸 для повернень
   notes: Joi.string().optional(),
+  buyerType: Joi.string().valid("anonim", "przedsiębiorca").optional(),
+  buyerName: Joi.when("buyerType", {
+    is: "przedsiębiorca",
+    then: Joi.string().required(),
+    otherwise: Joi.forbidden(),
+  }),
+  buyerAddress: Joi.when("buyerType", {
+    is: "przedsiębiorca",
+    then: Joi.string().required(),
+    otherwise: Joi.forbidden(),
+  }),
+  buyerNIP: Joi.when("buyerType", {
+    is: "przedsiębiorca",
+    then: Joi.string().required(),
+    otherwise: Joi.forbidden(),
+  }),
   saleDate: Joi.date().optional(), // для ручних/старих операцій
 });
 

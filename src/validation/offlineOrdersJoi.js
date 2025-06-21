@@ -16,6 +16,22 @@ const offlineOrderValidationSchema = Joi.object({
   paymentMethod: Joi.string().valid("BLIK", "bank_transfer").required(),
   status: Joi.string().valid("pending", "completed", "cancelled").required(),
   notes: Joi.string().optional(),
+  buyerType: Joi.string().valid("anonim", "przedsiębiorca").optional(),
+  buyerName: Joi.when("buyerType", {
+    is: "przedsiębiorca",
+    then: Joi.string().required(),
+    otherwise: Joi.forbidden(),
+  }),
+  buyerAddress: Joi.when("buyerType", {
+    is: "przedsiębiorca",
+    then: Joi.string().required(),
+    otherwise: Joi.forbidden(),
+  }),
+  buyerNIP: Joi.when("buyerType", {
+    is: "przedsiębiorca",
+    then: Joi.string().required(),
+    otherwise: Joi.forbidden(),
+  }),
 });
 
 module.exports = offlineOrderValidationSchema;
