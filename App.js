@@ -24,6 +24,7 @@ const PaymentRouter = require("./src/routes/paymentRouter");
 const { authenticateUser } = require("./src/middleware/authenticateUser");
 const MainRouter = require("./src/routes/mainRouter");
 const InvoicesRouter = require("./src/routes/invoiceRouter");
+const ExpenseRouter = require("./src/routes/finance/expenseRouter");
 const app = express();
 
 const allowedOrigins = [
@@ -90,6 +91,7 @@ app.use("/api/admin/finance/online/sales", OnlineSalesFinanceRouter);
 app.use("/api/admin/finance/offline/orders", OfflineOrdersFinanceRouter);
 app.use("/api/admin/finance/offline/sales", OfflineSalesFinanceRouter);
 app.use("/api/admin/finance/overview", FinanceOverviewRouter);
+app.use("/api/admin/finance/expense", ExpenseRouter);
 app.use("/api/admin/finance/settings", FinanceSettingsRouter);
 app.post("/upload", upload.single("photo"), (req, res) => {
   try {

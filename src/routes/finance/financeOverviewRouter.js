@@ -55,14 +55,36 @@ router.get("/", authenticateAdmin, async (req, res) => {
     ]);
 
     // ✅ Огляд продуктів: низький залишок
-    const lowStockItems = await Product.find({ stock: { $lt: 5 } }).select(
+    const lowStockItems = await Product.find({ stock: { $lt: 2 } }).select(
       "name stock photo index"
     );
 
     // ✅ Виконані замовлення та повернення
-    const completedSales = await OfflineSale.find({
+    const completedSalesOffline = await OfflineSale.find({
       status: "completed",
-    }).select("products totalPrice paymentMethod createdAt");
+    })
+      .select("products totalPrice paymentMethod createdAt")
+      .lean();
+
+    const completedSalesOnline = await OnlineSale.find({ status: "completed" })
+      .select("products totalAmount paymentMethod createdAt")
+      .lean();
+
+    const completedSales = [
+      ...completedSalesOffline
+        .filter((sale) => sale.paymentMethod !== "cash")
+        .map((sale) => ({
+          ...sale,
+          source: "offline",
+          totalPrice: sale.totalPrice,
+        })),
+      ...completedSalesOnline.map((sale) => ({
+        ...sale,
+        source: "online",
+        totalPrice: sale.totalAmount,
+      })),
+    ];
+
     const refundedSales = await OfflineSale.find({ status: "returned" }).select(
       "products refundAmount paymentMethod createdAt"
     );
