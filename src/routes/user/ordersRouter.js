@@ -84,6 +84,15 @@ router.post("/", authenticateUser, async (req, res) => {
         .status(400)
         .json({ error: "Address is required to place an order" });
     }
+    console.log("🧪 Order to be created:", {
+      userId: req.user.id,
+      products,
+      totalPrice,
+      deliveryType,
+      paymentMethod,
+      pickupPointId,
+      ...orderAddress,
+    });
 
     const newOrder = await OnlineOrder.create({
       userId: req.user.id,
@@ -103,7 +112,7 @@ router.post("/", authenticateUser, async (req, res) => {
       .json({ message: "Order created successfully", order: newOrder });
   } catch (error) {
     console.error("Order creation error:", error);
-    res.status(500).json({ error: "Failed to create order" });
+    res.status(500).json({ error: error.message || "Failed to create order" });
   }
 });
 

@@ -16,7 +16,7 @@ const onlineOrderValidationSchema = Joi.object({
     )
     .min(1)
     .required(),
-  totalQuantity: Joi.number().min(1).required(),
+  // totalQuantity: Joi.number().min(1).required(),
   status: Joi.string()
     .valid("new", "received", "assembled", "shipped", "completed", "cancelled")
     .required(),
