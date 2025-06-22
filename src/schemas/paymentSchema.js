@@ -9,7 +9,11 @@ const PaymentSchema = new mongoose.Schema({
     required: true,
   },
   amount: { type: Number, required: true },
-  paymentMethod: { type: String, enum: ["BLIK", "transfer"], required: true },
+  paymentMethod: {
+    type: String,
+    enum: ["BLIK", "bank_transfer"],
+    required: true,
+  },
   status: {
     type: String,
     enum: ["pending", "paid", "failed"],

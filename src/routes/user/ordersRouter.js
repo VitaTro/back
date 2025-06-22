@@ -1,67 +1,47 @@
 const express = require("express");
 const router = express.Router();
+
 const { getAllPoints, trackShipment } = require("../../config/inpostService");
-const User = require("../../schemas/userSchema");
-const { authenticateUser } = require("../../middleware/authenticateUser");
-const OnlineOrder = require("../../schemas/finance/onlineOrders");
-const OnlineSale = require("../../schemas/finance/onlineSales");
-const Product = require("../../schemas/product");
-const FinanceOverview = require("../../schemas/finance/financeOverview");
 const {
   sendAdminOrderNotification,
   sendAdminReturnNotification,
 } = require("../../config/emailService");
+const { authenticateUser } = require("../../middleware/authenticateUser");
+const { getIo } = require("../../config/socket");
 
+const User = require("../../schemas/userSchema");
+const OnlineOrder = require("../../schemas/finance/onlineOrders");
+const OnlineSale = require("../../schemas/finance/onlineSales");
+const Product = require("../../schemas/product");
+const Payment = require("../../schemas/paymentSchema");
+const FinanceOverview = require("../../schemas/finance/financeOverview");
+
+// ✅ Отримати всі замовлення користувача
 router.get("/", authenticateUser, async (req, res) => {
   try {
     const userOrders = await OnlineOrder.find({ userId: req.user.id }).sort({
       createdAt: -1,
     });
     res.status(200).json(userOrders);
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch user orders" });
   }
 });
 
-// ✅ Фільтр: неоплачені замовлення
-router.get("/unpaid", authenticateUser, async (req, res) => {
-  try {
-    const unpaidOrders = await OnlineOrder.find({
-      userId: req.user.id,
-      status: "unpaid",
-    });
-    res.status(200).json(unpaidOrders);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch unpaid orders" });
-  }
-});
+// ✅ Фільтрація по статусу
+const createStatusRoute = (status) =>
+  router.get(`/${status}`, authenticateUser, async (req, res) => {
+    try {
+      const orders = await OnlineOrder.find({ userId: req.user.id, status });
+      res.status(200).json(orders);
+    } catch {
+      res.status(500).json({ error: `Failed to fetch ${status} orders` });
+    }
+  });
 
-// ✅ Фільтр: оброблювані замовлення
-router.get("/processing", authenticateUser, async (req, res) => {
-  try {
-    const processingOrders = await OnlineOrder.find({
-      userId: req.user.id,
-      status: "processing",
-    });
-    res.status(200).json(processingOrders);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch processing orders" });
-  }
-});
+["unpaid", "processing", "shipped"].forEach(createStatusRoute);
 
-// ✅ Фільтр: надіслані замовлення
-router.get("/shipped", authenticateUser, async (req, res) => {
-  try {
-    const shippedOrders = await OnlineOrder.find({
-      userId: req.user.id,
-      status: "shipped",
-    });
-    res.status(200).json(shippedOrders);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch shipped orders" });
-  }
-});
-
+// ✅ Створення нового замовлення
 router.post("/", authenticateUser, async (req, res) => {
   try {
     const {
@@ -82,20 +62,9 @@ router.post("/", authenticateUser, async (req, res) => {
       return res.status(400).json({ error: "Pickup point is required" });
     }
 
-    // const pickupPoint = await getPoints();
-    // const selectedPoint = pickupPoint.items.find(
-    //   (p) => p.name === pickupPointId
-    // );
-
-    // if (!selectedPoint) {
-    //   return res.status(404).json({ error: "Invalid pickup point ID" });
-    // }
-
-    // 📌 Перевіряємо профіль користувача
     const user = await User.findById(req.user.id);
-
     const orderAddress = user.address?.postalCode
-      ? user.address // Використовуємо адресу з профілю
+      ? user.address
       : {
           postalCode,
           city,
@@ -103,9 +72,8 @@ router.post("/", authenticateUser, async (req, res) => {
           houseNumber,
           apartmentNumber,
           isPrivateHouse,
-        }; // Використовуємо введені дані
+        };
 
-    // 📌 Перевіряємо, чи всі обов’язкові поля адреси заповнені
     if (
       !orderAddress.postalCode ||
       !orderAddress.city ||
@@ -124,19 +92,22 @@ router.post("/", authenticateUser, async (req, res) => {
       paymentMethod,
       pickupPointId,
       deliveryType,
-      ...orderAddress, // Передаємо адресу
+      ...orderAddress,
       status: "new",
     });
+
+    await sendAdminOrderNotification(newOrder);
 
     res
       .status(201)
       .json({ message: "Order created successfully", order: newOrder });
   } catch (error) {
-    console.error("❌ Order creation error:", error);
+    console.error("Order creation error:", error);
     res.status(500).json({ error: "Failed to create order" });
   }
 });
-// ❌ Запит на повернення замовлення
+
+// ✅ Запит на повернення
 router.put("/:orderId/return", authenticateUser, async (req, res) => {
   try {
     const { returnedProducts, refundAmount } = req.body;
@@ -146,29 +117,23 @@ router.put("/:orderId/return", authenticateUser, async (req, res) => {
       userId: req.user.id,
       status: "paid",
     });
-
     if (!order)
-      return res
-        .status(404)
-        .json({ error: "Order not found or not eligible for return" });
+      return res.status(404).json({ error: "Order not eligible for return" });
+    if (!returnedProducts?.length)
+      return res.status(400).json({ error: "No products selected" });
 
-    if (!returnedProducts || returnedProducts.length === 0) {
-      return res.status(400).json({ error: "No products selected for return" });
-    }
-
-    // 🔄 Повертаємо товари на склад
     await Promise.all(
-      returnedProducts.map(async (product) => {
-        await Product.updateOne(
+      returnedProducts.map((product) =>
+        Product.updateOne(
           { _id: product.productId },
           { $inc: { stock: product.quantity } }
-        );
-      })
+        )
+      )
     );
 
     const payment = await Payment.findOne({ orderId: req.params.orderId });
     if (payment) {
-      payment.status = "refunded"; // Оновлюємо статус
+      payment.status = "refunded";
       payment.refundAmount = refundAmount;
       await payment.save();
     }
@@ -177,76 +142,65 @@ router.put("/:orderId/return", authenticateUser, async (req, res) => {
     order.refundAmount = refundAmount;
     await order.save();
 
-    res
-      .status(200)
-      .json({ message: "Return processed successfully with refund", order });
-  } catch (error) {
+    await sendAdminReturnNotification(order);
+
+    res.status(200).json({ message: "Return processed successfully", order });
+  } catch {
     res.status(500).json({ error: "Failed to process return" });
   }
 });
 
-// ✅ Користувач підтверджує отримання товару
-// пізніше підв'язати апі
-router.patch(
-  "/:id/received",
-  authenticateUser,
+// ✅ Користувач підтверджує отримання
+router.patch("/:id/received", authenticateUser, async (req, res) => {
+  try {
+    const order = await OnlineOrder.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.status !== "shipped")
+      return res.status(400).json({ error: "Order not ready" });
 
-  async (req, res) => {
-    try {
-      const order = await OnlineOrder.findOne({
-        _id: req.params.id,
-        userId: req.user.id,
-      });
+    order.status = "completed";
+    order.statusHistory.push({
+      status: "completed",
+      updatedBy: req.user.id,
+      updatedAt: new Date(),
+    });
 
-      if (!order) return res.status(404).json({ error: "Order not found" });
+    await order.save();
+    getIo().emit("adminOrderUpdate", {
+      orderId: order._id,
+      status: "completed",
+    });
 
-      if (order.status !== "shipped") {
-        return res
-          .status(400)
-          .json({ error: "Order is not ready to be completed" });
-      }
-
-      order.status = "completed";
-      order.statusHistory.push({
-        status: "completed",
-        updatedBy: req.user.id,
-        updatedAt: new Date(),
-      });
-
-      await order.save();
-
-      // 🔄 **Оновлення адмінської сторони**
-      io.emit("adminOrderUpdate", { orderId: order._id, status: "completed" });
-
-      res.status(200).json({ message: "Order marked as received", order });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to confirm order received" });
-    }
+    res.status(200).json({ message: "Order marked as received", order });
+  } catch {
+    res.status(500).json({ error: "Failed to confirm received" });
   }
-);
+});
 
 // ✅ Історія покупок
 router.get("/purchase-history", authenticateUser, async (req, res) => {
   try {
-    const { startDate, endDate, status, page = 1, limit = 25 } = req.query; // ✅ Додаємо пагінацію
-
-    let filter = { userId: req.user.id };
+    const { startDate, endDate, status, page = 1, limit = 25 } = req.query;
+    const filter = { userId: req.user.id };
 
     if (startDate && endDate) {
       filter.saleDate = { $gte: new Date(startDate), $lte: new Date(endDate) };
     }
     if (status) {
-      filter.status = status; // ✅ Фільтр за статусом
+      filter.status = status;
     }
 
     const skip = (page - 1) * limit;
 
     const purchaseHistory = await OnlineSale.find(filter)
-      .populate("orderId", "totalAmount paymentMethod saleDate status") // ✅ Додаємо статус
-      .populate("products", "name price quantity")
+      .populate("onlineOrderId", "totalAmount paymentMethod saleDate status")
+      .populate("products.productId", "name photoUrl price quantity")
       .sort({ saleDate: -1 })
       .skip(skip)
-      .limit(parseInt(limit)); // ✅ Додаємо `limit` та `skip`
+      .limit(parseInt(limit));
 
     const totalOrders = await OnlineSale.countDocuments(filter);
 
@@ -261,39 +215,36 @@ router.get("/purchase-history", authenticateUser, async (req, res) => {
       totalPages: Math.ceil(totalOrders / limit),
       purchaseHistory,
     });
-  } catch (error) {
-    console.error("❌ Purchase history error:", error);
+  } catch {
     res.status(500).json({ error: "Failed to fetch purchase history" });
   }
 });
 
+// ✅ Отримання поштоматів
 router.get("/pickup-points", authenticateUser, async (req, res) => {
   try {
     const pickupPoints = await getAllPoints();
-    if (!pickupPoints || pickupPoints.length === 0) {
+    if (!pickupPoints?.length)
       return res.status(404).json({ error: "No pickup points found" });
-    }
 
     res.status(200).json({ points: pickupPoints });
   } catch (error) {
-    console.error("❌ Помилка отримання поштоматів:", error); // 🔍 Виводимо повний лог
+    console.error("Pickup points error:", error);
     res.status(500).json({ error: "Failed to fetch pickup points" });
   }
 });
 
+// ✅ Трекінг доставки
 router.get("/track/:trackingNumber", authenticateUser, async (req, res) => {
   try {
-    const { trackingNumber } = req.params;
-
-    const shipmentStatus = await trackShipment(trackingNumber);
-
-    if (!shipmentStatus) {
+    const shipmentStatus = await trackShipment(req.params.trackingNumber);
+    if (!shipmentStatus)
       return res.status(404).json({ error: "Tracking number not found" });
-    }
 
     res.status(200).json(shipmentStatus);
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch tracking status" });
   }
 });
+
 module.exports = router;

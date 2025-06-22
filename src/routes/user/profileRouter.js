@@ -1,22 +1,26 @@
 const express = require("express");
-const User = require("../../schemas/userSchema");
-const Product = require("../../schemas/product");
-const { authenticateUser } = require("../../middleware/authenticateUser");
-const { sendAdminMessage } = require("../../config/emailService");
-const Recent = require("../../schemas/recent");
 const router = express.Router();
 
-// 📌 Отримати особисті дані
+const { authenticateUser } = require("../../middleware/authenticateUser");
+const { sendAdminMessage } = require("../../config/emailService");
+
+const User = require("../../schemas/userSchema");
+const Product = require("../../schemas/product");
+const Recent = require("../../schemas/recent");
+
+// 👤 Отримати особисті дані
 router.get("/profile/info", authenticateUser, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select(
-      "username email firstName lastName phone"
-    );
+    const user = await User.findById(req.user.id)
+      .select("username email firstName lastName phone")
+      .lean();
+
     if (!user) {
       return res
         .status(404)
         .json({ message: "Użytkownik nie został znaleziony" });
     }
+
     res.json(user);
   } catch (error) {
     console.error("Error fetching profile info:", error);
@@ -28,6 +32,7 @@ router.get("/profile/info", authenticateUser, async (req, res) => {
 router.put("/profile/info", authenticateUser, async (req, res) => {
   try {
     const { username, email, firstName, lastName, phone } = req.body;
+
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
       { username, email, firstName, lastName, phone },
@@ -50,12 +55,14 @@ router.put("/profile/info", authenticateUser, async (req, res) => {
 // 🏠 Отримати адресу
 router.get("/profile/address", authenticateUser, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("address");
+    const user = await User.findById(req.user.id).select("address").lean();
+
     if (!user) {
       return res
         .status(404)
         .json({ message: "Użytkownik nie został znaleziony" });
     }
+
     res.json(user.address);
   } catch (error) {
     console.error("Error fetching address:", error);
@@ -67,6 +74,7 @@ router.get("/profile/address", authenticateUser, async (req, res) => {
 router.put("/profile/address", authenticateUser, async (req, res) => {
   try {
     const { address } = req.body;
+
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
       { address },
@@ -90,24 +98,30 @@ router.put("/profile/address", authenticateUser, async (req, res) => {
 router.delete("/profile", authenticateUser, async (req, res) => {
   try {
     const deletedUser = await User.findByIdAndDelete(req.user.id);
+
     if (!deletedUser) {
       return res
         .status(404)
         .json({ message: "Użytkownik nie został znaleziony" });
     }
+
     res.json({ message: "Konto zostało pomyślnie usunięte" });
   } catch (error) {
     console.error("Error deleting account:", error);
     res.status(500).json({ message: "Błąd serwera" });
   }
 });
+
+// ✉️ Надіслати повідомлення адміну
 router.post("/profile/email", authenticateUser, async (req, res) => {
   try {
     const { subject, message } = req.body;
-    if (!subject || !message)
+
+    if (!subject || !message) {
       return res
         .status(400)
         .json({ error: "Należy podać temat i treść wiadomości" });
+    }
 
     await sendAdminMessage(subject, message);
 
@@ -120,12 +134,14 @@ router.post("/profile/email", authenticateUser, async (req, res) => {
       .json({ error: "Nie udało się wysłać wiadomości do administratora." });
   }
 });
+
+// 🕓 Отримати історію переглядів
 router.get("/recent", authenticateUser, async (req, res) => {
   try {
     const recentViews = await Recent.find({ userId: req.user.id })
       .populate("productId", "name photoUrl price category subcategory")
       .sort({ viewedAt: -1 })
-      .limit(20); // Показати останні 10 переглядів
+      .limit(20);
 
     res.status(200).json(recentViews);
   } catch (error) {
@@ -135,17 +151,9 @@ router.get("/recent", authenticateUser, async (req, res) => {
   }
 });
 
-// 📌 Всі продукти для авторизованих користувачів (ціни доступні)
+// 🛍 Всі продукти (авторизований доступ)
 router.get("/products", authenticateUser, async (req, res) => {
   try {
-    console.log("🛍 Fetching products for user:", req.user);
-
-    if (!req.user || !req.user.id) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized: No user ID found." });
-    }
-
     const products = await Product.find();
     res.status(200).json(products);
   } catch (error) {
@@ -153,35 +161,58 @@ router.get("/products", authenticateUser, async (req, res) => {
   }
 });
 
+// 🧾 Деталі конкретного товару
 router.get("/products/:id", authenticateUser, async (req, res) => {
   try {
-    console.log(
-      "🔍 Fetching product for user:",
-      req.user,
-      "ID:",
-      req.params.id
-    );
-
-    if (!req.user || !req.user.id) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized: No user ID found." });
-    }
-
     const product = await Product.findById(req.params.id);
+
     if (!product) {
       return res.status(404).json({ message: "Product not found." });
     }
 
     res.status(200).json(product);
   } catch (error) {
-    console.error("❌ Error fetching product:", error.message);
-    res
-      .status(500)
-      .json({
-        error: "Failed to fetch product details.",
-        details: error.message,
-      });
+    console.error("Error fetching product:", error.message);
+    res.status(500).json({
+      error: "Failed to fetch product details.",
+      details: error.message,
+    });
+  }
+});
+// 💰 Отримати поточний баланс
+router.get("/wallet", authenticateUser, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("wallet").lean();
+    res.status(200).json({ wallet: user.wallet });
+  } catch (error) {
+    res.status(500).json({ error: "Nie udało się pobrać salda portfela" });
+  }
+});
+
+// ⚙️ Отримати налаштування
+router.get("/settings", authenticateUser, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("settings").lean();
+    res.status(200).json(user.settings || { allowWalletUsage: true });
+  } catch (error) {
+    res.status(500).json({ error: "Nie udało się pobrać ustawień" });
+  }
+});
+
+// ⚙️ Оновити налаштування
+router.put("/settings", authenticateUser, async (req, res) => {
+  try {
+    const { allowWalletUsage } = req.body;
+
+    const updated = await User.findByIdAndUpdate(
+      req.user.id,
+      { "settings.allowWalletUsage": !!allowWalletUsage },
+      { new: true, runValidators: true }
+    ).select("settings");
+
+    res.status(200).json(updated.settings);
+  } catch (error) {
+    res.status(500).json({ error: "Nie udało się zaktualizować ustawień" });
   }
 });
 

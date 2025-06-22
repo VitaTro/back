@@ -1,6 +1,9 @@
 const Joi = require("joi");
 
 const onlineSaleValidationSchema = Joi.object({
+  userId: Joi.string().required(),
+  onlineOrderId: Joi.string().required(),
+
   products: Joi.array()
     .items(
       Joi.object({
@@ -11,7 +14,7 @@ const onlineSaleValidationSchema = Joi.object({
     )
     .required(),
   totalAmount: Joi.number().required(),
-  paymentMethod: Joi.string().valid("card", "bank_transfer").required(),
+  paymentMethod: Joi.string().valid("BLIK", "bank_transfer").required(),
   processedBy: Joi.string().optional(),
   status: Joi.string()
     .valid("new", "completed", "cancelled", "returned")

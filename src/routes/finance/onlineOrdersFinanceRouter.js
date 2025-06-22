@@ -126,6 +126,8 @@ router.put("/:id/sale", authenticateAdmin, async (req, res) => {
     const newSale = await OnlineSale.create({
       orderId: order._id,
       totalAmount: order.totalPrice,
+      products: order.products,
+      userId: order.userId,
       paymentMethod: order.paymentMethod,
       saleDate: new Date(),
     });

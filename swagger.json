@@ -2979,6 +2979,80 @@
         }
       }
     },
+    "/api/user/wallet": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Отримати баланс гаманця користувача",
+        "responses": {
+          "200": {
+            "description": "Поточний баланс гаманця",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "wallet": { "type": "number", "example": 34.5 }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Неавторизований доступ" },
+          "500": { "description": "Помилка сервера" }
+        }
+      }
+    },
+    "/api/user/settings": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Отримати налаштування користувача",
+        "responses": {
+          "200": {
+            "description": "Успішне отримання налаштувань",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "allowWalletUsage": { "type": "boolean", "example": true }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Неавторизований доступ" },
+          "500": { "description": "Помилка сервера" }
+        }
+      },
+      "put": {
+        "tags": ["User"],
+        "summary": "Оновити налаштування користувача",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "allowWalletUsage": {
+                    "type": "boolean",
+                    "description": "Чи дозволено використовувати гаманець",
+                    "example": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Налаштування оновлено" },
+          "400": { "description": "Некоректний запит" },
+          "401": { "description": "Неавторизований доступ" },
+          "500": { "description": "Помилка сервера" }
+        }
+      }
+    },
+
     "/api/user/recent": {
       "get": {
         "tags": ["User"],
@@ -4084,6 +4158,16 @@
             "type": "boolean",
             "description": "Чи верифікований email",
             "example": true
+          },
+          "Wallet": {
+            "type": "object",
+            "properties": {
+              "wallet": {
+                "type": "number",
+                "description": "Поточний баланс гаманця користувача",
+                "example": 42.75
+              }
+            }
           }
         }
       },
@@ -4101,6 +4185,16 @@
             }
           }
         ]
+      },
+      "UserSettings": {
+        "type": "object",
+        "properties": {
+          "allowWalletUsage": {
+            "type": "boolean",
+            "description": "Чи дозволено використовувати гаманець під час оплати",
+            "example": true
+          }
+        }
       },
 
       "Product": {

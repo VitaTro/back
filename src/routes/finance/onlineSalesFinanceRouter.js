@@ -69,17 +69,17 @@ router.post(
 
       await newOnlineSale.save();
       console.log("✅ Онлайн-продаж створено успішно!");
-      const salesInvoice = await SalesInvoice.create({
+      const createdInvoice = await Invoice.create({
         totalAmount,
         paymentMethod,
         saleDate: new Date(),
       });
 
-      console.log("✅ Faktura przychodowa створена:", salesInvoice);
+      console.log("✅ Faktura przychodowa створена:", createdInvoice);
       res.status(201).json({
         message: "Продаж записано успішно",
         sale: newOnlineSale,
-        invoice: salesInvoice,
+        invoice: createdInvoice,
       });
     } catch (error) {
       console.error("🔥 Помилка створення онлайн-продажу:", error);
@@ -137,7 +137,7 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
           : null;
 
         // ✅ `paymentMethod` встановлюється автоматично
-        const salePaymentMethod = paymentMethod || "card";
+        const salePaymentMethod = paymentMethod || "BLIK";
 
         // ✅ `salePrice` встановлюється автоматично
         const saleProducts = existingOnlineOrder.products.map((product) => ({
@@ -147,6 +147,7 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
         }));
 
         const newOnlineSale = new OnlineSale({
+          userId: existingOnlineOrder.userId,
           onlineOrderId: existingOnlineOrder._id,
           totalAmount: existingOnlineOrder.totalPrice,
           paymentMethod: salePaymentMethod,

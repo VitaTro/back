@@ -2,6 +2,16 @@ const mongoose = require("mongoose");
 
 const onlineSaleSchema = new mongoose.Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // 🔹 Зв'язок з користувачем
+      required: true,
+    },
+    onlineOrderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "OnlineOrder",
+      required: true,
+    },
     products: [
       {
         productId: {
@@ -17,8 +27,9 @@ const onlineSaleSchema = new mongoose.Schema(
     discount: { type: Number, default: 0 },
     paymentMethod: {
       type: String,
-      enum: ["card", "bank_transfer"],
-      default: "card",
+      enum: ["BLIK", "bank_transfer"],
+      default: "BLIK",
+      required: true,
     },
     status: {
       type: String,

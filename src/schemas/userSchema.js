@@ -29,6 +29,16 @@ const userSchema = new mongoose.Schema({
   resetCode: { type: String },
   resetCodeExpires: { type: Date },
   passwordChangedAt: { type: Date },
+  wallet: {
+    type: Number,
+    default: 0,
+  },
+  settings: {
+    allowWalletUsage: {
+      type: Boolean,
+      default: true,
+    },
+  },
 });
 
 userSchema.methods.generateVerificationToken = function () {
