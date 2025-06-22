@@ -61,6 +61,10 @@ router.post("/", authenticateUser, async (req, res) => {
     if (!pickupPointId) {
       return res.status(400).json({ error: "Pickup point is required" });
     }
+    const totalQuantity = products.reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
 
     const user = await User.findById(req.user.id);
     const orderAddress = user.address?.postalCode
@@ -98,6 +102,7 @@ router.post("/", authenticateUser, async (req, res) => {
       userId: req.user.id,
       products,
       totalPrice,
+      totalQuantity,
       paymentMethod,
       pickupPointId,
       deliveryType,
