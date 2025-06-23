@@ -19,9 +19,14 @@ const FinanceOverview = require("../../schemas/finance/financeOverview");
 // ✅ Отримати всі замовлення користувача
 router.get("/", authenticateUser, async (req, res) => {
   try {
-    const userOrders = await OnlineOrder.find({ userId: req.user.id }).sort({
-      createdAt: -1,
-    });
+    const userOrders = await OnlineOrder.find({ userId: req.user.id })
+      .sort({
+        createdAt: -1,
+      })
+      .populate(
+        "products.productId",
+        "name photoUrl price quantity color size width length"
+      );
     res.status(200).json(userOrders);
   } catch {
     res.status(500).json({ error: "Failed to fetch user orders" });
