@@ -42,6 +42,7 @@ const createStatusRoute = (status) =>
 ["unpaid", "processing", "shipped"].forEach(createStatusRoute);
 
 // ✅ Створення нового замовлення
+// ✅ Створення нового замовлення
 router.post("/", authenticateUser, async (req, res) => {
   try {
     const {
@@ -49,54 +50,44 @@ router.post("/", authenticateUser, async (req, res) => {
       totalPrice,
       paymentMethod,
       pickupPointId,
-      postalCode,
       deliveryType,
-      city,
-      street,
-      houseNumber,
-      apartmentNumber,
-      isPrivateHouse,
+      deliveryAddress,
+      smartboxDetails,
+      notes,
     } = req.body;
 
-    if (!pickupPointId) {
+    // 📦 Перевірка поштомату
+    if (deliveryType === "pickup" && !pickupPointId) {
       return res.status(400).json({ error: "Pickup point is required" });
     }
+
+    // 📮 Перевірка адреси при доставці кур'єром
+    if (deliveryType === "courier") {
+      if (
+        !deliveryAddress?.postalCode ||
+        !deliveryAddress?.city ||
+        !deliveryAddress?.street ||
+        !deliveryAddress?.houseNumber
+      ) {
+        return res
+          .status(400)
+          .json({ error: "Missing delivery address details" });
+      }
+    }
+
+    // 📬 Перевірка smartbox (InPost)
+    if (deliveryType === "smartbox") {
+      if (!smartboxDetails?.boxId || !smartboxDetails?.location) {
+        return res
+          .status(400)
+          .json({ error: "Missing smartbox delivery details" });
+      }
+    }
+
     const totalQuantity = products.reduce(
       (sum, item) => sum + item.quantity,
       0
     );
-
-    const user = await User.findById(req.user.id);
-    const orderAddress = user.address?.postalCode
-      ? user.address
-      : {
-          postalCode,
-          city,
-          street,
-          houseNumber,
-          apartmentNumber,
-          isPrivateHouse,
-        };
-
-    if (
-      !orderAddress.postalCode ||
-      !orderAddress.city ||
-      !orderAddress.street ||
-      !orderAddress.houseNumber
-    ) {
-      return res
-        .status(400)
-        .json({ error: "Address is required to place an order" });
-    }
-    console.log("🧪 Order to be created:", {
-      userId: req.user.id,
-      products,
-      totalPrice,
-      deliveryType,
-      paymentMethod,
-      pickupPointId,
-      ...orderAddress,
-    });
 
     const newOrder = await OnlineOrder.create({
       userId: req.user.id,
@@ -106,18 +97,23 @@ router.post("/", authenticateUser, async (req, res) => {
       paymentMethod,
       pickupPointId,
       deliveryType,
-      ...orderAddress,
+      deliveryAddress,
+      smartboxDetails,
+      notes,
       status: "new",
     });
 
     await sendAdminOrderNotification(newOrder);
 
-    res
-      .status(201)
-      .json({ message: "Order created successfully", order: newOrder });
+    res.status(201).json({
+      message: "Order created successfully",
+      order: newOrder,
+    });
   } catch (error) {
     console.error("Order creation error:", error);
-    res.status(500).json({ error: error.message || "Failed to create order" });
+    res.status(500).json({
+      error: error.message || "Failed to create order",
+    });
   }
 });
 

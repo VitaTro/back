@@ -40,14 +40,21 @@ const onlineOrderValidationSchema = Joi.object({
   paymentStatus: Joi.string().valid("paid", "unpaid").required(),
   paymentMethod: Joi.string().valid("BLIK", "bank_transfer").required(),
   deliveryType: Joi.string().valid("courier", "smartbox", "pickup").required(),
-  postalCode: Joi.string()
-    .pattern(/^\d{5}$/)
-    .required(),
-  city: Joi.string().required(),
-  street: Joi.string().required(),
-  houseNumber: Joi.string().required(),
-  apartmentNumber: Joi.string().optional(),
-  isPrivateHouse: Joi.boolean().required(),
+  deliveryAddress: Joi.object({
+    postalCode: Joi.string()
+      .pattern(/^\d{5}$/)
+      .required(),
+    city: Joi.string().required(),
+    street: Joi.string().required(),
+    houseNumber: Joi.string().required(),
+    apartmentNumber: Joi.string().allow(""),
+    isPrivateHouse: Joi.boolean().required(),
+  }).when("deliveryType", {
+    is: "courier",
+    then: Joi.required(),
+    otherwise: Joi.optional(),
+  }),
+
   smartboxDetails: Joi.object({
     boxId: Joi.string().required(),
     location: Joi.string().required(),

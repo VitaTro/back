@@ -85,11 +85,14 @@ const onlineOrderSchema = new mongoose.Schema(
       },
     },
     deliveryAddress: {
-      type: String,
-      required: function () {
-        return this.deliveryType === "courier";
-      },
+      postalCode: { type: String },
+      city: { type: String },
+      street: { type: String },
+      houseNumber: { type: String },
+      apartmentNumber: { type: String },
+      isPrivateHouse: { type: Boolean },
     },
+
     notes: { type: String },
     orderId: {
       type: String,
