@@ -42,7 +42,6 @@ const createStatusRoute = (status) =>
 ["unpaid", "processing", "shipped"].forEach(createStatusRoute);
 
 // ✅ Створення нового замовлення
-// ✅ Створення нового замовлення
 router.post("/", authenticateUser, async (req, res) => {
   try {
     const {
@@ -102,7 +101,9 @@ router.post("/", authenticateUser, async (req, res) => {
       notes,
       status: "new",
     });
-
+    await User.findByIdAndUpdate(req.user.id, {
+      address: deliveryAddress,
+    });
     await sendAdminOrderNotification(newOrder);
 
     res.status(201).json({
