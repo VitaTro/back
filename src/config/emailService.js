@@ -165,6 +165,7 @@ const sendAdminMessage = async (subject, message) => {
 module.exports = {
   transporter,
   sendEmail,
+  sendAdminMessage,
   sendVerificationEmail,
   sendResetPasswordEmail,
   sendAdminOrderNotification,
