@@ -94,7 +94,7 @@ app.use("/api/admin/finance/offline/sales", OfflineSalesFinanceRouter);
 app.use("/api/admin/finance/overview", FinanceOverviewRouter);
 app.use("/api/admin/finance/expense", ExpenseRouter);
 app.use("/api/admin/finance/settings", FinanceSettingsRouter);
-app.use("api/public", PublicRouter);
+app.use("/api/public", PublicRouter);
 app.post("/upload", upload.single("photo"), (req, res) => {
   try {
     if (!req.file) {
