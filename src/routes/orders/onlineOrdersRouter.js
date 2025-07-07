@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const OnlineOrder = require("../../schemas/finance/onlineOrders");
-const OnlineSale = require("../../schemas/finance/onlineSales");
+const OnlineOrder = require("../../schemas/orders/onlineOrders");
+const OnlineSale = require("../../schemas/sales/onlineSales");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 const { getIo } = require("../../config/socket");

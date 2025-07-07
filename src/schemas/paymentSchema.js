@@ -11,7 +11,7 @@ const PaymentSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   paymentMethod: {
     type: String,
-    enum: ["BLIK", "bank_transfer"],
+    enum: ["elavon_link"],
     required: true,
   },
   status: {
@@ -21,16 +21,6 @@ const PaymentSchema = new mongoose.Schema({
   },
   transactionId: { type: String },
   createdAt: { type: Date, default: Date.now },
-  cardDetails: {
-    cardNumber: { type: String, length: 16, match: /^\d+$/, required: false },
-    expiryDate: {
-      type: String,
-      match: /^(0[1-9]|1[0-2])\/\d{2}$/,
-      required: false,
-    },
-    cvv: { type: String, length: 3, match: /^\d+$/, required: false },
-    cardHolder: { type: String, required: false },
-  },
 });
 
 module.exports = mongoose.model("Payment", PaymentSchema);

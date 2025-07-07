@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
-const OfflineSale = require("./offlineSales");
-const OnlineSale = require("./onlineSales");
+const OfflineSale = require("../sales/offlineSales");
+const OnlineSale = require("../sales/onlineSales");
 
 const financeOverviewSchema = new mongoose.Schema({
   totalRevenue: { type: Number, default: 0 }, // Загальний дохід

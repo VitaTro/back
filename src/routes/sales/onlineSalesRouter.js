@@ -1,14 +1,14 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
-const OnlineSale = require("../../schemas/finance/onlineSales");
-const OnlineOrder = require("../../schemas/finance/onlineOrders");
+const OnlineSale = require("../../schemas/sales/onlineSales");
+const OnlineOrder = require("../../schemas/orders/onlineOrders");
 const Product = require("../../schemas/product");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 const { validate } = require("../../middleware/validateMiddleware");
 const validateOnlineSale = require("../../validation/onlineSalesJoi");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
-const Invoice = require("../../schemas/InvoiceSchema");
+const Invoice = require("../../schemas/accounting/InvoiceSchema");
 
 // 🔍 Отримати всі онлайн продажі
 router.get("/", authenticateAdmin, async (req, res) => {

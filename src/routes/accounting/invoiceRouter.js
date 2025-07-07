@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const { authenticateUser } = require("../middleware/authenticateUser");
-const OnlineOrder = require("../schemas/finance/onlineOrders");
-const Invoice = require("../schemas/InvoiceSchema");
-const generateInvoicePDF = require("../config/invoicePdfGenerator");
-const uploadToDrive = require("../services/uploadToDrive");
+const { authenticateUser } = require("../../middleware/authenticateUser");
+const OnlineOrder = require("../orders/onlineOrdersRouter");
+const Invoice = require("../../schemas/accounting/InvoiceSchema");
+const generateInvoicePDF = require("../../config/invoicePdfGenerator");
+const uploadToDrive = require("../../services/uploadToDrive");
 
 // ✅ Генерувати фактуру після оплати
 router.post("/generate/:orderId", authenticateUser, async (req, res) => {

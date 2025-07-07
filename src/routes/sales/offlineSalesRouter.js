@@ -6,9 +6,9 @@ const { validate } = require("../../middleware/validateMiddleware");
 const offlineSaleValidationSchema = require("../../validation/offlineSalesJoi");
 
 const Product = require("../../schemas/product");
-const OfflineSale = require("../../schemas/finance/offlineSales");
+const OfflineSale = require("../../schemas/sales/offlineSales");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
-const Invoice = require("../../schemas/InvoiceSchema");
+const Invoice = require("../../schemas/accounting/InvoiceSchema");
 const generateInvoicePDFOffline = require("../../config/invoicePdfGeneratorOffline");
 
 router.get("/", authenticateAdmin, async (req, res) => {

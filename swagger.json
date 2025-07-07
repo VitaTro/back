@@ -40,6 +40,18 @@
       "description": "Операції з профілем користувача, включаючи список бажань і корзину"
     },
     {
+      "name": "Reporting",
+      "description": "Фінансовий дашборд, аналітика, маржа, виторг та прибуток."
+    },
+    {
+      "name": "Stock",
+      "description": "Рух товарів: закупка, продаж, списання, повернення."
+    },
+    {
+      "name": "Accounting",
+      "description": "Офіційна бухгалтерія: щомісячні звіти, інвойси, баланс."
+    },
+    {
       "name": "Finance - Online",
       "description": "Операції з фінансами онлайн, включаючи замовлення та продажі."
     },
@@ -813,6 +825,263 @@
         }
       }
     },
+    "/api/admin/reporting/dashboard": {
+      "get": {
+        "tags": ["Reporting"],
+        "summary": "Зведений фінансовий дашборд",
+        "description": "Повертає аналітичний дашборд: прибуток, витрати, доходи, залишки, топ-продажі, маржинальність.",
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date" },
+            "description": "Дата початку звітного періоду (YYYY-MM-DD)"
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date" },
+            "description": "Дата кінця звітного періоду (YYYY-MM-DD)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Дані дашборду успішно отримано.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "revenue": {
+                      "type": "object",
+                      "properties": {
+                        "onlineRevenue": { "type": "number" },
+                        "offlineRevenue": { "type": "number" },
+                        "totalRevenue": { "type": "number" }
+                      }
+                    },
+                    "expenses": { "type": "number" },
+                    "profit": { "type": "number" },
+                    "stockSummary": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": { "type": "string" },
+                          "index": { "type": "string" },
+                          "quantity": { "type": "number" }
+                        }
+                      }
+                    },
+                    "topSales": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": { "type": "string" },
+                          "index": { "type": "string" },
+                          "sold": { "type": "number" }
+                        }
+                      }
+                    },
+                    "productMargins": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "product": { "type": "string" },
+                          "index": { "type": "string" },
+                          "quantitySold": { "type": "number" },
+                          "totalRevenue": { "type": "number" },
+                          "totalCost": { "type": "number" },
+                          "margin": { "type": "number" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Помилка при отриманні дашборду."
+          }
+        }
+      }
+    },
+    "/api/admin/stock/movement": {
+      "post": {
+        "tags": ["Stock"],
+        "summary": "Додати рух товару (складська операція)",
+        "description": "Додає запис руху товару: закупка, продаж, повернення, списання тощо.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "product": {
+                    "type": "string",
+                    "example": "64b901d82f813b71d55f1d4c"
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2025-07-01T10:00:00.000Z"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "purchase",
+                      "sale",
+                      "return",
+                      "writeOff",
+                      "restock"
+                    ],
+                    "example": "purchase"
+                  },
+                  "quantity": {
+                    "type": "number",
+                    "example": 5
+                  },
+                  "unitPrice": {
+                    "type": "number",
+                    "example": 3.5
+                  },
+                  "note": {
+                    "type": "string",
+                    "example": "Повернення від клієнта"
+                  },
+                  "relatedSaleId": {
+                    "type": "string",
+                    "example": "64c38c0e54eddb001e109ac8"
+                  },
+                  "saleSource": {
+                    "type": "string",
+                    "enum": ["OnlineSale", "OfflineSale"],
+                    "example": "OnlineSale"
+                  }
+                },
+                "required": ["product", "type", "quantity"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Рух товару успішно зафіксовано.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Stock movement recorded"
+                    },
+                    "movement": {
+                      "$ref": "#/components/schemas/StockMovement"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Не заповнені обов'язкові поля."
+          },
+          "500": {
+            "description": "Помилка при записі руху товару."
+          }
+        }
+      }
+    },
+    "/api/admin/accounting/monthly-report": {
+      "get": {
+        "tags": ["Accounting"],
+        "summary": "Список щомісячних фінансових звітів",
+        "description": "Повертає масив усіх наявних місячних звітів (архів).",
+        "responses": {
+          "200": {
+            "description": "Успішно отримано список звітів.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/MonthlyReport" }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Помилка сервера при отриманні звітів."
+          }
+        }
+      }
+    },
+    "/api/admin/accounting/monthly-report/{month}": {
+      "get": {
+        "tags": ["Accounting"],
+        "summary": "Детальний звіт за місяць",
+        "description": "Повертає звіт за конкретний місяць у форматі YYYY-MM.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "month",
+            "schema": { "type": "string", "example": "2025-07" },
+            "required": true,
+            "description": "Формат місяця: YYYY-MM"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Звіт успішно отримано.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MonthlyReport" }
+              }
+            }
+          },
+          "404": {
+            "description": "Звіт за вказаний місяць не знайдено."
+          },
+          "500": {
+            "description": "Помилка сервера при пошуку звіту."
+          }
+        }
+      }
+    },
+    "/api/admin/accounting/monthly-report/generate": {
+      "post": {
+        "tags": ["Accounting"],
+        "summary": "Ручна генерація звіту",
+        "description": "Запускає ручну генерацію фінансового звіту за попередній місяць.",
+        "responses": {
+          "201": {
+            "description": "Звіт успішно згенеровано.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Monthly report generated successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Помилка генерації звіту."
+          }
+        }
+      }
+    },
 
     "/api/admin/users": {
       "get": {
@@ -925,7 +1194,19 @@
                   "color": { "type": "string", "example": "Red" },
                   "quantity": { "type": "integer", "example": 10 },
                   "index": { "type": "string", "example": "RBX-123" },
-                  "purchasePrice": { "type": "number", "example": 20 },
+                  "purchasePrice": {
+                    "type": "object",
+                    "properties": {
+                      "value": { "type": "number", "example": 3.5 },
+                      "currency": {
+                        "type": "string",
+                        "enum": ["PLN", "USD", "EUR"],
+                        "example": "USD"
+                      },
+                      "exchangeRateToPLN": { "type": "number", "example": 4.25 }
+                    }
+                  },
+
                   "inStock": { "type": "boolean", "example": true },
                   "visible": { "type": "boolean", "example": true }
                 },
@@ -4777,6 +5058,74 @@
             "description": "Тип продажу: онлайн або офлайн.",
             "enum": ["online", "offline"],
             "example": "offline"
+          }
+        }
+      },
+      "StockMovement": {
+        "type": "object",
+        "properties": {
+          "product": { "type": "string" },
+          "date": { "type": "string", "format": "date-time" },
+          "type": {
+            "type": "string",
+            "enum": ["purchase", "sale", "return", "writeOff", "restock"]
+          },
+          "quantity": { "type": "number" },
+          "unitPrice": { "type": "number" },
+          "note": { "type": "string" },
+          "relatedSaleId": { "type": "string" },
+          "saleSource": {
+            "type": "string",
+            "enum": ["OnlineSale", "OfflineSale"]
+          }
+        }
+      },
+      "MonthlyReport": {
+        "type": "object",
+        "properties": {
+          "month": { "type": "string", "example": "2025-07" },
+          "generatedAt": { "type": "string", "format": "date-time" },
+          "revenue": {
+            "type": "object",
+            "properties": {
+              "online": { "type": "number" },
+              "offline": { "type": "number" },
+              "total": { "type": "number" }
+            }
+          },
+          "expenses": {
+            "type": "object",
+            "properties": {
+              "total": { "type": "number" },
+              "byCategory": {
+                "type": "object",
+                "additionalProperties": { "type": "number" }
+              }
+            }
+          },
+          "profit": { "type": "number" },
+          "invoices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "number": { "type": "string" },
+                "amount": { "type": "number" },
+                "status": { "type": "string" },
+                "date": { "type": "string", "format": "date" }
+              }
+            }
+          },
+          "stockSnapshot": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "index": { "type": "string" },
+                "quantity": { "type": "number" }
+              }
+            }
           }
         }
       },

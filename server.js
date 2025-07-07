@@ -5,7 +5,7 @@ const { initSocket } = require("./src/config/socket");
 const http = require("http");
 const { getAllPoints } = require("./src/config/inpostService");
 const app = require("./App");
-require("./cronTasks");
+require("./src/cron/cronTasks");
 
 const server = http.createServer(app);
 initSocket(server);

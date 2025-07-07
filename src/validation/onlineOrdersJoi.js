@@ -38,7 +38,8 @@ const onlineOrderValidationSchema = Joi.object({
   ),
   totalPrice: Joi.number().min(0).required(),
   paymentStatus: Joi.string().valid("paid", "unpaid").required(),
-  paymentMethod: Joi.string().valid("BLIK", "bank_transfer").required(),
+  paymentMethod: Joi.string().valid("elavon_link").required(),
+
   deliveryType: Joi.string().valid("courier", "smartbox", "pickup").required(),
   deliveryAddress: Joi.object({
     postalCode: Joi.string()

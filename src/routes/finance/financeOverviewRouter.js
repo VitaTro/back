@@ -3,11 +3,11 @@ const router = express.Router();
 const Admin = require("../../schemas/adminSchema");
 const Expense = require("../../schemas/finance/expense");
 const Product = require("../../schemas/product");
-const OnlineSale = require("../../schemas/finance/onlineSales");
-const OfflineSale = require("../../schemas/finance/offlineSales");
+const OnlineSale = require("../../schemas/sales/onlineSales");
+const OfflineSale = require("../../schemas/sales/offlineSales");
 const FinanceSettings = require("../../schemas/finance/financeSettings");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
-const Invoice = require("../../schemas/InvoiceSchema");
+const Invoice = require("../../schemas/accounting/InvoiceSchema");
 
 router.get("/", authenticateAdmin, async (req, res) => {
   try {

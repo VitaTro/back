@@ -1,4 +1,4 @@
-const Invoice = require("../schemas/InvoiceSchema");
+const Invoice = require("../schemas/accounting/InvoiceSchema");
 const generateInvoicePDF = require("../config/invoicePdfGenerator");
 const uploadToDrive = require("../services/uploadToDrive");
 

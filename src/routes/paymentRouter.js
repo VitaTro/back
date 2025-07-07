@@ -2,10 +2,10 @@ const express = require("express");
 const router = express.Router();
 const { authenticateUser } = require("../middleware/authenticateUser");
 const Payment = require("../schemas/paymentSchema");
-const OnlineOrder = require("../schemas/finance/onlineOrders");
-const OnlineSale = require("../schemas/finance/onlineSales");
+const OnlineOrder = require("../schemas/orders/onlineOrders");
+const OnlineSale = require("../schemas/sales/onlineSales");
 
-const Invoice = require("../schemas/InvoiceSchema");
+const Invoice = require("../schemas/accounting/InvoiceSchema");
 
 // ✅ Ініціювати оплату
 router.post("/initiate", authenticateUser, async (req, res) => {
@@ -15,28 +15,46 @@ router.post("/initiate", authenticateUser, async (req, res) => {
     if (!orderId || !amount || !paymentMethod) {
       return res.status(400).json({ error: "Invalid payment data" });
     }
-    let paymentStatus = "pending";
 
-    // 🔹 Логіка для BLIK
-    if (paymentMethod === "BLIK") {
-      paymentStatus = "waiting_for_blik_code";
-    }
-    // 🔹 Логіка для переказу
-    else if (paymentMethod === "bank_transfer") {
-      paymentStatus = "waiting_for_transfer";
-    }
-    const newPayment = await Payment.create({
-      userId: req.user.id,
-      orderId,
-      amount,
-      paymentMethod,
-      status: paymentStatus,
-    });
+    // 🔹 Тільки Elavon
+    if (paymentMethod === "elavon_link") {
+      const expiryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0];
 
-    res.status(201).json({ message: "Payment initiated", payment: newPayment });
+      const paylinkRes = await axios.post(
+        `${process.env.BASE_URL}/api/paylink`,
+        {
+          amount,
+          currency: "PLN",
+          orderId,
+          email: req.user.email,
+          expiryDate,
+        }
+      );
+
+      // 🔸 Записати платіж для привʼязки до order (але не для обробки карти)
+      const payment = await Payment.create({
+        userId: req.user.id,
+        orderId,
+        amount,
+        paymentMethod,
+        status: "waiting_for_payment",
+        transactionId: orderId, // або унікальний Elavon ID, якщо є
+      });
+
+      return res.status(201).json({
+        message: "✅ Посилання на оплату створено",
+        payLink: paylinkRes.data.payLink,
+        paymentId: payment._id,
+      });
+    }
+
+    // 🔸 Якщо передали старі методи (тимчасово допустимо)
+    return res.status(400).json({ error: "Unsupported payment method" });
   } catch (error) {
     console.error("❌ Payment initiation error:", error);
-    res.status(500).json({ error: "Failed to initiate payment" });
+    res.status(500).json({ error: "Failed to initiate Elavon payment" });
   }
 });
 

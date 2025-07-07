@@ -6,8 +6,8 @@ const { validate } = require("../../middleware/validateMiddleware");
 const offlineOrderValidationSchema = require("../../validation/offlineOrdersJoi");
 
 const Product = require("../../schemas/product");
-const OfflineOrder = require("../../schemas/finance/offlineOrders");
-const OfflineSale = require("../../schemas/finance/offlineSales");
+const OfflineOrder = require("../../schemas/orders/offlineOrders");
+const OfflineSale = require("../../schemas/sales/offlineSales");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 const generateUniversalInvoice = require("../../services/generateUniversalInvoice");
 

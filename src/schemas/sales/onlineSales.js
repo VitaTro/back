@@ -27,8 +27,8 @@ const onlineSaleSchema = new mongoose.Schema(
     discount: { type: Number, default: 0 },
     paymentMethod: {
       type: String,
-      enum: ["BLIK", "bank_transfer"],
-      default: "BLIK",
+      enum: ["elavon_link"],
+      default: "elavon_link",
       required: true,
     },
     status: {

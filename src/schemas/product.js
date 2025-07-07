@@ -19,9 +19,23 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
     purchasePrice: {
-      type: Number,
-      required: false, // Закупівельна ціна
+      value: {
+        type: Number,
+        required: true, // або false, якщо буває, що нема закупки
+      },
+      currency: {
+        type: String,
+        enum: ["PLN", "USD", "EUR"],
+        required: true,
+      },
+      exchangeRateToPLN: {
+        type: Number,
+        required: function () {
+          return this.currency !== "PLN";
+        }, // потрібно лише для валют ≠ PLN
+      },
     },
+
     description: {
       type: String,
       required: true,
@@ -96,6 +110,10 @@ productSchema.pre("save", function (next) {
 
 // Індекс для пошуку по тексту
 productSchema.index({ name: "text", description: "text" });
+productSchema.virtual("purchasePricePLN").get(function () {
+  if (this.purchasePrice.currency === "PLN") return this.purchasePrice.value;
+  return this.purchasePrice.value * this.purchasePrice.exchangeRateToPLN;
+});
 
 const Product = mongoose.model("Product", productSchema);
 

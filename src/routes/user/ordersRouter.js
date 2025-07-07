@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-
+const dotenv = require("dotenv");
 const { getAllPoints, trackShipment } = require("../../config/inpostService");
 const {
   sendAdminOrderNotification,
@@ -10,12 +10,12 @@ const { authenticateUser } = require("../../middleware/authenticateUser");
 const { getIo } = require("../../config/socket");
 
 const User = require("../../schemas/userSchema");
-const OnlineOrder = require("../../schemas/finance/onlineOrders");
-const OnlineSale = require("../../schemas/finance/onlineSales");
+const OnlineOrder = require("../../schemas/orders/onlineOrders");
+const OnlineSale = require("../../schemas/sales/onlineSales");
 const Product = require("../../schemas/product");
 const Payment = require("../../schemas/paymentSchema");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
-
+require("dotenv").config();
 // ✅ Отримати всі замовлення користувача
 router.get("/", authenticateUser, async (req, res) => {
   try {
@@ -52,7 +52,6 @@ router.post("/", authenticateUser, async (req, res) => {
     const {
       products,
       totalPrice,
-      paymentMethod,
       pickupPointId,
       deliveryType,
       deliveryAddress,
@@ -60,26 +59,20 @@ router.post("/", authenticateUser, async (req, res) => {
       notes,
     } = req.body;
 
-    // 📦 Перевірка поштомату
+    // 🔎 Валідація доставки (можна потім замінити Joi)
     if (deliveryType === "pickup" && !pickupPointId) {
       return res.status(400).json({ error: "Pickup point is required" });
     }
-
-    // 📮 Перевірка адреси при доставці кур'єром
     if (deliveryType === "courier") {
-      if (
-        !deliveryAddress?.postalCode ||
-        !deliveryAddress?.city ||
-        !deliveryAddress?.street ||
-        !deliveryAddress?.houseNumber
-      ) {
-        return res
-          .status(400)
-          .json({ error: "Missing delivery address details" });
+      const requiredFields = ["postalCode", "city", "street", "houseNumber"];
+      for (const field of requiredFields) {
+        if (!deliveryAddress?.[field]) {
+          return res
+            .status(400)
+            .json({ error: `Missing delivery address: ${field}` });
+        }
       }
     }
-
-    // 📬 Перевірка smartbox (InPost)
     if (deliveryType === "smartbox") {
       if (!smartboxDetails?.boxId || !smartboxDetails?.location) {
         return res
@@ -88,17 +81,19 @@ router.post("/", authenticateUser, async (req, res) => {
       }
     }
 
+    // 🧮 Підрахунок загальної кількості
     const totalQuantity = products.reduce(
       (sum, item) => sum + item.quantity,
       0
     );
 
+    // 📝 Створення замовлення
     const newOrder = await OnlineOrder.create({
       userId: req.user.id,
       products,
       totalPrice,
       totalQuantity,
-      paymentMethod,
+      paymentMethod: "elavon_link",
       pickupPointId,
       deliveryType,
       deliveryAddress,
@@ -106,18 +101,37 @@ router.post("/", authenticateUser, async (req, res) => {
       notes,
       status: "new",
     });
-    await User.findByIdAndUpdate(req.user.id, {
-      address: deliveryAddress,
+
+    // 📩 Оновлення адреси користувача
+    await User.findByIdAndUpdate(req.user.id, { address: deliveryAddress });
+
+    // 💳 Генерація Pay-by-Link через Elavon
+    const expiryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0];
+
+    const paylinkRes = await axios.post(`${process.env.BASE_URL}/api/paylink`, {
+      amount: totalPrice,
+      currency: "PLN",
+      orderId: newOrder.orderId,
+      email: req.user.email,
+      expiryDate,
     });
+
+    newOrder.payLink = paylinkRes.data.payLink;
+    await newOrder.save();
+
+    // 📬 Email адміну
     await sendAdminOrderNotification(newOrder);
 
-    res.status(201).json({
-      message: "Order created successfully",
+    return res.status(201).json({
+      message: "✅ Замовлення створено та очікує оплату",
       order: newOrder,
+      payLink: newOrder.payLink,
     });
   } catch (error) {
     console.error("Order creation error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message || "Failed to create order",
     });
   }

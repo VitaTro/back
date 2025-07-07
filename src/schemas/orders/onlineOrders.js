@@ -62,7 +62,7 @@ const onlineOrderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["BLIK", "bank_transfer"],
+      enum: ["elavon_link"],
       required: true,
     },
     deliveryType: {
@@ -91,6 +91,9 @@ const onlineOrderSchema = new mongoose.Schema(
       houseNumber: { type: String },
       apartmentNumber: { type: String },
       isPrivateHouse: { type: Boolean },
+    },
+    payLink: {
+      type: String,
     },
 
     notes: { type: String },

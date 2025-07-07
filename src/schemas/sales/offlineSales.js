@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const OfflineOrder = require("./offlineOrders");
+const OfflineOrder = require("../orders/offlineOrders");
 const Product = require("../product");
 const offlineSaleSchema = new mongoose.Schema(
   {
