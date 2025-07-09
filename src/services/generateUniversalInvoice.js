@@ -61,10 +61,10 @@ async function generateUniversalInvoice(source, options = {}) {
     return null;
   }
 
-  const publicUrl = await uploadToDrive(pdfPath, `${invoiceNumber}.pdf`);
-  console.log("✅ Файл завантажено, лінк:", publicUrl);
+  // const publicUrl = await uploadToDrive(pdfPath, `${invoiceNumber}.pdf`);
+  // console.log("✅ Файл завантажено, лінк:", publicUrl);
 
-  invoiceData.fileUrl = publicUrl;
+  // invoiceData.fileUrl = publicUrl;
 
   const newInvoice = await Invoice.create({
     invoiceNumber,
@@ -82,7 +82,7 @@ async function generateUniversalInvoice(source, options = {}) {
         : undefined,
     filePath: pdfPath,
     userId: source.userId || null,
-    fileUrl: publicUrl,
+    // fileUrl: publicUrl,
   });
 
   return newInvoice;
