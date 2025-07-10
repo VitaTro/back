@@ -2,11 +2,17 @@ const mongoose = require("mongoose");
 const Product = require("../product");
 const OnlineSale = require("../sales/onlineSales");
 const OfflineSales = require("../sales/offlineSales");
+
 const stockMovementSchema = new mongoose.Schema({
-  product: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Product",
+  productName: {
+    type: String,
     required: true,
+    index: true,
+  },
+  productIndex: {
+    type: String,
+    required: false,
+    index: true,
   },
   date: {
     type: Date,
@@ -20,8 +26,24 @@ const stockMovementSchema = new mongoose.Schema({
   quantity: {
     type: Number,
     required: true,
+    min: [0, "Кількість не може бути менше нуля"],
   },
-  unitPrice: Number, // ціна закупки або продажу
+  unitPurchasePrice: {
+    type: Number,
+    required: function () {
+      return ["purchase", "restock"].includes(this.type);
+    },
+  },
+  unitSalePrice: {
+    type: Number,
+    required: function () {
+      return this.type === "sale";
+    },
+  },
+  price: {
+    type: Number, // Рекомендована ціна продажу
+    required: true,
+  },
   relatedSaleId: {
     type: mongoose.Schema.Types.ObjectId,
     refPath: "saleSource",
@@ -30,8 +52,12 @@ const stockMovementSchema = new mongoose.Schema({
     type: String,
     enum: ["OnlineSale", "OfflineSale"],
   },
-  note: String,
+  note: {
+    type: String,
+    default: "",
+  },
 });
 
+stockMovementSchema.index({ productName: "text", productIndex: "text" });
 const StockMovement = mongoose.model("StockMovement", stockMovementSchema);
 module.exports = StockMovement;

@@ -16,17 +16,17 @@ const productSchema = new mongoose.Schema(
     },
     price: {
       type: Number,
-      required: true,
+      required: false,
     },
     purchasePrice: {
       value: {
         type: Number,
-        required: true, // або false, якщо буває, що нема закупки
+        required: false, // або false, якщо буває, що нема закупки
       },
       currency: {
         type: String,
         enum: ["PLN", "USD", "EUR"],
-        required: true,
+        required: false,
       },
       exchangeRateToPLN: {
         type: Number,
@@ -62,7 +62,7 @@ const productSchema = new mongoose.Schema(
     },
     quantity: {
       type: Number, // Кількість товару в наявності
-      required: true,
+      required: false,
       default: 0,
     },
     inStock: {

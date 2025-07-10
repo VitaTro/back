@@ -5,7 +5,9 @@ const OnlineSale = require("../../schemas/sales/onlineSales");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 const { getIo } = require("../../config/socket");
-
+const { handleSaleStockByIndex } = require("../../controller/stockController");
+const StockMovement = require("../../schemas/accounting/stockMovement");
+const Product = require("../../schemas/product");
 // ✅ Отримати всі онлайн-замовлення з пагінацією і фільтром
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
@@ -110,8 +112,6 @@ router.patch("/:id/status", authenticateAdmin, async (req, res) => {
 // ✅ Конвертувати замовлення у продаж
 router.put("/:id/sale", authenticateAdmin, async (req, res) => {
   try {
-    console.log(`🔄 Converting order ID: ${req.params.id} to sale...`);
-
     const order = await OnlineOrder.findById(req.params.id);
     if (!order) {
       return res.status(404).json({ error: "Order not found" });
@@ -123,37 +123,41 @@ router.put("/:id/sale", authenticateAdmin, async (req, res) => {
         .json({ error: "Order must be completed before converting to sale" });
     }
 
-    // ✅ Створюємо продаж у `OnlineSale`
+    // ⛓️ Перевіряємо чи всі продукти мають `index` і `name`
+    const enrichedProducts = [];
+    for (const item of order.products) {
+      const product = await Product.findById(item.productId);
+      if (!product || !product.index) continue;
+      enrichedProducts.push({
+        index: product.index,
+        name: product.name,
+        quantity: item.quantity,
+        price: item.price,
+      });
+    }
+
+    // ✅ Створюємо запис продажу
     const newSale = await OnlineSale.create({
       orderId: order._id,
       totalAmount: order.totalPrice,
-      products: order.products,
+      products: enrichedProducts,
       userId: order.userId,
       paymentMethod: order.paymentMethod,
       saleDate: new Date(),
     });
 
-    console.log("✅ Sale recorded:", newSale);
+    // 📦 Створюємо рухи на складі
+    await handleSaleStockByIndex(newSale, "OnlineSale");
 
-    // ✅ Оновлюємо фінансовий огляд
+    // 💰 Оновлюємо фінансову аналітику
     await FinanceOverview.updateOne(
       {},
       { $inc: { totalRevenue: order.totalPrice } }
     );
 
-    console.log("💰 FinanceOverview updated!");
-
-    // ✅ Оновлюємо статус замовлення на `"sold"`
+    // 🔄 Оновлюємо статус замовлення
     order.status = "sold";
     await order.save();
-
-    console.log("✅ Order status updated to 'sold'");
-    for (const item of order.products) {
-      await Product.findByIdAndUpdate(item.productId, {
-        $inc: { stock: -item.quantity },
-      });
-    }
-    console.log("✅ Product stock updated!");
 
     res
       .status(200)
@@ -181,10 +185,26 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
     onlineOrder.statusHistory.push({ status: "cancelled", updatedBy });
     await onlineOrder.save();
 
+    for (const returned of returnedProducts) {
+      const product = await Product.findById(returned.productId);
+      if (!product || !product.index) continue;
+
+      await StockMovement.create({
+        productIndex: product.index,
+        productName: product.name,
+        type: "return",
+        quantity: returned.quantity,
+        unitPurchasePrice: product.purchasePrice.value || 0,
+        date: new Date(),
+        note: `Повернення з замовлення ${req.params.id}`,
+      });
+    }
+
     res
       .status(200)
       .json({ message: "Return processed successfully", onlineOrder });
   } catch (error) {
+    console.error("🧨 Error processing return:", error);
     res.status(500).json({ error: "Failed to process return" });
   }
 });

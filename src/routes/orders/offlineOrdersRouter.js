@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 const { validate } = require("../../middleware/validateMiddleware");
 const offlineOrderValidationSchema = require("../../validation/offlineOrdersJoi");
-
+const { handleSaleStock } = require("../../controller/stockController");
 const Product = require("../../schemas/product");
 const OfflineOrder = require("../../schemas/orders/offlineOrders");
 const OfflineSale = require("../../schemas/sales/offlineSales");
@@ -52,7 +52,6 @@ router.post(
         buyerName,
         buyerAddress,
         buyerNIP,
-        // notes,
       } = req.body;
 
       const validPaymentMethods = ["BLIK", "bank_transfer"];
@@ -60,31 +59,34 @@ router.post(
         return res.status(400).json({ error: "Invalid payment method" });
       }
 
-      const offlineOrderProducts = await Promise.all(
-        products.map(async (product) => {
-          const dbProduct = await Product.findById(product.productId);
-          if (!dbProduct || dbProduct.quantity < product.quantity) {
-            throw new Error(
-              `Insufficient stock for ${dbProduct?.name || "product"}`
-            );
-          }
-          dbProduct.quantity -= product.quantity;
-          await dbProduct.save();
-          return {
-            productId: dbProduct._id,
-            quantity: product.quantity,
-            name: dbProduct.name,
-            price: dbProduct.price,
-            photoUrl: dbProduct.photoUrl,
-          };
-        })
-      );
+      // 🧠 Перевіряємо склад по `productIndex`
+      const offlineOrderProducts = [];
+      for (const item of products) {
+        const product = await Product.findById(item.productId);
+        if (!product || !product.index) {
+          throw new Error(`Товар не знайдено або без індексу`);
+        }
 
+        const currentStock = await calculateStock(product.index);
+        if (currentStock < item.quantity) {
+          throw new Error(`❌ Недостатньо ${product.name} на складі`);
+        }
+
+        offlineOrderProducts.push({
+          productId: product._id,
+          index: product.index,
+          name: product.name,
+          quantity: item.quantity,
+          price: product.price,
+          photoUrl: product.photoUrl,
+        });
+      }
+
+      // 📝 Створюємо offline order
       const newOfflineOrder = await OfflineOrder.create({
         products: offlineOrderProducts,
         totalPrice,
         paymentMethod,
-        // notes,
         status: "completed",
         buyerType,
         ...(buyerType === "przedsiębiorca" && {
@@ -94,6 +96,7 @@ router.post(
         }),
       });
 
+      // 💰 Створюємо продаж і рухи на складі
       const newOfflineSale = await OfflineSale.create({
         orderId: newOfflineOrder._id,
         products: offlineOrderProducts,
@@ -102,6 +105,8 @@ router.post(
         status: "completed",
         saleDate: new Date(),
       });
+
+      await handleSaleStockByIndex(newOfflineSale, "OfflineSale");
 
       await FinanceOverview.updateOne(
         {},
@@ -112,8 +117,7 @@ router.post(
         { upsert: true }
       );
 
-      // Генеруємо інвойс
-      console.log("🧾 Старт генерації інвойсу");
+      // 🧾 Генеруємо інвойс
       const invoice = await generateUniversalInvoice(newOfflineSale, {
         mode: "offline",
         buyerType: buyerType || "anonim",
@@ -123,7 +127,7 @@ router.post(
           buyerNIP,
         }),
       });
-      console.log("📄 Інвойс створено:", invoice);
+
       res.status(201).json({
         message: "Offline order and sale recorded successfully",
         order: newOfflineOrder,
@@ -177,16 +181,31 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
     let invoice = null;
 
     if (status === "completed") {
+      // 🧠 Перебудовуємо продукти
+      const enrichedProducts = [];
+      for (const item of offlineOrder.products) {
+        const product = await Product.findById(item.productId);
+        if (!product || !product.index) continue;
+        enrichedProducts.push({
+          index: product.index,
+          name: product.name,
+          quantity: item.quantity,
+          price: item.price,
+        });
+      }
+
+      // 📦 Створення продажу
       newSale = await OfflineSale.create({
         orderId: offlineOrder._id,
-        products: offlineOrder.products,
+        products: enrichedProducts,
         totalAmount: offlineOrder.totalPrice,
         paymentMethod: offlineOrder.paymentMethod,
         status: "completed",
         saleDate: new Date(),
       });
 
-      await OfflineOrder.deleteOne({ _id: offlineOrder._id });
+      await handleSaleStockByIndex(newSale, "OfflineSale");
+
       await FinanceOverview.updateOne(
         {},
         {
@@ -196,7 +215,7 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
         { upsert: true }
       );
 
-      // Генеруємо інвойс при завершенні
+      // 🧾 Інвойс
       invoice = await generateUniversalInvoice(newSale, {
         mode: "offline",
         buyerType: offlineOrder.buyerType || "anonim",
