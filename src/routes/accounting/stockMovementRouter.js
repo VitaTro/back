@@ -54,7 +54,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
   }
 });
 
-router.get("/product/:productIndex", authenticateAdmin, async (req, res) => {
+router.get("/product/:productIndex", async (req, res) => {
   try {
     const { productIndex } = req.params;
 
@@ -116,7 +116,7 @@ router.put("/:id", authenticateAdmin, async (req, res) => {
 });
 router.get(
   "/index/:productIndex/summary",
-  authenticateAdmin,
+
   async (req, res) => {
     try {
       const { productIndex } = req.params;
