@@ -89,7 +89,7 @@ router.get("/product/:productIndex", authenticateAdmin, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch movements" });
   }
 });
-router.put("/movement/:id", authenticateAdmin, async (req, res) => {
+router.put("/:id", authenticateAdmin, async (req, res) => {
   try {
     const { type, quantity, date, unitPurchasePrice, unitSalePrice, note } =
       req.body;
@@ -164,5 +164,28 @@ router.get(
     }
   }
 );
+router.delete("/:id", authenticateAdmin, async (req, res) => {
+  try {
+    const movement = await StockMovement.findById(req.params.id);
+    if (!movement) {
+      return res.status(404).json({ error: "Рух не знайдено" });
+    }
+
+    await StockMovement.findByIdAndDelete(req.params.id);
+    res.json({ message: "Рух успішно видалено", deletedId: req.params.id });
+  } catch (err) {
+    console.error("❌ Помилка видалення руху:", err);
+    res.status(500).json({ error: "Не вдалося видалити рух" });
+  }
+});
+router.get("/", authenticateAdmin, async (req, res) => {
+  try {
+    const movements = await StockMovement.find().sort({ date: -1 });
+    res.json(movements);
+  } catch (error) {
+    console.error("❌ Error fetching all movements:", error);
+    res.status(500).json({ error: "Не вдалося отримати всі рухи" });
+  }
+});
 
 module.exports = router;
