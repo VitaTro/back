@@ -58,8 +58,8 @@ router.post("/", authenticateAdmin, async (req, res) => {
     product.inStock = product.quantity > 0;
     product.currentStock = product.quantity; // якщо таке поле додаєш у схему
 
-    if (unitPurchasePrice) {
-      product.lastRetailPrice = unitPurchasePrice; // якщо таке поле є
+    if (price) {
+      product.lastRetailPrice = price; // якщо таке поле є
     }
 
     await product.save();
