@@ -47,6 +47,23 @@ router.post("/", authenticateAdmin, async (req, res) => {
       saleSource,
     });
     await movement.save();
+    if (["purchase", "restock", "return"].includes(type)) {
+      product.quantity += quantity;
+    }
+
+    if (["sale", "writeOff"].includes(type)) {
+      product.quantity -= quantity;
+    }
+
+    product.inStock = product.quantity > 0;
+    product.currentStock = product.quantity; // якщо таке поле додаєш у схему
+
+    if (unitPurchasePrice) {
+      product.lastRetailPrice = unitPurchasePrice; // якщо таке поле є
+    }
+
+    await product.save();
+
     res.status(201).json({ message: "Stock movement recorded", movement });
   } catch (error) {
     console.error("🔥 Error adding stock movement:", error);

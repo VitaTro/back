@@ -35,6 +35,14 @@ const productSchema = new mongoose.Schema(
         }, // потрібно лише для валют ≠ PLN
       },
     },
+    currentStock: {
+      type: Number,
+      default: 0,
+    },
+    lastRetailPrice: {
+      type: Number,
+      default: null,
+    },
 
     description: {
       type: String,
