@@ -178,7 +178,7 @@ router.delete("/:id", authenticateAdmin, async (req, res) => {
     res.status(500).json({ error: "Не вдалося видалити рух" });
   }
 });
-router.get("/", authenticateAdmin, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const movements = await StockMovement.find().sort({ date: -1 });
     res.json(movements);
