@@ -70,6 +70,74 @@ router.post("/", authenticateAdmin, async (req, res) => {
     res.status(500).json({ error: "Failed to record movement" });
   }
 });
+router.post("/bulk", authenticateAdmin, async (req, res) => {
+  try {
+    const movementsArray = req.body;
+
+    if (!Array.isArray(movementsArray) || movementsArray.length === 0) {
+      return res.status(400).json({ error: "Дані мають бути масивом рухів" });
+    }
+
+    const results = [];
+
+    for (const movementData of movementsArray) {
+      const {
+        productIndex,
+        productName,
+        type,
+        quantity,
+        price,
+        unitPurchasePrice,
+        unitSalePrice,
+        date,
+        note,
+      } = movementData;
+
+      const product = await Product.findOne({
+        index: productIndex,
+        name: productName,
+      });
+      if (!product) {
+        results.push({ error: "Товар не знайдено", productIndex });
+        continue;
+      }
+
+      const movement = new StockMovement({
+        productIndex,
+        productName,
+        type,
+        quantity,
+        price,
+        unitPurchasePrice,
+        unitSalePrice,
+        date: date || new Date(),
+        note,
+      });
+
+      await movement.save();
+
+      if (["purchase", "restock", "return"].includes(type)) {
+        product.quantity += quantity;
+      } else if (["sale", "writeOff"].includes(type)) {
+        product.quantity -= quantity;
+      }
+
+      product.currentStock = product.quantity;
+      product.inStock = product.quantity > 0;
+
+      if (price !== undefined) product.lastRetailPrice = price;
+
+      await product.save();
+
+      results.push({ success: true, movementId: movement._id });
+    }
+
+    res.json({ message: "Масовий прихід виконано", results });
+  } catch (error) {
+    console.error("🔥 Bulk error:", error);
+    res.status(500).json({ error: "Не вдалося додати рухи" });
+  }
+});
 
 router.get("/product/:productIndex", async (req, res) => {
   try {
