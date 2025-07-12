@@ -11,9 +11,11 @@ const offlineOrderSchema = new mongoose.Schema(
           ref: "Product",
           required: true,
         },
+        index: { type: String, required: true },
+        name: { type: String, required: true },
         photoUrl: { type: String, required: true },
         quantity: { type: Number, required: true },
-        name: { type: String, required: true },
+
         price: { type: Number, required: true },
         color: { type: String }, // Робимо поле опціональним
       },

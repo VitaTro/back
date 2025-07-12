@@ -83,7 +83,7 @@ const productSchema = new mongoose.Schema(
     },
     index: {
       type: String, // Може використовуватись для категоризації чи позиції
-      required: false,
+      required: true,
     },
     createdAt: {
       type: Date,

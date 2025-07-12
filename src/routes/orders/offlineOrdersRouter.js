@@ -2,240 +2,151 @@ const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
-const { validate } = require("../../middleware/validateMiddleware");
-const offlineOrderValidationSchema = require("../../validation/offlineOrdersJoi");
-const { handleSaleStock } = require("../../controller/stockController");
-const Product = require("../../schemas/product");
 const OfflineOrder = require("../../schemas/orders/offlineOrders");
-const OfflineSale = require("../../schemas/sales/offlineSales");
+const StockMovement = require("../../schemas/accounting/stockMovement");
+const Invoice = require("../../schemas/accounting/InvoiceSchema");
+const Product = require("../../schemas/product");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
-const generateUniversalInvoice = require("../../services/generateUniversalInvoice");
-
+const OfflineSale = require("../../schemas/sales/offlineSales");
+const {
+  generateUniversalInvoice,
+} = require("../../services/generateUniversalInvoice");
+const { calculateStock } = require("../../services/calculateStock");
+// 🔹 GET: Отримати всі офлайн-замовлення
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
-    const filter = req.query.status
-      ? { status: req.query.status }
-      : { status: { $ne: "archived" } };
-
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    const offlineOrders = await OfflineOrder.find(filter)
-      .populate("products.productId", "name photoUrl")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    if (!offlineOrders.length) {
-      return res.status(404).json({ error: "No offline orders available" });
-    }
-
-    res.status(200).json({ offlineOrders, page, limit });
+    const orders = await OfflineOrder.find().sort({ createdAt: -1 });
+    res.status(200).json(orders);
   } catch (error) {
-    console.error("🔥 Error fetching offline orders:", error);
+    console.error("🧨 Error fetching offline orders:", error);
     res.status(500).json({ error: "Failed to fetch offline orders" });
   }
 });
 
-router.post(
-  "/",
-  authenticateAdmin,
-  validate(offlineOrderValidationSchema),
-  async (req, res) => {
-    try {
-      const {
-        products,
-        totalPrice,
-        paymentMethod,
-        buyerType,
-        buyerName,
-        buyerAddress,
-        buyerNIP,
-      } = req.body;
-
-      const validPaymentMethods = ["BLIK", "bank_transfer"];
-      if (!validPaymentMethods.includes(paymentMethod)) {
-        return res.status(400).json({ error: "Invalid payment method" });
-      }
-
-      // 🧠 Перевіряємо склад по `productIndex`
-      const offlineOrderProducts = [];
-      for (const item of products) {
-        const product = await Product.findById(item.productId);
-        if (!product || !product.index) {
-          throw new Error(`Товар не знайдено або без індексу`);
-        }
-
-        const currentStock = await calculateStock(product.index);
-        if (currentStock < item.quantity) {
-          throw new Error(`❌ Недостатньо ${product.name} на складі`);
-        }
-
-        offlineOrderProducts.push({
-          productId: product._id,
-          index: product.index,
-          name: product.name,
-          quantity: item.quantity,
-          price: product.price,
-          photoUrl: product.photoUrl,
-        });
-      }
-
-      // 📝 Створюємо offline order
-      const newOfflineOrder = await OfflineOrder.create({
-        products: offlineOrderProducts,
-        totalPrice,
-        paymentMethod,
-        status: "completed",
-        buyerType,
-        ...(buyerType === "przedsiębiorca" && {
-          buyerName,
-          buyerAddress,
-          buyerNIP,
-        }),
-      });
-
-      // 💰 Створюємо продаж і рухи на складі
-      const newOfflineSale = await OfflineSale.create({
-        orderId: newOfflineOrder._id,
-        products: offlineOrderProducts,
-        totalAmount: totalPrice,
-        paymentMethod,
-        status: "completed",
-        saleDate: new Date(),
-      });
-
-      await handleSaleStockByIndex(newOfflineSale, "OfflineSale");
-
-      await FinanceOverview.updateOne(
-        {},
-        {
-          $inc: { totalRevenue: totalPrice },
-          $push: { completedOrders: newOfflineOrder._id },
-        },
-        { upsert: true }
-      );
-
-      // 🧾 Генеруємо інвойс
-      const invoice = await generateUniversalInvoice(newOfflineSale, {
-        mode: "offline",
-        buyerType: buyerType || "anonim",
-        ...(buyerType === "przedsiębiorca" && {
-          buyerName,
-          buyerAddress,
-          buyerNIP,
-        }),
-      });
-
-      res.status(201).json({
-        message: "Offline order and sale recorded successfully",
-        order: newOfflineOrder,
-        sale: newOfflineSale,
-        invoice,
-      });
-    } catch (error) {
-      console.error("🔥 Error creating offline order:", error);
-      res.status(500).json({
-        error: error.message || "Failed to create offline order & sale",
-      });
-    }
-  }
-);
-
+// 🔹 GET: Отримати замовлення за ID
 router.get("/:id", authenticateAdmin, async (req, res) => {
   try {
-    const offlineOrder = await OfflineOrder.findById(req.params.id).populate(
-      "products.productId",
-      "name photoUrl price"
-    );
+    const order = await OfflineOrder.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
-    if (!offlineOrder) {
-      return res.status(404).json({ error: "Offline order not found" });
-    }
-
-    res.status(200).json(offlineOrder);
+    res.status(200).json(order);
   } catch (error) {
-    console.error("🔥 Error fetching offline order:", error);
-    res.status(500).json({ error: "Failed to fetch offline order" });
+    console.error("🧨 Error fetching order by ID:", error);
+    res.status(500).json({ error: "Failed to fetch order" });
   }
 });
 
+// 🔹 POST: Створити нове офлайн-замовлення
+router.post("/", authenticateAdmin, async (req, res) => {
+  try {
+    const {
+      products,
+      paymentMethod,
+      buyerType,
+      buyerName,
+      buyerAddress,
+      buyerNIP,
+      saleDate,
+    } = req.body;
+
+    const validMethods = ["BLIK", "bank_transfer"];
+    if (!validMethods.includes(paymentMethod)) {
+      return res.status(400).json({ error: "Invalid payment method" });
+    }
+
+    const enrichedProducts = [];
+    let totalAmount = 0;
+
+    for (const item of products) {
+      // 🔍 Знайти останній складський рух по товару
+      const lastMovement = await StockMovement.findOne({
+        productId: item.productId,
+        type: { $in: ["sale", "purchase"] },
+      }).sort({ date: -1 });
+
+      if (
+        !lastMovement ||
+        !lastMovement.productIndex ||
+        !lastMovement.productName
+      ) {
+        throw new Error(
+          `❌ No stock movement found for product ${item.productId}`
+        );
+      }
+
+      const stockLevel = await calculateStock(lastMovement.productIndex);
+      if (stockLevel < item.quantity) {
+        return res.status(400).json({
+          error: `Insufficient stock for ${lastMovement.productName}`,
+        });
+      }
+
+      const unitPrice =
+        lastMovement.unitSalePrice ||
+        lastMovement.price || // 💸 ← це твій 58
+        productData?.lastRetailPrice ||
+        lastMovement.unitPurchasePrice ||
+        0;
+
+      totalAmount += unitPrice * item.quantity;
+
+      // 🔧 Тягнемо тільки декоративні дані з Product (фото тощо)
+      const productVisual = await Product.findById(item.productId);
+
+      enrichedProducts.push({
+        productId: item.productId,
+        index: lastMovement?.productIndex || item.index,
+        name: lastMovement?.productName || item.name,
+        photoUrl: productVisual?.photoUrl || "",
+        quantity: item.quantity,
+        price: unitPrice, // ✅ з руху
+      });
+    }
+
+    const order = await OfflineOrder.create({
+      products: enrichedProducts,
+      totalPrice: totalAmount,
+      paymentMethod,
+      status: "pending", // 🔹 важливо: не completed!
+      buyerType,
+      saleDate,
+      ...(buyerType === "przedsiębiorca" && {
+        buyerName,
+        buyerAddress,
+        buyerNIP,
+      }),
+    });
+
+    res.status(201).json({ message: "Offline order created", order });
+  } catch (error) {
+    console.error("🔥 Error creating offline order:", error);
+    res
+      .status(500)
+      .json({ error: error.message || "Не вдалося створити замовлення" });
+  }
+});
+
+// 🔹 PATCH: Оновити статус офлайн-замовлення
 router.patch("/:id", authenticateAdmin, async (req, res) => {
   try {
     const { status } = req.body;
     const validStatuses = ["pending", "completed", "cancelled"];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: "Invalid status" });
+      return res.status(400).json({ error: "Invalid status value" });
     }
 
-    const offlineOrder = await OfflineOrder.findById(req.params.id);
-    if (!offlineOrder) {
-      return res.status(404).json({ error: "Offline order not found" });
-    }
+    const order = await OfflineOrder.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
 
-    offlineOrder.status = status;
-    await offlineOrder.save();
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
-    let newSale = null;
-    let invoice = null;
-
-    if (status === "completed") {
-      // 🧠 Перебудовуємо продукти
-      const enrichedProducts = [];
-      for (const item of offlineOrder.products) {
-        const product = await Product.findById(item.productId);
-        if (!product || !product.index) continue;
-        enrichedProducts.push({
-          index: product.index,
-          name: product.name,
-          quantity: item.quantity,
-          price: item.price,
-        });
-      }
-
-      // 📦 Створення продажу
-      newSale = await OfflineSale.create({
-        orderId: offlineOrder._id,
-        products: enrichedProducts,
-        totalAmount: offlineOrder.totalPrice,
-        paymentMethod: offlineOrder.paymentMethod,
-        status: "completed",
-        saleDate: new Date(),
-      });
-
-      await handleSaleStockByIndex(newSale, "OfflineSale");
-
-      await FinanceOverview.updateOne(
-        {},
-        {
-          $push: { completedOrders: offlineOrder._id },
-          $inc: { totalRevenue: offlineOrder.totalPrice },
-        },
-        { upsert: true }
-      );
-
-      // 🧾 Інвойс
-      invoice = await generateUniversalInvoice(newSale, {
-        mode: "offline",
-        buyerType: offlineOrder.buyerType || "anonim",
-        ...(offlineOrder.buyerType === "przedsiębiorca" && {
-          buyerName: offlineOrder.buyerName,
-          buyerAddress: offlineOrder.buyerAddress,
-          buyerNIP: offlineOrder.buyerNIP,
-        }),
-      });
-    }
-
-    res.status(200).json({
-      message: "Offline order updated successfully",
-      order: offlineOrder,
-      sale: newSale,
-      invoice,
-    });
+    res.status(200).json({ message: "Order status updated", order });
   } catch (error) {
-    console.error("🔥 Error updating offline order:", error);
-    res.status(500).json({ error: "Failed to update offline order" });
+    console.error("🧨 Error updating order status:", error);
+    res.status(500).json({ error: "Failed to update order" });
   }
 });
 

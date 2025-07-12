@@ -1,10 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose");
-const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
-const { validate } = require("../../middleware/validateMiddleware");
-const offlineSaleValidationSchema = require("../../validation/offlineSalesJoi");
 
+const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
+
+const { calculateStock } = require("../../services/calculateStock");
+const OfflineOrder = require("../../schemas/orders/offlineOrders");
+const StockMovement = require("../../schemas/accounting/stockMovement");
 const Product = require("../../schemas/product");
 const OfflineSale = require("../../schemas/sales/offlineSales");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
@@ -30,114 +31,146 @@ router.get("/", authenticateAdmin, async (req, res) => {
   }
 });
 
-router.post(
-  "/",
-  authenticateAdmin,
-  validate(offlineSaleValidationSchema),
-  async (req, res) => {
-    try {
-      const {
-        orderId,
-        products,
-        totalAmount,
-        paymentMethod,
-        status,
-        buyerType,
-        buyerName,
-        buyerAddress,
-        buyerNIP,
-      } = req.body;
+router.post("/", authenticateAdmin, async (req, res) => {
+  try {
+    const { orderId, saleDate } = req.body;
 
-      const validPaymentMethods = ["BLIK", "bank_transfer"];
-      if (!validPaymentMethods.includes(paymentMethod)) {
-        return res.status(400).json({ error: "Invalid payment method" });
-      }
-
-      const offlineSaleProducts = await Promise.all(
-        products.map(async (product) => {
-          const dbProduct = await Product.findById(product.productId);
-          if (!dbProduct || dbProduct.quantity < product.quantity) {
-            throw new Error(
-              `Insufficient stock for ${dbProduct?.name || "product"}`
-            );
-          }
-          dbProduct.quantity -= product.quantity;
-          await dbProduct.save();
-          return {
-            productId: dbProduct._id,
-            quantity: product.quantity,
-            name: dbProduct.name,
-            price: dbProduct.price,
-            photoUrl: dbProduct.photoUrl,
-          };
-        })
-      );
-
-      const newOfflineSale = await OfflineSale.create({
-        orderId,
-        products: offlineSaleProducts,
-        totalAmount,
-        paymentMethod,
-        status: status || (paymentMethod !== "BLIK" ? "completed" : "pending"),
-        saleDate: new Date(),
-        buyerType,
-        ...(buyerType === "przedsiębiorca" && {
-          buyerName,
-          buyerAddress,
-          buyerNIP,
-        }),
-      });
-
-      let invoice = null;
-
-      if (newOfflineSale.status === "completed") {
-        await FinanceOverview.updateOne(
-          {},
-          {
-            $inc: { totalRevenue: newOfflineSale.totalAmount },
-            $push: { completedOfflineSales: newOfflineSale._id },
-          },
-          { upsert: true }
-        );
-
-        const invoiceData = {
-          invoiceType: "offline",
-          totalAmount,
-          paymentMethod,
-          buyerType: buyerType || "anonim",
-          issueDate: new Date(),
-        };
-
-        if (buyerType === "przedsiębiorca") {
-          invoiceData.buyerName = buyerName;
-          invoiceData.buyerAddress = buyerAddress;
-          invoiceData.buyerNIP = buyerNIP;
-        }
-
-        invoice = new Invoice(invoiceData);
-        await invoice.validate();
-
-        const pdfPath = await generateInvoicePDFOffline(
-          invoice,
-          invoiceData.buyerType
-        );
-        invoice.filePath = pdfPath;
-        await invoice.save();
-      }
-
-      res.status(201).json({
-        message: "Offline sale recorded successfully",
-        sale: newOfflineSale,
-        invoice,
-      });
-    } catch (error) {
-      console.error("🔥 Error recording offline sale:", error);
-      res
-        .status(500)
-        .json({ error: error.message || "Failed to record offline sale" });
+    const order = await OfflineOrder.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
     }
+
+    if (order.status !== "pending") {
+      return res
+        .status(400)
+        .json({ error: "Order already completed or cancelled" });
+    }
+
+    const enrichedProducts = [];
+    let totalAmount = 0;
+
+    for (const item of order.products) {
+      const lastMovement = await StockMovement.findOne({
+        productId: item.productId,
+        type: { $in: ["sale", "purchase"] },
+      }).sort({ date: -1 });
+
+      if (
+        !lastMovement ||
+        !lastMovement.productIndex ||
+        !lastMovement.productName
+      ) {
+        throw new Error(
+          `❌ Немає даних зі складу для товару ${item.productId}`
+        );
+      }
+
+      const stockLevel = await calculateStock(lastMovement.productIndex);
+      if (stockLevel < item.quantity) {
+        return res.status(400).json({
+          error: `Недостатньо ${lastMovement.productName} на складі`,
+        });
+      }
+
+      const productData = await Product.findById(item.productId);
+      const unitPrice =
+        lastMovement.unitSalePrice ||
+        productData?.lastRetailPrice ||
+        lastMovement.price ||
+        lastMovement.unitPurchasePrice ||
+        0;
+
+      totalAmount += unitPrice * item.quantity;
+
+      enrichedProducts.push({
+        productId: item.productId,
+        index: lastMovement.productIndex,
+        name: lastMovement.productName,
+        quantity: item.quantity,
+        price: unitPrice,
+        photoUrl: productData?.photoUrl || "",
+      });
+    }
+
+    const sale = await OfflineSale.create({
+      orderId,
+      products: enrichedProducts,
+      totalAmount,
+      paymentMethod: order.paymentMethod,
+      buyerType: order.buyerType,
+      ...(order.buyerType === "przedsiębiorca" && {
+        buyerName: order.buyerName,
+        buyerAddress: order.buyerAddress,
+        buyerNIP: order.buyerNIP,
+      }),
+      status: "completed",
+      saleDate: saleDate || new Date(),
+    });
+
+    for (const product of enrichedProducts) {
+      await StockMovement.create({
+        productId: product.productId,
+        productIndex: product.index,
+        productName: product.name,
+        quantity: product.quantity,
+        type: "sale",
+        unitSalePrice: product.price,
+        price: product.price,
+        relatedSaleId: sale._id,
+        saleSource: "OfflineSale",
+        date: sale.saleDate,
+        note: "Списання при продажу",
+      });
+
+      // 🧮 Синхронізація продукту зі складом
+      const productDoc = await Product.findById(product.productId);
+      if (productDoc) {
+        const stockCount = await calculateStock(product.index);
+        productDoc.quantity = stockCount;
+        productDoc.currentStock = stockCount;
+        productDoc.inStock = stockCount > 0;
+        await productDoc.save();
+      }
+    }
+
+    await FinanceOverview.updateOne(
+      {},
+      {
+        $inc: { totalRevenue: totalAmount },
+        $push: { completedSales: sale._id },
+      },
+      { upsert: true }
+    );
+
+    const invoice = new Invoice({
+      orderId,
+      invoiceType: "offline",
+      totalAmount,
+      paymentMethod: order.paymentMethod,
+      buyerType: order.buyerType,
+      ...(order.buyerType === "przedsiębiorca" && {
+        buyerName: order.buyerName,
+        buyerAddress: order.buyerAddress,
+        buyerNIP: order.buyerNIP,
+      }),
+    });
+
+    await invoice.validate();
+    await invoice.save();
+
+    order.status = "completed";
+    await order.save();
+
+    res.status(201).json({
+      message: "Продаж успішно завершено",
+      sale,
+      invoice,
+    });
+  } catch (error) {
+    console.error("🔥 Error completing sale:", error);
+    res.status(500).json({ error: error.message || "Помилка обробки продажу" });
   }
-);
+});
 
 router.patch("/:id", authenticateAdmin, async (req, res) => {
   try {
@@ -177,28 +210,37 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
     if (sale.status === "returned")
       return res.status(400).json({ error: "Sale already returned" });
 
-    await Promise.all(
-      sale.products.map(async (product) => {
-        await Product.updateOne(
-          { _id: product.productId },
-          { $inc: { stock: product.quantity } }
-        );
-      })
-    );
+    for (const item of sale.products) {
+      // 📦 Склад бачить повернення
+      await StockMovement.create({
+        productIndex: item.index,
+        productName: item.name,
+        quantity: item.quantity,
+        type: "return",
+        unitPurchasePrice: item.price, // або item.unitPurchasePrice якщо є
+        price: item.price,
+        relatedSaleId: sale._id,
+        saleSource: "OfflineSale",
+        date: new Date(),
+        note: "Повернення товару після продажу",
+      });
+    }
 
+    // 💰 Оновлення фінансів
     await FinanceOverview.updateOne(
       {},
       { $inc: { totalRevenue: -refundAmount } }
     );
 
+    // 🌀 Статус продажу
     sale.status = "returned";
     sale.refundAmount = refundAmount;
     await sale.save();
 
-    res.status(200).json({ message: "Sale returned successfully", sale });
+    res.status(200).json({ message: "Повернення завершено", sale });
   } catch (error) {
-    console.error("🔥 Error processing return:", error);
-    res.status(500).json({ error: "Failed to return sale" });
+    console.error("🔥 Return processing error:", error);
+    res.status(500).json({ error: "Не вдалося обробити повернення" });
   }
 });
 

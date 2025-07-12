@@ -4,6 +4,12 @@ const OnlineSale = require("../sales/onlineSales");
 const OfflineSales = require("../sales/offlineSales");
 
 const stockMovementSchema = new mongoose.Schema({
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
+  },
+
   productName: {
     type: String,
     required: true,
@@ -11,7 +17,7 @@ const stockMovementSchema = new mongoose.Schema({
   },
   productIndex: {
     type: String,
-    required: false,
+    required: true,
     index: true,
   },
   date: {

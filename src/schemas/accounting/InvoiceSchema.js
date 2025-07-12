@@ -9,7 +9,7 @@ const InvoiceSchema = new mongoose.Schema({
     enum: ["online", "offline"],
     required: true,
   },
-
+  saleDate: Date,
   totalAmount: { type: Number, required: true },
   paymentMethod: { type: String, required: true },
   issueDate: { type: Date, default: Date.now },

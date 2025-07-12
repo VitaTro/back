@@ -32,6 +32,7 @@ const offlineOrderValidationSchema = Joi.object({
     then: Joi.string().required(),
     otherwise: Joi.forbidden(),
   }),
+  saleDate: Joi.date().optional(),
 });
 
 module.exports = offlineOrderValidationSchema;

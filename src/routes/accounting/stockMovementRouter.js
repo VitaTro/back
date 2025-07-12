@@ -32,6 +32,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         .json({ error: "Product not found by name + index" });
     }
     const movement = new StockMovement({
+      productId: product._id,
       productIndex,
       productName,
       type,
