@@ -1,17 +1,21 @@
 const express = require("express");
 const router = express.Router();
-const { authenticateUser } = require("../middleware/authenticateUser");
-const Payment = require("../schemas/paymentSchema");
-const OnlineOrder = require("../schemas/orders/onlineOrders");
-const OnlineSale = require("../schemas/sales/onlineSales");
+const { authenticateUser } = require("../../middleware/authenticateUser");
+const Payment = require("../../schemas/paymentSchema");
+const OnlineOrder = require("../../schemas/orders/onlineOrders");
+const OnlineSale = require("../../schemas/sales/onlineSales");
 
-const Invoice = require("../schemas/accounting/InvoiceSchema");
+const Invoice = require("../../schemas/accounting/InvoiceSchema");
+const { createPaylink } = require("../../services/elavonService");
 
 // ✅ Ініціювати оплату
 router.post("/initiate", authenticateUser, async (req, res) => {
   try {
-    const { orderId, amount, paymentMethod } = req.body;
+    const { orderId, paymentMethod } = req.body;
+    const order = await OnlineOrder.findById(orderId);
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
+    const amount = order.totalPrice;
     if (!orderId || !amount || !paymentMethod) {
       return res.status(400).json({ error: "Invalid payment data" });
     }
@@ -21,31 +25,38 @@ router.post("/initiate", authenticateUser, async (req, res) => {
       const expiryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
         .toISOString()
         .split("T")[0];
+      console.log("💳 Creating paylink with", {
+        orderId,
+        amount,
+        email: req.user.email,
+      });
 
-      const paylinkRes = await axios.post(
-        `${process.env.BASE_URL}/api/paylink`,
-        {
-          amount,
-          currency: "PLN",
-          orderId,
-          email: req.user.email,
-          expiryDate,
-        }
-      );
-
+      const paylink = await createPaylink({
+        amount,
+        currency: "PLN",
+        orderId,
+        email: req.user.email,
+        expiryDate,
+      });
+      if (!paylink || typeof paylink !== "string") {
+        return res
+          .status(502)
+          .json({ error: "Elavon не повернув лінк оплати" });
+      }
       // 🔸 Записати платіж для привʼязки до order (але не для обробки карти)
       const payment = await Payment.create({
         userId: req.user.id,
         orderId,
         amount,
         paymentMethod,
-        status: "waiting_for_payment",
+        status: "pending",
+
         transactionId: orderId, // або унікальний Elavon ID, якщо є
       });
 
       return res.status(201).json({
         message: "✅ Посилання на оплату створено",
-        payLink: paylinkRes.data.payLink,
+        payLink: payLink,
         paymentId: payment._id,
       });
     }
@@ -123,12 +134,12 @@ router.post("/confirm/:orderId", authenticateUser, async (req, res) => {
     const pdfPath = await generateInvoicePDF(invoice, "individual");
     invoice.filePath = pdfPath;
 
-    // ☁️ Завантаження в Google Drive
-    const fileUrl = await uploadToDrive(
-      pdfPath,
-      `${invoice.invoiceNumber}.pdf`
-    );
-    invoice.fileUrl = fileUrl;
+    // // ☁️ Завантаження в Google Drive
+    // const fileUrl = await uploadToDrive(
+    //   pdfPath,
+    //   `${invoice.invoiceNumber}.pdf`
+    // );
+    // invoice.fileUrl = fileUrl;
 
     await invoice.save();
 

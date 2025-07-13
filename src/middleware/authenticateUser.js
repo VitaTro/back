@@ -40,7 +40,12 @@ const authenticateUser = async (req, res, next) => {
 
         // ✅ Генеруємо новий accessToken
         const newAccessToken = jwt.sign(
-          { id: user.id, username: user.username, role: user.role },
+          {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            email: user.email,
+          },
           process.env.JWT_SECRET,
           { expiresIn: "30d" }
         );

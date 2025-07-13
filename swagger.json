@@ -44,7 +44,7 @@
       "description": "Фінансовий дашборд, аналітика, маржа, виторг та прибуток."
     },
     {
-      "name": "Stock",
+      "name": "StockMovement",
       "description": "Рух товарів: закупка, продаж, списання, повернення."
     },
     {
@@ -912,10 +912,132 @@
       }
     },
     "/api/admin/stock/movement": {
+      "get": {
+        "tags": ["StockMovement"],
+        "summary": "Отримати всі складські рухи",
+        "responses": {
+          "200": {
+            "description": "Список рухів успішно отримано"
+          }
+        }
+      },
       "post": {
-        "tags": ["Stock"],
-        "summary": "Додати рух товару (складська операція)",
-        "description": "Додає запис руху товару: закупка, продаж, повернення, списання тощо.",
+        "tags": ["StockMovement"],
+        "summary": "Створити один запис руху",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["productIndex", "productName", "type", "quantity"],
+                "properties": {
+                  "productIndex": { "type": "string" },
+                  "productName": { "type": "string" },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "purchase",
+                      "sale",
+                      "restock",
+                      "return",
+                      "writeOff"
+                    ]
+                  },
+                  "quantity": { "type": "number" },
+                  "price": { "type": "number" },
+                  "unitSalePrice": { "type": "number" },
+                  "unitPurchasePrice": { "type": "number" },
+                  "note": { "type": "string" },
+                  "relatedSaleId": { "type": "string" },
+                  "saleSource": { "type": "string" },
+                  "date": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Рух успішно створено"
+          }
+        }
+      }
+    },
+    "/api/admin/stock/movement/bulk": {
+      "post": {
+        "tags": ["StockMovement"],
+        "summary": "Масове додавання рухів",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/StockMovement" }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Масове додавання завершено"
+          }
+        }
+      }
+    },
+    "/api/admin/stock/movement/product/{productIndex}": {
+      "get": {
+        "tags": ["StockMovement"],
+        "summary": "Отримати історію рухів по SKU",
+        "parameters": [
+          {
+            "name": "productIndex",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Історія рухів отримана"
+          }
+        }
+      }
+    },
+    "/api/admin/stock/movement/index/{productIndex}/summary": {
+      "get": {
+        "tags": ["StockMovement"],
+        "summary": "Отримати звіт по SKU",
+        "parameters": [
+          {
+            "name": "productIndex",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Звіт сформовано успішно"
+          }
+        }
+      }
+    },
+    "/api/admin/stock/movement/{id}": {
+      "put": {
+        "tags": ["StockMovement"],
+        "summary": "Оновити рух товару",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -923,78 +1045,37 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "product": {
-                    "type": "string",
-                    "example": "64b901d82f813b71d55f1d4c"
-                  },
-                  "date": {
-                    "type": "string",
-                    "format": "date-time",
-                    "example": "2025-07-01T10:00:00.000Z"
-                  },
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "purchase",
-                      "sale",
-                      "return",
-                      "writeOff",
-                      "restock"
-                    ],
-                    "example": "purchase"
-                  },
-                  "quantity": {
-                    "type": "number",
-                    "example": 5
-                  },
-                  "unitPrice": {
-                    "type": "number",
-                    "example": 3.5
-                  },
-                  "note": {
-                    "type": "string",
-                    "example": "Повернення від клієнта"
-                  },
-                  "relatedSaleId": {
-                    "type": "string",
-                    "example": "64c38c0e54eddb001e109ac8"
-                  },
-                  "saleSource": {
-                    "type": "string",
-                    "enum": ["OnlineSale", "OfflineSale"],
-                    "example": "OnlineSale"
-                  }
-                },
-                "required": ["product", "type", "quantity"]
+                  "type": { "type": "string" },
+                  "quantity": { "type": "number" },
+                  "date": { "type": "string", "format": "date-time" },
+                  "unitPurchasePrice": { "type": "number" },
+                  "unitSalePrice": { "type": "number" },
+                  "note": { "type": "string" }
+                }
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Рух товару успішно зафіксовано.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "Stock movement recorded"
-                    },
-                    "movement": {
-                      "$ref": "#/components/schemas/StockMovement"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Не заповнені обов'язкові поля."
-          },
-          "500": {
-            "description": "Помилка при записі руху товару."
+          "200": {
+            "description": "Рух оновлено"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["StockMovement"],
+        "summary": "Видалити запис руху",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Рух успішно видалено"
           }
         }
       }

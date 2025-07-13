@@ -9,15 +9,32 @@ const onlineOrderSchema = new mongoose.Schema(
     },
     products: [
       {
+        _id: false,
         productId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Product",
           required: true,
         },
-        quantity: { type: Number, required: true, min: 1 },
+        index: { type: String, required: true },
+        name: { type: String, required: true },
+        photoUrl: { type: String, required: true },
+        quantity: { type: Number, required: true },
+
+        price: { type: Number, required: true },
+        color: { type: String },
       },
     ],
     totalQuantity: { type: Number, required: true, default: 0 },
+    totalPrice: { type: Number, required: true },
+    buyerType: {
+      type: String,
+      enum: ["anonim", "przedsiębiorca"],
+      default: "anonim",
+    },
+    buyerName: { type: String },
+    buyerAddress: { type: String },
+    buyerNIP: { type: String },
+
     status: {
       type: String,
       enum: [
@@ -53,7 +70,7 @@ const onlineOrderSchema = new mongoose.Schema(
         updatedAt: { type: Date, default: Date.now },
       },
     ],
-    totalPrice: { type: Number, required: true },
+
     paymentStatus: {
       type: String,
       enum: ["paid", "unpaid"],

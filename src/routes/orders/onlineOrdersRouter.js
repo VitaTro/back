@@ -8,6 +8,7 @@ const { getIo } = require("../../config/socket");
 const { handleSaleStockByIndex } = require("../../controller/stockController");
 const StockMovement = require("../../schemas/accounting/stockMovement");
 const Product = require("../../schemas/product");
+const { calculateStock } = require("../../services/calculateStock");
 // ✅ Отримати всі онлайн-замовлення з пагінацією і фільтром
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
@@ -52,22 +53,52 @@ router.get("/:id", authenticateAdmin, async (req, res) => {
 // ✅ Створити нове онлайн-замовлення
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
-    const {
-      userId,
-      products,
-      totalPrice,
-      paymentMethod,
-      deliveryType,
-      deliveryAddress,
-    } = req.body;
+    const { userId, products, paymentMethod, deliveryType, deliveryAddress } =
+      req.body;
 
-    if (!userId || !products || products.length === 0) {
-      return res.status(400).json({ error: "Invalid order data" });
+    const enrichedProducts = [];
+    let totalPrice = 0;
+    for (const item of products) {
+      const lastMovement = await StockMovement.findOne({
+        productId: item.productId,
+        type: { $in: ["sale", "purchase"] },
+      }).sort({ date: -1 });
+
+      if (
+        !lastMovement ||
+        !lastMovement.productIndex ||
+        !lastMovement.productName
+      ) {
+        return res
+          .status(400)
+          .json({ error: `❌ Немає руху товару ${item.productId}` });
+      }
+      const stockLevel = await calculateStock(lastMovement.productIndex);
+      if (stockLevel < item.quantity) {
+        return res.status(400).json({
+          error: `🚫 Недостатньо залишку для ${lastMovement.productName}`,
+        });
+      }
+
+      const unitPrice =
+        lastMovement.unitSalePrice || lastMovement.unitPurchasePrice || 0;
+      totalPrice += unitPrice * item.quantity;
+
+      const visualProduct = await Product.findById(item.productId);
+
+      enrichedProducts.push({
+        productId: item.productId,
+        index: lastMovement.productIndex,
+        name: lastMovement.productName,
+        quantity: item.quantity,
+        price: unitPrice,
+        photoUrl: visualProduct?.photoUrl || "",
+      });
     }
-
     const newOrder = new OnlineOrder({
       userId,
-      products,
+      products: enrichedProducts,
+      totalQuantity: enrichedProducts.reduce((sum, p) => sum + p.quantity, 0),
       totalPrice,
       paymentStatus: "unpaid",
       paymentMethod,
@@ -86,7 +117,6 @@ router.post("/", authenticateAdmin, async (req, res) => {
 });
 
 // ✅ Оновити статус замовлення
-
 router.patch("/:id/status", authenticateAdmin, async (req, res) => {
   try {
     const { status } = req.body;
@@ -227,7 +257,6 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
     if (!order) {
       return res.status(404).json({ error: "❌ Замовлення не знайдено" });
     }
-
     if (status && !validStatuses.includes(status)) {
       return res.status(400).json({ error: "❌ Некоректний статус" });
     }
@@ -242,8 +271,6 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
     if (deliveryAddress) order.deliveryAddress = deliveryAddress;
 
     await order.save();
-    console.log("✅ Замовлення оновлено:", order);
-
     res.status(200).json({ message: "✅ Замовлення успішно оновлено!", order });
   } catch (error) {
     console.error("🔥 Помилка оновлення замовлення:", error);
@@ -252,8 +279,6 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
 });
 
 router.put("/:id", authenticateAdmin, async (req, res) => {
-  console.log("🛠️ Повне оновлення замовлення:", req.params.id);
-
   try {
     const updatedOrderData = req.body;
 
@@ -261,8 +286,6 @@ router.put("/:id", authenticateAdmin, async (req, res) => {
     if (!order) {
       return res.status(404).json({ error: "❌ Замовлення не знайдено" });
     }
-
-    // ✅ Додаємо зміну статусу до `statusHistory`
     if (updatedOrderData.status && updatedOrderData.updatedBy) {
       order.statusHistory.push({
         status: updatedOrderData.status,
@@ -271,11 +294,9 @@ router.put("/:id", authenticateAdmin, async (req, res) => {
       });
     }
 
-    // ✅ Перезаписуємо замовлення (але не торкаємося `_id`)
     Object.assign(order, updatedOrderData);
     await order.save();
 
-    console.log("✅ Замовлення повністю оновлено!");
     res.status(200).json({ message: "✅ Замовлення оновлено!", order });
   } catch (error) {
     console.error("🔥 Помилка оновлення:", error);

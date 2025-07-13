@@ -23,14 +23,14 @@ const FinanceSettingsRouter = require("./src/routes/finance/financeSettingsRoute
 const AdminAuthRouter = require("./src/routes/auth/adminAuthRouter");
 const UserAuthRouter = require("./src/routes/auth/userAuthRouter");
 const ProfileRouter = require("./src/routes/user/profileRouter");
-const PaymentRouter = require("./src/routes/paymentRouter");
+const PaymentRouter = require("./src/routes/payment/paymentRouter");
 const { authenticateUser } = require("./src/middleware/authenticateUser");
 const MainRouter = require("./src/routes/mainRouter");
 const InvoicesRouter = require("./src/routes/accounting/invoiceRouter");
 const ExpenseRouter = require("./src/routes/finance/expenseRouter");
 const PublicRouter = require("./src/routes/publicRouter");
 const AllegroRouter = require("./src/routes/allegroRouter");
-const PaylinkRouter = require("./src/routes/paylinkRouter");
+
 const app = express();
 
 const allowedOrigins = [
@@ -104,7 +104,7 @@ app.use("/api/admin/finance/settings", FinanceSettingsRouter);
 app.use("/api/public", PublicRouter);
 app.use("/api/allegro", AllegroRouter);
 app.use("/api/admin/reporting", ReportingRouter);
-app.use("/api/paylink", PaylinkRouter);
+
 app.post("/upload", upload.single("photo"), (req, res) => {
   try {
     if (!req.file) {

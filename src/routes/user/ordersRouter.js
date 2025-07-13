@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const dotenv = require("dotenv");
+const axios = require("axios");
 const { getAllPoints, trackShipment } = require("../../config/inpostService");
 const {
   sendAdminOrderNotification,
@@ -8,14 +9,17 @@ const {
 } = require("../../config/emailService");
 const { authenticateUser } = require("../../middleware/authenticateUser");
 const { getIo } = require("../../config/socket");
-
+const StockMovement = require("../../schemas/accounting/stockMovement");
 const User = require("../../schemas/userSchema");
 const OnlineOrder = require("../../schemas/orders/onlineOrders");
 const OnlineSale = require("../../schemas/sales/onlineSales");
 const Product = require("../../schemas/product");
 const Payment = require("../../schemas/paymentSchema");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
+const { calculateStock } = require("../../services/calculateStock");
+const { createPaylink } = require("../../services/elavonService");
 require("dotenv").config();
+
 // ✅ Отримати всі замовлення користувача
 router.get("/", authenticateUser, async (req, res) => {
   try {
@@ -51,7 +55,6 @@ router.post("/", authenticateUser, async (req, res) => {
   try {
     const {
       products,
-      totalPrice,
       pickupPointId,
       deliveryType,
       deliveryAddress,
@@ -59,10 +62,12 @@ router.post("/", authenticateUser, async (req, res) => {
       notes,
     } = req.body;
 
-    // 🔎 Валідація доставки (можна потім замінити Joi)
-    if (deliveryType === "pickup" && !pickupPointId) {
+    if (!products || products.length === 0)
+      return res.status(400).json({ error: "Не передано товари" });
+
+    if (deliveryType === "pickup" && !pickupPointId)
       return res.status(400).json({ error: "Pickup point is required" });
-    }
+
     if (deliveryType === "courier") {
       const requiredFields = ["postalCode", "city", "street", "houseNumber"];
       for (const field of requiredFields) {
@@ -73,24 +78,70 @@ router.post("/", authenticateUser, async (req, res) => {
         }
       }
     }
+
     if (deliveryType === "smartbox") {
-      if (!smartboxDetails?.boxId || !smartboxDetails?.location) {
+      if (!smartboxDetails?.boxId || !smartboxDetails?.location)
         return res
           .status(400)
           .json({ error: "Missing smartbox delivery details" });
-      }
     }
 
-    // 🧮 Підрахунок загальної кількості
-    const totalQuantity = products.reduce(
-      (sum, item) => sum + item.quantity,
+    const enrichedProducts = [];
+    let totalPrice = 0;
+
+    for (const item of products) {
+      const lastMovement = await StockMovement.findOne({
+        productId: item.productId,
+        type: { $in: ["sale", "purchase"] },
+      }).sort({ date: -1 });
+
+      if (
+        !lastMovement ||
+        !lastMovement.productIndex ||
+        !lastMovement.productName
+      ) {
+        return res
+          .status(400)
+          .json({ error: `Немає рухів по товару ${item.productId}` });
+      }
+
+      const stockLevel = await calculateStock(lastMovement.productIndex);
+      if (stockLevel < item.quantity) {
+        return res.status(400).json({
+          error: `Недостатньо на складі: ${lastMovement.productName}`,
+        });
+      }
+
+      const product = await Product.findById(item.productId);
+
+      const unitPrice =
+        product?.lastRetailPrice ??
+        lastMovement.unitSalePrice ??
+        lastMovement.price ??
+        product?.price ??
+        lastMovement.unitPurchasePrice ??
+        0;
+
+      totalPrice += unitPrice * item.quantity;
+
+      enrichedProducts.push({
+        productId: item.productId,
+        index: lastMovement.productIndex,
+        name: lastMovement.productName,
+        quantity: item.quantity,
+        price: unitPrice,
+        photoUrl: product?.photoUrl || "",
+      });
+    }
+
+    const totalQuantity = enrichedProducts.reduce(
+      (sum, p) => sum + p.quantity,
       0
     );
 
-    // 📝 Створення замовлення
-    const newOrder = await OnlineOrder.create({
+    const newOrder = new OnlineOrder({
       userId: req.user.id,
-      products,
+      products: enrichedProducts,
       totalPrice,
       totalQuantity,
       paymentMethod: "elavon_link",
@@ -102,15 +153,17 @@ router.post("/", authenticateUser, async (req, res) => {
       status: "new",
     });
 
-    // 📩 Оновлення адреси користувача
-    await User.findByIdAndUpdate(req.user.id, { address: deliveryAddress });
+    await newOrder.save();
 
-    // 💳 Генерація Pay-by-Link через Elavon
+    await User.findByIdAndUpdate(req.user.id, {
+      address: deliveryAddress,
+    });
+
     const expiryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split("T")[0];
 
-    const paylinkRes = await axios.post(`${process.env.BASE_URL}/api/paylink`, {
+    const payLink = await createPaylink({
       amount: totalPrice,
       currency: "PLN",
       orderId: newOrder.orderId,
@@ -118,21 +171,20 @@ router.post("/", authenticateUser, async (req, res) => {
       expiryDate,
     });
 
-    newOrder.payLink = paylinkRes.data.payLink;
+    newOrder.payLink = payLink;
     await newOrder.save();
 
-    // 📬 Email адміну
     await sendAdminOrderNotification(newOrder);
 
-    return res.status(201).json({
-      message: "✅ Замовлення створено та очікує оплату",
+    res.status(201).json({
+      message: "✅ Замовлення створено і перевірено по складу",
       order: newOrder,
       payLink: newOrder.payLink,
     });
   } catch (error) {
-    console.error("Order creation error:", error);
-    return res.status(500).json({
-      error: error.message || "Failed to create order",
+    console.error("❌ Помилка створення замовлення:", error);
+    res.status(500).json({
+      error: error.message || "Не вдалося створити замовлення",
     });
   }
 });
@@ -141,45 +193,90 @@ router.post("/", authenticateUser, async (req, res) => {
 router.put("/:orderId/return", authenticateUser, async (req, res) => {
   try {
     const { returnedProducts, refundAmount } = req.body;
-
+    if (!returnedProducts?.length) {
+      return res
+        .status(400)
+        .json({ error: "Не вибрано товари для повернення" });
+    }
     const order = await OnlineOrder.findOne({
       _id: req.params.orderId,
       userId: req.user.id,
-      status: "paid",
+      status: { $in: ["completed", "paid", "shipped"] },
     });
-    if (!order)
-      return res.status(404).json({ error: "Order not eligible for return" });
-    if (!returnedProducts?.length)
-      return res.status(400).json({ error: "No products selected" });
+    if (!order) {
+      return res
+        .status(404)
+        .json({ error: "❌ Замовлення не підходить для повернення" });
+    }
 
-    await Promise.all(
-      returnedProducts.map((product) =>
-        Product.updateOne(
-          { _id: product.productId },
-          { $inc: { stock: product.quantity } }
-        )
-      )
-    );
+    let totalRefunded = 0;
 
+    for (const returned of returnedProducts) {
+      const originalItem = order.products.find(
+        (p) => p.productId.toString() === returned.productId
+      );
+
+      if (!originalItem) {
+        return res.status(400).json({
+          error: `❌ Товар не знайдено в замовленні: ${returned.productId}`,
+        });
+      }
+      if (returned.quantity > originalItem.quantity) {
+        return res.status(400).json({
+          error: `🚫 Кількість повернення перевищує куплену для ${originalItem.name}`,
+        });
+      }
+
+      await StockMovement.create({
+        productId: originalItem.productId,
+        productIndex: originalItem.index,
+        productName: originalItem.name,
+        quantity: returned.quantity,
+        type: "return",
+        unitPurchasePrice: originalItem.price,
+        price: originalItem.price,
+        saleSource: "OnlineSale",
+        relatedSaleId: order._id,
+        date: new Date(),
+        note: "Повернення товару користувачем",
+      });
+
+      // 🧮 Оновлюємо продукт через calculateStock
+      const productDoc = await Product.findById(originalItem.productId);
+      if (productDoc) {
+        const stockCount = await calculateStock(originalItem.index);
+        productDoc.quantity = stockCount;
+        productDoc.currentStock = stockCount;
+        productDoc.inStock = stockCount > 0;
+        await productDoc.save();
+      }
+
+      totalRefunded += returned.quantity * originalItem.price;
+    }
+
+    // 💳 Оновлення статусу платежу, якщо є
     const payment = await Payment.findOne({ orderId: req.params.orderId });
     if (payment) {
       payment.status = "refunded";
-      payment.refundAmount = refundAmount;
+      payment.refundAmount = refundAmount || totalRefunded;
       await payment.save();
     }
 
     order.status = "returned";
-    order.refundAmount = refundAmount;
+    order.refundAmount = refundAmount || totalRefunded;
     await order.save();
 
     await sendAdminReturnNotification(order);
 
-    res.status(200).json({ message: "Return processed successfully", order });
-  } catch {
-    res.status(500).json({ error: "Failed to process return" });
+    return res.status(200).json({
+      message: "✅ Повернення успішно оброблено",
+      order,
+    });
+  } catch (error) {
+    console.error("🔥 Помилка обробки повернення:", error);
+    return res.status(500).json({ error: "❌ Не вдалося обробити повернення" });
   }
 });
-
 // ✅ Користувач підтверджує отримання
 router.patch("/:id/received", authenticateUser, async (req, res) => {
   try {
