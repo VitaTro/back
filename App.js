@@ -30,7 +30,7 @@ const InvoicesRouter = require("./src/routes/accounting/invoiceRouter");
 const ExpenseRouter = require("./src/routes/finance/expenseRouter");
 const PublicRouter = require("./src/routes/publicRouter");
 const AllegroRouter = require("./src/routes/allegroRouter");
-
+const InvoiceArchiveRouter = require("./src/routes/admin/invoiceArchiveRouter");
 const app = express();
 
 const allowedOrigins = [
@@ -104,7 +104,7 @@ app.use("/api/admin/finance/settings", FinanceSettingsRouter);
 app.use("/api/public", PublicRouter);
 app.use("/api/allegro", AllegroRouter);
 app.use("/api/admin/reporting", ReportingRouter);
-
+app.use("/api/admin/invoices", InvoiceArchiveRouter);
 app.post("/upload", upload.single("photo"), (req, res) => {
   try {
     if (!req.file) {

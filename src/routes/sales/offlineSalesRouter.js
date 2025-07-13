@@ -37,7 +37,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
     const order = await OfflineOrder.findById(orderId);
     if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+      return res.status(404).json({ error: "❌ Замовлення не знайдено" });
     }
 
     if (order.status !== "pending") {

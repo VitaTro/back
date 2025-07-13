@@ -11,11 +11,11 @@ const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 const Invoice = require("../../schemas/accounting/InvoiceSchema");
 const StockMovement = require("../../schemas/accounting/stockMovement");
 const { calculateStock } = require("../../services/calculateStock");
+const generateUniversalInvoice = require("../../services/generateUniversalInvoice");
 
 // 🔍 Отримати всі онлайн продажі
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
-    console.log("🔍 Fetching online sales...");
     const onlineSales = await OnlineSale.find()
       .populate({
         path: "products.productId",
@@ -23,6 +23,9 @@ router.get("/", authenticateAdmin, async (req, res) => {
       })
       .populate("processedBy");
 
+    if (!onlineSales.length) {
+      return res.status(404).json({ error: "No online sales available" });
+    }
     console.log("✅ Online sales fetched:", onlineSales);
     res.status(200).json(onlineSales);
   } catch (error) {
@@ -139,23 +142,29 @@ router.post("/", authenticateAdmin, async (req, res) => {
     );
 
     // 📄 Генеруємо фактуру
-    const invoice = new Invoice({
-      orderId: onlineOrderId,
-      invoiceType: "online",
-      totalAmount,
-      paymentMethod: order.paymentMethod,
+    // const invoice = new Invoice({
+    //   orderId: onlineOrderId,
+    //   invoiceType: "online",
+    //   totalAmount,
+    //   paymentMethod: order.paymentMethod,
+    //   buyerType: order.buyerType,
+    //   buyerName: order.buyerName,
+    //   buyerAddress: order.buyerAddress,
+    //   buyerNIP: order.buyerNIP,
+    // });
+
+    // await invoice.save();
+    const invoice = await generateUniversalInvoice(order, {
+      mode: "online",
       buyerType: order.buyerType,
       buyerName: order.buyerName,
       buyerAddress: order.buyerAddress,
       buyerNIP: order.buyerNIP,
     });
-
-    await invoice.save();
-
     return res.status(201).json({
       message: "✅ Онлайн-продаж завершено",
       sale: onlineSale,
-      invoice,
+      invoice: invoice,
     });
   } catch (error) {
     console.error("🔥 Помилка створення онлайн-продажу:", error);
@@ -240,7 +249,6 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
         console.log("⚠️ Online order is already in OnlineSales, skipping...");
       }
     }
-    console.log("🔍 Adding online order ID to FinanceOverview...");
     await FinanceOverview.updateOne(
       {},
       {
@@ -264,7 +272,6 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
   try {
     const { returnedProducts, refundAmount } = req.body;
     const sale = await OnlineSale.findById(req.params.id);
-
     if (!sale) return res.status(404).json({ error: "❌ Продаж не знайдено" });
     if (sale.status === "returned")
       return res
@@ -281,56 +288,63 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
       if (returnedItem) {
         if (returnedItem.quantity > product.quantity) {
           return res.status(400).json({
-            error: `❌ Кількість повернених товарів перевищує куплену!`,
+            error: `❌ Кількість повернених товарів перевищує куплену`,
           });
         }
 
-        // 🔄 Оновлюємо склад
-        await Product.updateOne(
-          { _id: product.productId },
-          { $inc: { stock: returnedItem.quantity } }
-        );
+        // 📦 Створюємо рух повернення на склад
+        await StockMovement.create({
+          productId: product.productId,
+          productIndex: product.index,
+          productName: product.name,
+          quantity: returnedItem.quantity,
+          type: "return",
+          unitPurchasePrice: product.price,
+          price: product.price,
+          relatedSaleId: sale._id,
+          saleSource: "OnlineSale",
+          date: new Date(),
+          note: "Повернення після онлайн-продажу",
+        });
 
-        // 💰 Оновлення загальної суми повернення
-        totalRefunded += returnedItem.quantity * product.salePrice;
+        // 💰 Облік суми повернення
+        totalRefunded += returnedItem.quantity * product.price;
         product.quantity -= returnedItem.quantity;
       }
     }
 
-    // 💵 Оновлення фінансів
     await FinanceOverview.updateOne(
       {},
       { $inc: { totalRevenue: -totalRefunded } }
     );
 
-    // 📌 Видаляємо товари, які повністю повернули
     sale.products = sale.products.filter((p) => p.quantity > 0);
     sale.returnedItems = returnedProducts;
-
     if (sale.products.length === 0) {
-      sale.status = "returned"; // Якщо всі товари повернені, змінюємо статус
+      sale.status = "returned";
     }
 
     await sale.save();
 
-    res.status(200).json({ message: "✅ Товар частково повернено", sale });
+    res.status(200).json({ message: "✅ Товар повернуто", sale });
   } catch (error) {
-    console.error("🔥 Помилка повернення:", error);
-    res.status(500).json({ error: "❌ Не вдалося повернути товар" });
+    console.error("🔥 Error during return:", error);
+    res.status(500).json({ error: "❌ Не вдалося обробити повернення" });
   }
 });
-router.get("/invoices", authenticateAdmin, async (req, res) => {
-  try {
-    const invoices = await Invoice.find()
-      .sort({ issueDate: -1 })
-      .populate("userId", "fullName email") // якщо хочеш бачити юзера
-      .populate("orderId", "products totalPrice"); // якщо потрібно підтягнути замовлення
 
-    res.status(200).json(invoices);
-  } catch (error) {
-    console.error("❌ Failed to fetch invoices:", error);
-    res.status(500).json({ error: "Failed to fetch invoices" });
-  }
-});
+// router.get("/invoices", authenticateAdmin, async (req, res) => {
+//   try {
+//     const invoices = await Invoice.find()
+//       .sort({ issueDate: -1 })
+//       .populate("userId", "fullName email") // якщо хочеш бачити юзера
+//       .populate("orderId", "products totalPrice"); // якщо потрібно підтягнути замовлення
+
+//     res.status(200).json(invoices);
+//   } catch (error) {
+//     console.error("❌ Failed to fetch invoices:", error);
+//     res.status(500).json({ error: "Failed to fetch invoices" });
+//   }
+// });
 
 module.exports = router;
