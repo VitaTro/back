@@ -24,10 +24,12 @@ router.get("/", authenticateAdmin, async (req, res) => {
       .populate("processedBy");
 
     if (!onlineSales.length) {
-      return res.status(404).json({ error: "No online sales available" });
+      return res
+        .status(200)
+        .json({ message: "No online sales available", sales: [] });
     }
     console.log("✅ Online sales fetched:", onlineSales);
-    res.status(200).json(onlineSales);
+    res.status(200).json({ sales: onlineSales });
   } catch (error) {
     console.error("🔥 Error in fetching online sales:", error);
     res.status(500).json({ error: "Failed to fetch online sales" });
