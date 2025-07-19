@@ -122,7 +122,6 @@ router.post("/", authenticateAdmin, async (req, res) => {
         note: "Списання при продажу",
       });
 
-      // 🧮 Синхронізація продукту зі складом
       const productDoc = await Product.findById(product.productId);
       if (productDoc) {
         const stockCount = await calculateStock(product.index);
@@ -142,6 +141,8 @@ router.post("/", authenticateAdmin, async (req, res) => {
       { upsert: true }
     );
 
+    // 📌 Фактура створюється вручну при потребі — цей блок залишено на всякий випадок
+    /*
     const invoice = new Invoice({
       orderId,
       invoiceType: "offline",
@@ -157,6 +158,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
     await invoice.validate();
     await invoice.save();
+    */
 
     order.status = "completed";
     await order.save();
@@ -164,7 +166,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
     res.status(201).json({
       message: "Продаж успішно завершено",
       sale,
-      invoice,
+      // invoice, // якщо колись згенеруєш
     });
   } catch (error) {
     console.error("🔥 Error completing sale:", error);

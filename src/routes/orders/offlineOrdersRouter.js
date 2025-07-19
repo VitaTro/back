@@ -37,6 +37,7 @@ router.get("/:id", authenticateAdmin, async (req, res) => {
 });
 
 // 🔹 POST: Створити нове офлайн-замовлення
+// 🔹 POST: Створити нове офлайн-замовлення
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
     const {
@@ -49,7 +50,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       saleDate,
     } = req.body;
 
-    const validMethods = ["BLIK", "bank_transfer"];
+    const validMethods = ["BLIK", "bank_transfer", "terminal"];
     if (!validMethods.includes(paymentMethod)) {
       return res.status(400).json({ error: "Invalid payment method" });
     }
@@ -58,7 +59,6 @@ router.post("/", authenticateAdmin, async (req, res) => {
     let totalAmount = 0;
 
     for (const item of products) {
-      // 🔍 Знайти останній складський рух по товару
       const lastMovement = await StockMovement.findOne({
         productId: item.productId,
         type: { $in: ["sale", "purchase"] },
@@ -83,14 +83,13 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
       const unitPrice =
         lastMovement.unitSalePrice ||
-        lastMovement.price || // 💸 ← це твій 58
+        lastMovement.price ||
         productData?.lastRetailPrice ||
         lastMovement.unitPurchasePrice ||
         0;
 
       totalAmount += unitPrice * item.quantity;
 
-      // 🔧 Тягнемо тільки декоративні дані з Product (фото тощо)
       const productVisual = await Product.findById(item.productId);
 
       enrichedProducts.push({
@@ -99,7 +98,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         name: lastMovement?.productName || item.name,
         photoUrl: productVisual?.photoUrl || "",
         quantity: item.quantity,
-        price: unitPrice, // ✅ з руху
+        price: unitPrice,
       });
     }
 
@@ -107,7 +106,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       products: enrichedProducts,
       totalPrice: totalAmount,
       paymentMethod,
-      status: "pending", // 🔹 важливо: не completed!
+      status: "pending",
       buyerType,
       saleDate,
       ...(buyerType === "przedsiębiorca" && {
@@ -116,6 +115,14 @@ router.post("/", authenticateAdmin, async (req, res) => {
         buyerNIP,
       }),
     });
+
+    // 📌 Фактури генеруються вручну. Цей блок залишено на випадок майбутніх змін.
+    /*
+    if (paymentMethod !== "terminal") {
+      const invoice = await generateUniversalInvoice(order);
+      await Invoice.create(invoice);
+    }
+    */
 
     res.status(201).json({ message: "Offline order created", order });
   } catch (error) {
