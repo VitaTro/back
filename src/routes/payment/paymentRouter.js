@@ -9,9 +9,12 @@ const Invoice = require("../../schemas/accounting/InvoiceSchema");
 const { createPaylink } = require("../../services/elavonService");
 
 // ✅ Ініціювати оплату
+// ✅ Ініціювати оплату (Elavon або банківський переказ)
 router.post("/initiate", authenticateUser, async (req, res) => {
   try {
     const { orderId, paymentMethod } = req.body;
+
+    // 📦 Отримати замовлення
     const order = await OnlineOrder.findById(orderId);
     if (!order) return res.status(404).json({ error: "Order not found" });
 
@@ -20,52 +23,74 @@ router.post("/initiate", authenticateUser, async (req, res) => {
       return res.status(400).json({ error: "Invalid payment data" });
     }
 
-    // 🔹 Тільки Elavon
+    // 🟢 Elavon оплата
     if (paymentMethod === "elavon_link") {
       const expiryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
         .toISOString()
         .split("T")[0];
-      console.log("💳 Creating paylink with", {
-        orderId,
-        amount,
-        email: req.user.email,
-      });
 
-      const paylink = await createPaylink({
+      const payLink = await createPaylink({
         amount,
         currency: "PLN",
         orderId,
         email: req.user.email,
         expiryDate,
       });
-      if (!paylink || typeof paylink !== "string") {
+
+      if (!payLink || typeof payLink !== "string") {
         return res
           .status(502)
           .json({ error: "Elavon не повернув лінк оплати" });
       }
-      // 🔸 Записати платіж для привʼязки до order (але не для обробки карти)
+
       const payment = await Payment.create({
         userId: req.user.id,
         orderId,
         amount,
-        paymentMethod,
+        paymentMethod: "elavon_link",
         status: "pending",
-
-        transactionId: orderId, // або унікальний Elavon ID, якщо є
+        transactionId: orderId,
       });
 
       return res.status(201).json({
-        message: "✅ Посилання на оплату створено",
-        payLink: payLink,
+        message: "✅ Посилання Elavon створено",
+        payLink,
         paymentId: payment._id,
       });
     }
 
-    // 🔸 Якщо передали старі методи (тимчасово допустимо)
+    // 🟡 Банківський переказ
+    if (paymentMethod === "bank_transfer") {
+      const payment = await Payment.create({
+        userId: req.user.id,
+        orderId,
+        amount,
+        paymentMethod: "bank_transfer",
+        status: "pending",
+        transactionId: `BT-${orderId}`,
+      });
+
+      const bankDetails = {
+        bankName: "Credit Agricole",
+        iban: "PL27194010763280694000000000",
+        swift: "AGRIPLPR",
+        recipientName: "Nika Gold", // ✅ Отримувач
+        reference: `ZAMÓWIENIE #${order._id}`, // ✅ Титул переказу (номер замовлення)
+        amount,
+        currency: "PLN",
+      };
+      return res.status(201).json({
+        message: "✅ Дані для переказу створено",
+        bankDetails,
+        paymentId: payment._id,
+      });
+    }
+
+    // 🚫 Не підтримується
     return res.status(400).json({ error: "Unsupported payment method" });
   } catch (error) {
     console.error("❌ Payment initiation error:", error);
-    res.status(500).json({ error: "Failed to initiate Elavon payment" });
+    res.status(500).json({ error: "Failed to initiate payment" });
   }
 });
 
