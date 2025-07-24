@@ -31,6 +31,7 @@ const ExpenseRouter = require("./src/routes/finance/expenseRouter");
 const PublicRouter = require("./src/routes/publicRouter");
 const AllegroRouter = require("./src/routes/allegroRouter");
 const InvoiceArchiveRouter = require("./src/routes/admin/invoiceArchiveRouter");
+// const ElavonRouter = require("./src/routes/payment/elavonRouter");
 const app = express();
 
 const allowedOrigins = [
@@ -92,6 +93,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api", SearchRouter);
 app.use("/api/products", FilterRouter);
 app.use("/api/admin", AdminRouter);
+// app.use("/api/pay-session", ElavonRouter);
 app.use("/api/admin/accounting/monthly-report", MonthlyReportRouter);
 app.use("/api/admin/finance/online/orders", OnlineOrdersFinanceRouter);
 app.use("/api/admin/finance/online/sales", OnlineSalesFinanceRouter);

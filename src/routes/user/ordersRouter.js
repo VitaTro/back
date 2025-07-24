@@ -59,6 +59,7 @@ router.post("/", authenticateUser, async (req, res) => {
       deliveryType,
       deliveryAddress,
       smartboxDetails,
+      paymentMethod,
       notes,
     } = req.body;
 
@@ -144,7 +145,7 @@ router.post("/", authenticateUser, async (req, res) => {
       products: enrichedProducts,
       totalPrice,
       totalQuantity,
-      paymentMethod: "elavon_link",
+      paymentMethod,
       pickupPointId,
       deliveryType,
       deliveryAddress,
@@ -163,14 +164,36 @@ router.post("/", authenticateUser, async (req, res) => {
       .toISOString()
       .split("T")[0];
 
-    const payLink = await createPaylink({
-      amount: totalPrice,
-      currency: "PLN",
-      orderId: newOrder.orderId,
-      email: req.user.email,
-      expiryDate,
-    });
+    let payLink = null;
+    let bankDetails = null;
 
+    if (paymentMethod === "elavon_link") {
+      const expiryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0];
+
+      payLink = await createPaylink({
+        amount: totalPrice,
+        currency: "PLN",
+        orderId: newOrder.orderId,
+        email: req.user.email,
+        expiryDate,
+      });
+
+      newOrder.payLink = payLink;
+      await newOrder.save();
+    }
+
+    if (paymentMethod === "bank_transfer") {
+      bankDetails = {
+        bankName: "NIKA BANK POLSKA",
+        iban: "PL76114020040000300201355387",
+        swift: "BREXPLPWMBK",
+        reference: newOrder.orderId,
+        amount: totalPrice,
+        currency: "PLN",
+      };
+    }
     newOrder.payLink = payLink;
     await newOrder.save();
 
@@ -179,7 +202,9 @@ router.post("/", authenticateUser, async (req, res) => {
     res.status(201).json({
       message: "✅ Замовлення створено і перевірено по складу",
       order: newOrder,
-      payLink: newOrder.payLink,
+      paymentMethod,
+      payLink,
+      bankDetails,
     });
   } catch (error) {
     console.error("❌ Помилка створення замовлення:", error);

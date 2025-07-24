@@ -14,7 +14,7 @@ const onlineSaleValidationSchema = Joi.object({
     )
     .required(),
   totalAmount: Joi.number().required(),
-  paymentMethod: Joi.string().valid("elavon_link").required(),
+  paymentMethod: Joi.string().valid("elavon_link", "bank_transfer").required(),
   processedBy: Joi.string().optional(),
   status: Joi.string()
     .valid("new", "completed", "cancelled", "returned")

@@ -79,7 +79,7 @@ const onlineOrderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["elavon_link"],
+      enum: ["elavon_link", "bank_transfer"],
       required: true,
     },
     deliveryType: {

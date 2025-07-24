@@ -11,7 +11,7 @@ const PaymentSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   paymentMethod: {
     type: String,
-    enum: ["elavon_link"],
+    enum: ["elavon_link", "bank_transfer"],
     required: true,
   },
   status: {
