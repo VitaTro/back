@@ -43,12 +43,17 @@ router.post("/add", authenticateUser, async (req, res) => {
     if (exists) {
       return res.status(400).json({ error: "Product is already in wishlist" });
     }
+    const unitPrice =
+      latestStock.lastRetailPrice ??
+      latestStock.unitSalePrice ??
+      latestStock.price ??
+      0;
 
     const newItem = new Wishlist({
       userId: req.user.id,
       productId,
       name: latestStock.productName,
-      price: latestStock.price,
+      price: unitPrice,
       inStock: latestStock.quantity > 0,
       photoUrl: product.photoUrl,
       color: product.color || "default",

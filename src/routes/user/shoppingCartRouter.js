@@ -145,13 +145,18 @@ router.post("/move-to-wishlist/:id", authenticateUser, async (req, res) => {
         .status(404)
         .json({ error: "No stock data found for this product" });
     }
+    const unitPrice =
+      latestStock.lastRetailPrice ??
+      latestStock.unitSalePrice ??
+      latestStock.price ??
+      0;
 
     const newWishlistItem = new Wishlist({
       userId: req.user.id,
       productId: cartItem.productId,
       name: latestStock.productName,
       photoUrl: cartItem.photoUrl,
-      price: latestStock.price,
+      price: unitPrice,
       inStock: latestStock.quantity > 0,
       addedAt: new Date(),
     });
