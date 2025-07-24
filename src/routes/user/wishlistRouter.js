@@ -4,6 +4,7 @@ const { authenticateUser } = require("../../middleware/authenticateUser");
 const router = express.Router();
 const Product = require("../../schemas/product");
 const ShoppingCart = require("../../schemas/shopping");
+const StockMovement = require("../../schemas/accounting/stockMovement");
 
 router.get("/", authenticateUser, async (req, res) => {
   try {
