@@ -20,18 +20,25 @@ router.get("/", authenticateUser, async (req, res) => {
 router.post("/add", authenticateUser, async (req, res) => {
   try {
     const { productId, quantity } = req.body;
-    if (!productId) {
-      return res
-        .status(400)
-        .json({ error: "Product ID (productId) is required" });
-    }
-
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    // Перевірка, чи продукт вже є у списку бажань
+    if (!productId) {
+      return res
+        .status(400)
+        .json({ error: "Product ID (productId) is required" });
+    }
+    const latestStock = await StockMovement.findOne({ productId }).sort({
+      date: -1,
+    });
+
+    if (!latestStock) {
+      return res
+        .status(404)
+        .json({ error: "No stock data found for this product" });
+    }
     const exists = await Wishlist.findOne({ userId: req.user.id, productId });
     if (exists) {
       return res.status(400).json({ error: "Product is already in wishlist" });
@@ -40,12 +47,12 @@ router.post("/add", authenticateUser, async (req, res) => {
     const newItem = new Wishlist({
       userId: req.user.id,
       productId,
-      name: product.name,
+      name: latestStock.productName,
+      price: latestStock.price,
+      inStock: latestStock.quantity > 0,
       photoUrl: product.photoUrl,
       color: product.color || "default",
-      price: product.price,
       quantity: quantity || 1,
-      inStock: product.inStock,
     });
 
     await newItem.save();
@@ -81,8 +88,6 @@ router.delete("/remove/:id", authenticateUser, async (req, res) => {
 router.post("/move-to-cart/:id", authenticateUser, async (req, res) => {
   try {
     const wishlistItemId = req.params.id;
-
-    // Знаходимо елемент у списку бажань
     const wishlistItem = await Wishlist.findOne({
       _id: wishlistItemId,
       userId: req.user.id,
@@ -93,25 +98,38 @@ router.post("/move-to-cart/:id", authenticateUser, async (req, res) => {
         .json({ error: "Item not found in user's wishlist" });
     }
 
-    // Додаємо елемент до кошика
+    const latestStock = await StockMovement.findOne({
+      productId: wishlistItem.productId,
+    }).sort({ date: -1 });
+
+    if (!latestStock) {
+      return res
+        .status(404)
+        .json({ error: "No stock data found for this product" });
+    }
+    if (latestStock.quantity < 1) {
+      return res.status(400).json({ error: "Product is out of stock" });
+    }
+
     const newCartItem = new ShoppingCart({
       userId: req.user.id,
       productId: wishlistItem.productId,
-      name: wishlistItem.name,
+      name: latestStock.productName,
       photoUrl: wishlistItem.photoUrl,
-      price: wishlistItem.price,
-      quantity: 1, // Можна встановити кількість за замовчуванням
-      inStock: wishlistItem.inStock,
+      price: latestStock.price,
+      quantity: 1,
+      inStock: latestStock.quantity > 0,
       addedAt: new Date(),
     });
+
     const existsInCart = await ShoppingCart.findOne({
       userId: req.user.id,
       productId: wishlistItem.productId,
     });
     if (existsInCart) {
-      existsInCart.quantity += 1; // ✅ Оновлюємо кількість замість дублювання
+      existsInCart.quantity += 1;
       await existsInCart.save();
-      await Wishlist.findByIdAndDelete(wishlistItem._id); // ✅ Видаляємо з вішліста
+      await Wishlist.findByIdAndDelete(wishlistItem._id);
       return res.json({
         message: "Item quantity updated in cart",
         item: existsInCart,
@@ -120,7 +138,6 @@ router.post("/move-to-cart/:id", authenticateUser, async (req, res) => {
 
     await newCartItem.save();
 
-    // Видаляємо елемент зі списку бажань
     await Wishlist.findByIdAndDelete(wishlistItemId);
 
     res.json({ message: "Item moved to shopping cart", item: newCartItem });

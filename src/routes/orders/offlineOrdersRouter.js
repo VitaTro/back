@@ -37,7 +37,6 @@ router.get("/:id", authenticateAdmin, async (req, res) => {
 });
 
 // 🔹 POST: Створити нове офлайн-замовлення
-// 🔹 POST: Створити нове офлайн-замовлення
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
     const {

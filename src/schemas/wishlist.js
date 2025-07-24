@@ -7,7 +7,6 @@ const wishlistSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, // Використовуємо `_id` продукту
     ref: "Product",
     required: true,
-    unique: true,
   },
   name: {
     type: String,
@@ -43,6 +42,7 @@ const wishlistSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+wishlistSchema.index({ userId: 1, productId: 1 }, { unique: true });
 
 const Wishlist = mongoose.model("Wishlist", wishlistSchema);
 

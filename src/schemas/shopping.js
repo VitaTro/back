@@ -22,6 +22,7 @@ const shoppingCartSchema = new mongoose.Schema({
   inStock: { type: Boolean, required: true },
   color: { type: String },
   addedAt: { type: Date, default: Date.now },
+  productIndex: { type: String },
 });
 
 const ShoppingCart = mongoose.model("ShoppingCart", shoppingCartSchema);

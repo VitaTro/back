@@ -5,7 +5,7 @@ const { authenticateUser } = require("../../middleware/authenticateUser");
 const Product = require("../../schemas/product");
 const mongoose = require("mongoose");
 const Wishlist = require("../../schemas/wishlist");
-
+const StockMovement = require("../../schemas/accounting/stockMovement");
 router.get("/", authenticateUser, async (req, res) => {
   try {
     const cartItems = await ShoppingCart.find({ userId: req.user.id }).populate(
@@ -38,27 +38,31 @@ router.post("/add", authenticateUser, async (req, res) => {
       });
     }
 
-    const product = await Product.findById(productId);
-    if (!product) {
-      console.error("🚨 Product not found! ID:", productId);
-      return res.status(404).json({ error: "Product not found" });
+    const latestStock = await StockMovement.findOne({ productId }).sort({
+      date: -1,
+    });
+    if (quantity > latestStock.quantity) {
+      return res
+        .status(400)
+        .json({ error: "Requested quantity exceeds stock" });
     }
 
+    if (!latestStock || latestStock.quantity < 1) {
+      return res
+        .status(400)
+        .json({ error: "Item out of stock or not available" });
+    }
+    const product = await Product.findById(productId);
     const newItem = new ShoppingCart({
       userId: req.user.id,
       productId,
-      name: product.name,
+      name: latestStock.productName,
       photoUrl: product.photoUrl,
-      price: product.price,
+      price: latestStock.price,
       quantity: quantity || 1,
-      inStock: product.inStock,
+      inStock: latestStock.quantity > 0,
       color: product.color,
     });
-    console.log("🛒 Received productId:", productId);
-    console.log(
-      "🔍 Checking database for product:",
-      await Product.findById(productId)
-    );
 
     await newItem.save();
     res.status(201).json({ message: "Item added to cart", item: newItem });
@@ -128,20 +132,27 @@ router.post("/move-to-wishlist/:id", authenticateUser, async (req, res) => {
       productId: cartItem.productId,
     });
     if (existsInWishlist) {
-      console.log("⚠️ Item is already in wishlist:", cartItem.productId);
-      await ShoppingCart.findByIdAndDelete(cartItem._id); // ✅ Видаляємо з кошика
+      await ShoppingCart.findByIdAndDelete(cartItem._id);
       return res.json({
         message: "Item already in wishlist, removed from cart",
       });
     }
+    const latestStock = await StockMovement.findOne({
+      productId: cartItem.productId,
+    }).sort({ date: -1 });
+    if (!latestStock) {
+      return res
+        .status(404)
+        .json({ error: "No stock data found for this product" });
+    }
 
     const newWishlistItem = new Wishlist({
-      userId: req.user.id, // ✅ Прив’язуємо до користувача
+      userId: req.user.id,
       productId: cartItem.productId,
-      name: cartItem.name,
+      name: latestStock.productName,
       photoUrl: cartItem.photoUrl,
-      price: cartItem.price,
-      inStock: cartItem.inStock,
+      price: latestStock.price,
+      inStock: latestStock.quantity > 0,
       addedAt: new Date(),
     });
     await newWishlistItem.save();
