@@ -32,6 +32,7 @@ const PublicRouter = require("./src/routes/publicRouter");
 const AllegroRouter = require("./src/routes/allegroRouter");
 const InvoiceArchiveRouter = require("./src/routes/admin/invoiceArchiveRouter");
 const PlatformOrdersRouter = require("./src/routes/orders/externalOrdersRouter");
+const PlatformSalesRouter = require("./src/routes/sales/externalSalesRouter");
 // const ElavonRouter = require("./src/routes/payment/elavonRouter");
 const app = express();
 
@@ -98,6 +99,7 @@ app.use("/api/admin", AdminRouter);
 
 app.use("/api/admin/accounting/monthly-report", MonthlyReportRouter);
 app.use("/api/admin/finance/platform-orders", PlatformOrdersRouter);
+app.use("/api/admin/finance/platform-sales", PlatformSalesRouter);
 app.use("/api/admin/finance/online/orders", OnlineOrdersFinanceRouter);
 app.use("/api/admin/finance/online/sales", OnlineSalesFinanceRouter);
 app.use("/api/admin/finance/offline/orders", OfflineOrdersFinanceRouter);

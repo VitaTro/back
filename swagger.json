@@ -78,6 +78,10 @@
     {
       "name": "Invoices",
       "description": "Операції, пов'язані з фактурами: генерація, отримання даних, завантаження PDF-файлів."
+    },
+    {
+      "name": "Platform",
+      "description": "Операції з фінансами ззовні, типу інших платформ, включаючи замовлення та продажі."
     }
   ],
 
@@ -2470,6 +2474,122 @@
           "200": { "description": "Онлайн-продаж успішно повернуто." },
           "400": { "description": "Недійсні дані у запиті." },
           "404": { "description": "Онлайн-продаж не знайдено." }
+        }
+      }
+    },
+    "/api/admin/finance/platform-orders": {
+      "post": {
+        "tags": ["Platform"],
+        "summary": "Створення платформеного замовлення",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "platform": {
+                    "type": "string",
+                    "enum": ["allegro", "etsy", "ebay", "amazon"],
+                    "example": "allegro"
+                  },
+                  "externalOrderId": {
+                    "type": "string",
+                    "example": "ALLEGRO-20230801-XYZ456"
+                  },
+                  "products": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "productId": {
+                          "type": "string",
+                          "example": "64fc28b578eb35a1e927e105"
+                        },
+                        "index": { "type": "string", "example": "NK-G-123" },
+                        "name": {
+                          "type": "string",
+                          "example": "Gold Necklace"
+                        },
+                        "photoUrl": {
+                          "type": "string",
+                          "example": "https://img.netlify.com/item.jpg"
+                        },
+                        "quantity": { "type": "integer", "example": 2 },
+                        "price": { "type": "number", "example": 320 },
+                        "color": { "type": "string", "example": "Rose Gold" }
+                      },
+                      "required": ["productId", "quantity", "price"]
+                    }
+                  },
+                  "platformFee": { "type": "number", "example": 15.5 },
+                  "paymentMethod": {
+                    "type": "string",
+                    "enum": ["platform_auto", "bank_transfer", "other"],
+                    "example": "platform_auto"
+                  },
+                  "notes": { "type": "string", "example": "Expedited delivery" }
+                },
+                "required": ["platform", "externalOrderId", "products"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Замовлення створено успішно"
+          },
+          "400": {
+            "description": "Невірні дані або платформа"
+          },
+          "500": {
+            "description": "Помилка сервера"
+          }
+        }
+      }
+    },
+
+    "/api/admin/finance/platform-sales": {
+      "post": {
+        "tags": ["Platform"],
+        "summary": "Створення платформеного продажу",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orderId": {
+                    "type": "string",
+                    "example": "64fc28b578eb35a1e927e105"
+                  },
+                  "saleDate": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2025-08-01T15:00:00Z"
+                  }
+                },
+                "required": ["orderId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Платформений продаж створено"
+          },
+          "400": {
+            "description": "Неправильний запит або недостатній склад"
+          },
+          "404": {
+            "description": "Замовлення або товар не знайдено"
+          },
+          "500": {
+            "description": "Помилка сервера"
+          }
         }
       }
     },
