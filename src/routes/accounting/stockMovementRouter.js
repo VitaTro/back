@@ -42,7 +42,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
       unitPurchasePrice: ["purchase", "restock"].includes(type)
         ? unitPurchasePrice
         : undefined,
-      unitSalePrice: type === "sale" ? unitSalePrice : undefined,
+      unitSalePrice: ["sale", "externalSale"].includes(type)
+        ? unitSalePrice
+        : undefined,
       note,
       relatedSaleId,
       saleSource,
@@ -52,7 +54,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       product.quantity += quantity;
     }
 
-    if (["sale", "writeOff"].includes(type)) {
+    if (["sale", "writeOff", "externalSale"].includes(type)) {
       product.quantity -= quantity;
     }
 
@@ -119,7 +121,7 @@ router.post("/bulk", authenticateAdmin, async (req, res) => {
 
       if (["purchase", "restock", "return"].includes(type)) {
         product.quantity += quantity;
-      } else if (["sale", "writeOff"].includes(type)) {
+      } else if (["sale", "writeOff", "externalSale"].includes(type)) {
         product.quantity -= quantity;
       }
 
@@ -156,7 +158,7 @@ router.get("/product/:productIndex", async (req, res) => {
     movements.forEach((move) => {
       if (["purchase", "restock", "return"].includes(move.type)) {
         totalIn += move.quantity;
-      } else if (["sale", "writeOff"].includes(move.type)) {
+      } else if (["sale", "writeOff", "externalSale"].includes(move.type)) {
         totalOut += move.quantity;
       }
     });
@@ -226,7 +228,7 @@ router.get(
           totalIn += m.quantity;
           if (!lastPurchase || m.date > lastPurchase.date) lastPurchase = m;
         }
-        if (["sale", "writeOff"].includes(m.type)) {
+        if (["sale", "writeOff", "externalSale"].includes(m.type)) {
           totalOut += m.quantity;
           if (!lastSale || m.date > lastSale.date) lastSale = m;
         }

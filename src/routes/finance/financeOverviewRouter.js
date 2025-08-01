@@ -8,6 +8,7 @@ const OfflineSale = require("../../schemas/sales/offlineSales");
 const FinanceSettings = require("../../schemas/finance/financeSettings");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 const Invoice = require("../../schemas/accounting/InvoiceSchema");
+const PlatformOrder = require("../../schemas/orders/platformOrders");
 
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
@@ -32,35 +33,46 @@ router.get("/", authenticateAdmin, async (req, res) => {
     ]);
 
     // ✅ Дані про продажі
-    const [onlineSalesData, offlineSalesData, refundsData] = await Promise.all([
-      OnlineSale.aggregate([
-        {
-          $group: {
-            _id: null,
-            totalSales: { $sum: "$totalAmount" },
-            netProfit: { $sum: { $subtract: ["$totalAmount", "$cost"] } },
+    const [onlineSalesData, offlineSalesData, refundsData, platformOrdersData] =
+      await Promise.all([
+        OnlineSale.aggregate([
+          {
+            $group: {
+              _id: null,
+              totalSales: { $sum: "$totalAmount" },
+              netProfit: { $sum: { $subtract: ["$totalAmount", "$cost"] } },
+            },
           },
-        },
-      ]),
-      OfflineSale.aggregate([
-        {
-          $group: {
-            _id: null,
-            totalSales: { $sum: "$totalAmount" },
-            netProfit: { $sum: { $subtract: ["$totalAmount", "$cost"] } },
+        ]),
+        OfflineSale.aggregate([
+          {
+            $group: {
+              _id: null,
+              totalSales: { $sum: "$totalAmount" },
+              netProfit: { $sum: { $subtract: ["$totalAmount", "$cost"] } },
+            },
           },
-        },
-      ]),
-      OfflineSale.aggregate([
-        { $match: { status: "returned" } },
-        { $group: { _id: null, totalRefunds: { $sum: "$refundAmount" } } },
-      ]),
-    ]);
+        ]),
+        OfflineSale.aggregate([
+          { $match: { status: "returned" } },
+          { $group: { _id: null, totalRefunds: { $sum: "$refundAmount" } } },
+        ]),
+        PlatformOrder.aggregate([
+          {
+            $group: {
+              _id: null,
+              totalPlatformOrders: { $sum: "$totalAmount" }, // Припустимо є поле totalAmount
+              netProfit: { $sum: { $subtract: ["$totalAmount", "$cost"] } }, // Якщо потрібно
+            },
+          },
+        ]),
+      ]);
 
     // ✅ Реальний totalRevenue
     const totalRevenue =
       (onlineSalesData[0]?.totalSales || 0) +
-      (offlineSalesData[0]?.totalSales || 0);
+      (offlineSalesData[0]?.totalSales || 0) +
+      (platformOrdersData[0]?.totalSales || 0);
 
     // ✅ Витрати
     const expensesData = await Expense.aggregate([
@@ -145,6 +157,10 @@ router.get("/", authenticateAdmin, async (req, res) => {
         offline: {
           totalSales: offlineSalesData[0]?.totalSales || 0,
           netProfit: offlineSalesData[0]?.netProfit || 0,
+        },
+        platform: {
+          totalSales: platformOrdersData[0]?.totalSales || 0,
+          netProfit: platformOrdersData[0]?.netProfit || 0,
         },
         refunds: refundsData[0]?.totalRefunds || 0,
         profitForecast,

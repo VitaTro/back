@@ -26,7 +26,7 @@ const stockMovementSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ["purchase", "sale", "return", "writeOff", "restock"],
+    enum: ["purchase", "sale", "return", "writeOff", "restock", "externalSale"],
     required: true,
   },
   quantity: {
@@ -43,7 +43,7 @@ const stockMovementSchema = new mongoose.Schema({
   unitSalePrice: {
     type: Number,
     required: function () {
-      return this.type === "sale";
+      return ["sale", "externalSale"].includes(this.type);
     },
   },
   price: {
@@ -56,7 +56,7 @@ const stockMovementSchema = new mongoose.Schema({
   },
   saleSource: {
     type: String,
-    enum: ["OnlineSale", "OfflineSale"],
+    enum: ["OnlineSale", "OfflineSale", "ExternalSale"],
   },
   note: {
     type: String,
