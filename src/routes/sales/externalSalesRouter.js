@@ -114,5 +114,26 @@ router.post("/", authenticateAdmin, async (req, res) => {
       .json({ error: error.message || "Помилка платформи-продажу" });
   }
 });
+router.get("/", authenticateAdmin, async (req, res) => {
+  try {
+    const sales = await PlatformSale.find().sort({ saleDate: -1 });
+    res.status(200).json({ sales });
+  } catch (error) {
+    console.error("🔥 Error fetching platform sales:", error);
+    res.status(500).json({ error: "Не вдалося отримати дані продажів" });
+  }
+});
+router.get("/:id", authenticateAdmin, async (req, res) => {
+  try {
+    const sale = await PlatformSale.findById(req.params.id);
+    if (!sale) {
+      return res.status(404).json({ error: "❌ Продаж не знайдено" });
+    }
+    res.status(200).json({ sale });
+  } catch (error) {
+    console.error("🔥 Error fetching sale by ID:", error);
+    res.status(500).json({ error: "Не вдалося отримати продаж" });
+  }
+});
 
 module.exports = router;

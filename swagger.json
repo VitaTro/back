@@ -2547,6 +2547,70 @@
             "description": "Помилка сервера"
           }
         }
+      },
+      "get": {
+        "tags": ["Platform"],
+        "summary": "Отримання всіх платформених замовлень",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Список платформених замовлень",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orders": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PlatformOrder"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Помилка сервера"
+          }
+        }
+      }
+    },
+    "/api/admin/finance/platform-orders/{id}": {
+      "get": {
+        "tags": ["Platform"],
+        "summary": "Отримання платформеного замовлення за ID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID замовлення в базі"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Деталі замовлення",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformOrder"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Замовлення не знайдено"
+          },
+          "500": {
+            "description": "Помилка сервера"
+          }
+        }
       }
     },
 
@@ -2591,9 +2655,70 @@
             "description": "Помилка сервера"
           }
         }
+      },
+      "get": {
+        "tags": ["Platform"],
+        "summary": "Отримання списку платформених продажів",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Список платформених продажів",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sales": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PlatformSale"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Помилка сервера"
+          }
+        }
       }
     },
-
+    "/api/admin/finance/platform-sales/{id}": {
+      "get": {
+        "tags": ["Platform"],
+        "summary": "Отримання платформного продажу за ID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID платформного продажу"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Деталі продажу",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformSale"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Продаж не знайдено"
+          },
+          "500": {
+            "description": "Помилка сервера"
+          }
+        }
+      }
+    },
     "/api/admin/finance/offline/orders": {
       "get": {
         "tags": ["Finance - Offline"],
