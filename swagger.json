@@ -2611,6 +2611,58 @@
             "description": "Помилка сервера"
           }
         }
+      },
+      "patch": {
+        "tags": ["Platform"],
+        "summary": "Оновлення статусу платформеного замовлення",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID замовлення"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["pending", "confirmed", "completed", "cancelled"]
+                  }
+                },
+                "required": ["status"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "✅ Статус оновлено",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformOrder"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "⛔ Невалідний статус або помилка запиту"
+          },
+          "404": {
+            "description": "❌ Замовлення не знайдено"
+          },
+          "500": {
+            "description": "🔥 Серверна помилка"
+          }
+        }
       }
     },
 

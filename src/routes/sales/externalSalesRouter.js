@@ -63,9 +63,12 @@ router.post("/", authenticateAdmin, async (req, res) => {
       products: enrichedProducts,
       totalAmount,
       paymentMethod: order.paymentMethod,
-      platformName: order.platformName,
+      platformName: order.platform,
       status: "completed",
       saleDate: saleDate || new Date(),
+      clientName: order.clientName,
+      clientPhone: order.clientPhone,
+      allegroClientId: order.allegroClientId,
     });
 
     for (const product of enrichedProducts) {
@@ -89,6 +92,13 @@ router.post("/", authenticateAdmin, async (req, res) => {
       productDoc.currentStock = updatedStock;
       productDoc.inStock = updatedStock > 0;
       await productDoc.save();
+    }
+    if (order.platform === "allegro") {
+      if (!order.clientName || !order.clientPhone || !order.allegroClientId) {
+        return res.status(400).json({
+          error: "❌ Для Allegro потрібно вказати ім’я, телефон та ID клієнта",
+        });
+      }
     }
 
     await FinanceOverview.updateOne(

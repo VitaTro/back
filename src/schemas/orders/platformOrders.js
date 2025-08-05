@@ -4,7 +4,7 @@ const platformOrderSchema = new mongoose.Schema(
   {
     platform: {
       type: String,
-      enum: ["allegro", "etsy", "ebay", "amazon"],
+      enum: ["allegro", "facebook", "instagram"],
       required: true,
     },
     externalOrderId: {
@@ -35,8 +35,17 @@ const platformOrderSchema = new mongoose.Schema(
 
     paymentMethod: {
       type: String,
-      enum: ["platform_auto", "bank_transfer", "other"],
-      default: "platform_auto",
+      enum: [
+        "payu",
+        "blik",
+        "bank_transfer",
+        "credit_card",
+        "installment",
+        "allegro_balance",
+        "terminal",
+        "other",
+      ],
+      default: "payu",
     },
     platformFee: { type: Number, default: 0 }, // комісія Allegro, Etsy тощо
 
@@ -46,6 +55,9 @@ const platformOrderSchema = new mongoose.Schema(
       enum: ["pending", "confirmed", "completed", "cancelled"],
       default: "pending",
     },
+    clientName: { type: String },
+    clientPhone: { type: String },
+    allegroClientId: { type: String },
 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },

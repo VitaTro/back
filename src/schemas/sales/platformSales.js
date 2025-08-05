@@ -18,6 +18,9 @@ const platformSaleSchema = new mongoose.Schema({
   status: { type: String, default: "completed" },
   saleDate: { type: Date, default: Date.now },
   refundAmount: { type: Number, default: 0 },
+  clientName: String,
+  clientPhone: String,
+  allegroClientId: String,
 });
 
 module.exports = mongoose.model("PlatformSale", platformSaleSchema);

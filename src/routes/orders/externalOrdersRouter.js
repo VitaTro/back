@@ -15,8 +15,16 @@ router.post("/", authenticateAdmin, async (req, res) => {
       paymentMethod = "platform_auto",
       notes,
     } = req.body;
-    if (!["allegro", "etsy", "ebay", "amazon"].includes(platform)) {
+    if (!["allegro", "facebook", "instagram"].includes(platform)) {
       return res.status(400).json({ error: "Invalid platform" });
+    }
+    if (platform === "allegro") {
+      if (!clientName || !clientPhone || !allegroClientId) {
+        return res.status(400).json({
+          error:
+            "❌ Для Allegro потрібно вказати ім’я, номер телефону та Allegro ID клієнта",
+        });
+      }
     }
 
     const enrichedProducts = [];
@@ -91,6 +99,30 @@ router.get("/:id", authenticateAdmin, async (req, res) => {
   } catch (error) {
     console.error("🚨 Error fetching platform order:", error);
     res.status(500).json({ error: "Failed to retrieve order" });
+  }
+});
+router.patch("/:id", authenticateAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!["pending", "confirmed", "completed", "cancelled"].includes(status)) {
+      return res.status(400).json({ error: "⛔ Невалідний статус" });
+    }
+
+    const order = await PlatformOrder.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({ error: "❌ Замовлення не знайдено" });
+    }
+
+    res.status(200).json({ message: "✅ Статус оновлено", order });
+  } catch (error) {
+    console.error("🔥 Помилка при оновленні статусу:", error);
+    res.status(500).json({ error: "Не вдалося оновити статус замовлення" });
   }
 });
 
