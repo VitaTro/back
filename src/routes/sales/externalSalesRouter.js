@@ -59,15 +59,21 @@ router.post("/", authenticateAdmin, async (req, res) => {
         lastMovement.unitPurchasePrice ||
         0;
 
-      totalAmount += unitPrice * item.quantity;
-      totalCost += unitPurchasePrice * item.quantity;
+      const manualPrice = !!(
+        productData?.lastRetailPrice &&
+        productData.lastRetailPrice !== unitPrice
+      );
+
+      // обчислюємо прибуток
+      const unitPurchasePrice = lastMovement.unitPurchasePrice || 0;
+      const margin = unitPrice - unitPurchasePrice;
 
       enrichedProducts.push({
         productId: item.productId,
         index: lastMovement.productIndex,
         name: lastMovement.productName,
         quantity: item.quantity,
-
+        unitPurchasePrice,
         price: unitPrice,
         manualPrice,
         margin,
