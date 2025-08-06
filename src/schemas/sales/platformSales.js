@@ -14,13 +14,16 @@ const platformSaleSchema = new mongoose.Schema({
   ],
   totalAmount: Number,
   paymentMethod: String,
-  platformName: String, // напр. Allegro, Amazon, Etsy...
+  platformName: String,
   status: { type: String, default: "completed" },
   saleDate: { type: Date, default: Date.now },
   refundAmount: { type: Number, default: 0 },
-  clientName: String,
-  clientPhone: String,
-  allegroClientId: String,
+  client: {
+    firstName: String,
+    lastName: String,
+    phone: String,
+    allegroClientId: String,
+  },
 });
 
 module.exports = mongoose.model("PlatformSale", platformSaleSchema);

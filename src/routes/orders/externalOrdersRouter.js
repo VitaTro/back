@@ -74,6 +74,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       platformFee,
       paymentMethod,
       notes,
+      client,
       status: "pending",
     });
 
