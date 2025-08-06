@@ -55,9 +55,12 @@ const platformOrderSchema = new mongoose.Schema(
       enum: ["pending", "confirmed", "completed", "cancelled"],
       default: "pending",
     },
-    clientName: { type: String },
-    clientPhone: { type: String },
-    allegroClientId: { type: String },
+    client: {
+      firstName: { type: String, required: true },
+      lastName: { type: String, required: true },
+      phone: { type: String },
+      allegroClientId: { type: String },
+    },
 
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },

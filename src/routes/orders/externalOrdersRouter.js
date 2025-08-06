@@ -14,12 +14,17 @@ router.post("/", authenticateAdmin, async (req, res) => {
       platformFee = 0,
       paymentMethod = "platform_auto",
       notes,
+      client,
     } = req.body;
     if (!["allegro", "facebook", "instagram"].includes(platform)) {
       return res.status(400).json({ error: "Invalid platform" });
     }
     if (platform === "allegro") {
-      if (!clientName || !clientPhone || !allegroClientId) {
+      if (
+        !client?.firstName?.trim() ||
+        !client?.lastName?.trim() ||
+        !client?.allegroClientId?.trim()
+      ) {
         return res.status(400).json({
           error:
             "❌ Для Allegro потрібно вказати ім’я, номер телефону та Allegro ID клієнта",
