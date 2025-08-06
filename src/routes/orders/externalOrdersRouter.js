@@ -23,6 +23,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       if (
         !client?.firstName?.trim() ||
         !client?.lastName?.trim() ||
+        !client?.phone?.trim() ||
         !client?.allegroClientId?.trim()
       ) {
         return res.status(400).json({
