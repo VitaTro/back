@@ -24,6 +24,8 @@ const platformSaleSchema = new mongoose.Schema({
     phone: String,
     allegroClientId: String,
   },
+  manualPrice: { type: Boolean, default: false }, // дефолтно false
 });
+const PlatformSale = mongoose.model("PlatformSale", platformSaleSchema);
 
-module.exports = mongoose.model("PlatformSale", platformSaleSchema);
+module.exports = PlatformSale;

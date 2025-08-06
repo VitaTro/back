@@ -37,33 +37,53 @@ router.post("/", authenticateAdmin, async (req, res) => {
     let totalPrice = 0;
 
     for (const item of products) {
-      const productData = await Product.findById(item.productId);
-      if (!productData) {
-        return res
-          .status(404)
-          .json({ error: `Product not found: ${item.productId}` });
-      }
-
-      const lastPurchase = await StockMovement.findOne({
+      const lastMovement = await StockMovement.findOne({
         productId: item.productId,
-        type: { $in: ["purchase", "restock"] },
+        type: { $in: ["sale", "purchase"] },
       }).sort({ date: -1 });
 
-      const purchasePrice = lastPurchase?.unitPurchasePrice || 0;
+      if (
+        !lastMovement ||
+        !lastMovement.productIndex ||
+        !lastMovement.productName
+      ) {
+        return res.status(400).json({
+          error: `❌ Немає руху на складі для продукту ${item.productId}`,
+        });
+      }
 
+      const stockLevel = await calculateStock(lastMovement.productIndex);
+      if (stockLevel < item.quantity) {
+        return res.status(400).json({
+          error: `📦 Недостатньо ${lastMovement.productName} на складі`,
+        });
+      }
+
+      const productDoc = await Product.findById(item.productId);
+      const unitPriceFromStock =
+        lastMovement.unitSalePrice ||
+        lastMovement.price ||
+        productDoc?.lastRetailPrice ||
+        lastMovement.unitPurchasePrice ||
+        0;
+
+      const finalPrice = item.price || unitPriceFromStock;
+      const manualPrice = !!item.price;
+      const productVisual = await Product.findById(item.productId);
       enrichedProducts.push({
         productId: item.productId,
-        index: item.index || productData.index,
-        name: item.name || productData.name,
-        photoUrl: productData.photoUrl || "",
+        index: lastMovement?.productIndex || item.index,
+        name: lastMovement?.productName || item.name,
+        photoUrl: productVisual?.photoUrl || "",
         quantity: item.quantity,
-        price: item.price, // ціна продажу вводиться вручну
-        color: item.color || productData.color,
-        unitPurchasePrice: purchasePrice,
-        margin: item.price - purchasePrice,
+        price: finalPrice,
+        unitPurchasePrice: lastMovement.unitPurchasePrice || 0,
+        manualPrice,
+        margin: finalPrice - (lastMovement.unitPurchasePrice || 0),
+        color: item.color || productDoc?.color || "",
       });
 
-      totalPrice += item.price * item.quantity;
+      totalPrice += finalPrice * item.quantity;
     }
 
     const newOrder = await PlatformOrder.create({

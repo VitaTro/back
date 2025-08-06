@@ -25,53 +25,69 @@ router.post("/", authenticateAdmin, async (req, res) => {
         .json({ error: "Замовлення вже виконано або скасовано" });
     }
 
-    const enrichedProducts = [];
     let totalAmount = 0;
+    let totalCost = 0;
+    const enrichedProducts = [];
 
     for (const item of order.products) {
-      const productDoc = await Product.findById(item.productId);
-      if (!productDoc) {
-        return res
-          .status(404)
-          .json({ error: `❌ Продукт не знайдено: ${item.productId}` });
+      const lastMovement = await StockMovement.findOne({
+        productId: item.productId,
+        type: { $in: ["sale", "purchase"] },
+      }).sort({ date: -1 });
+      if (
+        !lastMovement ||
+        !lastMovement.productIndex ||
+        !lastMovement.productName
+      ) {
+        throw new Error(
+          `❌ Немає даних зі складу для товару ${item.productId}`
+        );
       }
 
-      const stockLevel = await calculateStock(productDoc.index);
+      const stockLevel = await calculateStock(lastMovement.productIndex);
       if (stockLevel < item.quantity) {
         return res.status(400).json({
-          error: `Недостатньо ${productDoc.name} на складі`,
+          error: `Недостатньо ${lastMovement.productName} на складі`,
         });
       }
 
+      const productData = await Product.findById(item.productId);
       const unitPrice =
-        item.unitPrice || productDoc.lastRetailPrice || productDoc.price || 0;
+        lastMovement.unitSalePrice ||
+        productData?.lastRetailPrice ||
+        lastMovement.price ||
+        lastMovement.unitPurchasePrice ||
+        0;
 
       totalAmount += unitPrice * item.quantity;
+      totalCost += unitPurchasePrice * item.quantity;
 
       enrichedProducts.push({
         productId: item.productId,
-        index: productDoc.index,
-        name: productDoc.name,
+        index: lastMovement.productIndex,
+        name: lastMovement.productName,
         quantity: item.quantity,
+
         price: unitPrice,
-        photoUrl: productDoc.photoUrl || "",
+        manualPrice,
+        margin,
+        photoUrl: productData?.photoUrl || "",
       });
     }
+
+    const netProfit = totalAmount - totalCost;
 
     const sale = await PlatformSale.create({
       orderId,
       products: enrichedProducts,
       totalAmount,
+      totalCost,
+      netProfit,
       paymentMethod: order.paymentMethod,
       platformName: order.platform,
       status: "completed",
       saleDate: saleDate || new Date(),
-      client: {
-        firstName: order.client.firstName,
-        lastName: order.client.lastName,
-        phone: order.client.phone,
-        allegroClientId: order.client.allegroClientId,
-      },
+      client: order.client,
     });
 
     for (const product of enrichedProducts) {
@@ -115,11 +131,12 @@ router.post("/", authenticateAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error("🔥 Platform sale error:", error);
-    res
-      .status(500)
-      .json({ error: error.message || "Помилка платформи-продажу" });
+    res.status(500).json({
+      error: error.message || "Помилка створення продажу на платформі",
+    });
   }
 });
+
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
     const sales = await PlatformSale.find().sort({ saleDate: -1 });

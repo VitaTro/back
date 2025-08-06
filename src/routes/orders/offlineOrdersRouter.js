@@ -114,15 +114,6 @@ router.post("/", authenticateAdmin, async (req, res) => {
         buyerNIP,
       }),
     });
-
-    // 📌 Фактури генеруються вручну. Цей блок залишено на випадок майбутніх змін.
-    /*
-    if (paymentMethod !== "terminal") {
-      const invoice = await generateUniversalInvoice(order);
-      await Invoice.create(invoice);
-    }
-    */
-
     res.status(201).json({ message: "Offline order created", order });
   } catch (error) {
     console.error("🔥 Error creating offline order:", error);
