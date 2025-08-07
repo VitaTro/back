@@ -31,8 +31,8 @@ const ExpenseRouter = require("./src/routes/finance/expenseRouter");
 const PublicRouter = require("./src/routes/publicRouter");
 const AllegroRouter = require("./src/routes/allegroRouter");
 const InvoiceArchiveRouter = require("./src/routes/admin/invoiceArchiveRouter");
-const PlatformOrdersRouter = require("./src/routes/orders/externalOrdersRouter");
-const PlatformSalesRouter = require("./src/routes/sales/externalSalesRouter");
+const PlatformOrdersRouter = require("./src/routes/orders/platformOrdersRouter");
+const PlatformSalesRouter = require("./src/routes/sales/platformSalesRouter");
 // const ElavonRouter = require("./src/routes/payment/elavonRouter");
 const app = express();
 

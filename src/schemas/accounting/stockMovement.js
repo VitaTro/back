@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const Product = require("../product");
 const OnlineSale = require("../sales/onlineSales");
 const OfflineSales = require("../sales/offlineSales");
-
+const PlatformSale = require("../sales/platformSales");
 const stockMovementSchema = new mongoose.Schema({
   productId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -56,7 +56,7 @@ const stockMovementSchema = new mongoose.Schema({
   },
   saleSource: {
     type: String,
-    enum: ["OnlineSale", "OfflineSale", "ExternalSale"],
+    enum: ["OnlineSale", "OfflineSale", "ExternalSale", "PlatformSale"],
   },
   note: {
     type: String,

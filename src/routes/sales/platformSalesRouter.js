@@ -19,18 +19,29 @@ router.post("/", authenticateAdmin, async (req, res) => {
     const order = await PlatformOrder.findById(orderId);
     if (!order)
       return res.status(404).json({ error: "❌ Замовлення не знайдено" });
+
+    // 🛑 Перевірка: чи вже є продаж для цього замовлення
+    const existingSale = await PlatformSale.findOne({ orderId });
+    if (existingSale)
+      return res
+        .status(400)
+        .json({ error: "Продаж вже створено для цього замовлення" });
+
     if (order.status !== "pending")
       return res
         .status(400)
         .json({ error: "Замовлення вже виконано або скасовано" });
+
     let totalAmount = 0;
     let totalCost = 0;
     const enrichedProducts = [];
+
     for (const item of order.products) {
       const lastMovement = await StockMovement.findOne({
         productId: item.productId,
         type: { $in: ["sale", "purchase"] },
       }).sort({ date: -1 });
+
       if (
         !lastMovement ||
         !lastMovement.productIndex ||
@@ -40,23 +51,33 @@ router.post("/", authenticateAdmin, async (req, res) => {
           `❌ Немає даних зі складу для товару ${item.productId}`
         );
       }
+
       const stockLevel = await calculateStock(lastMovement.productIndex);
       if (stockLevel < item.quantity) {
-        return res
-          .status(400)
-          .json({ error: `Недостатньо ${lastMovement.productName} на складі` });
+        return res.status(400).json({
+          error: `Недостатньо ${lastMovement.productName} на складі`,
+        });
       }
+
       const productData = await Product.findById(item.productId);
-      const unitPrice =
-        lastMovement.unitSalePrice ||
-        productData?.lastRetailPrice ||
-        lastMovement.price ||
-        lastMovement.unitPurchasePrice ||
-        0;
+
+      // 💰 Ціна з замовлення, якщо manualPrice=true
       const unitPurchasePrice = lastMovement.unitPurchasePrice || 0;
+      const unitPrice =
+        typeof item.price === "number"
+          ? item.price
+          : lastMovement.unitSalePrice ?? 0;
+      console.log("🧾 Ціна для продукту:", {
+        productId: item.productId,
+        itemPrice: item.price,
+        lastMovementPrice: lastMovement.unitSalePrice,
+        finalPrice: unitPrice,
+      });
+
       const margin = unitPrice - unitPurchasePrice;
       totalAmount += unitPrice * item.quantity;
       totalCost += unitPurchasePrice * item.quantity;
+
       enrichedProducts.push({
         productId: item.productId,
         index: lastMovement.productIndex,
@@ -65,10 +86,13 @@ router.post("/", authenticateAdmin, async (req, res) => {
         unitPurchasePrice,
         price: unitPrice,
         margin,
+        manualPrice: order.manualPrice,
         photoUrl: productData?.photoUrl || "",
       });
     }
+
     const netProfit = totalAmount - totalCost;
+
     const sale = await PlatformSale.create({
       orderId,
       products: enrichedProducts,
@@ -78,7 +102,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       paymentMethod: order.paymentMethod,
       platformName: order.platform,
       status: "completed",
-      saleDate: saleDate || new Date(),
+      saleDate: saleDate ? new Date(saleDate) : new Date(),
       client: order.client,
     });
 
@@ -106,6 +130,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         await productDoc.save();
       }
     }
+
     await FinanceOverview.updateOne(
       {},
       {
