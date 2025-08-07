@@ -4,6 +4,7 @@ const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 const PlatformOrder = require("../../schemas/orders/platformOrders");
 const Product = require("../../schemas/product");
 const StockMovement = require("../../schemas/accounting/stockMovement");
+const { calculateStock } = require("../../services/calculateStock");
 
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
