@@ -1,9 +1,11 @@
 const express = require("express");
 const router = express.Router();
+
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 
 const PlatformOrder = require("../../schemas/orders/platformOrders");
 const PlatformSale = require("../../schemas/sales/platformSales");
+
 const Product = require("../../schemas/product");
 const StockMovement = require("../../schemas/accounting/stockMovement");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
@@ -15,20 +17,15 @@ router.post("/", authenticateAdmin, async (req, res) => {
     const { orderId, saleDate } = req.body;
 
     const order = await PlatformOrder.findById(orderId);
-    if (!order) {
+    if (!order)
       return res.status(404).json({ error: "❌ Замовлення не знайдено" });
-    }
-
-    if (order.status !== "pending") {
+    if (order.status !== "pending")
       return res
         .status(400)
         .json({ error: "Замовлення вже виконано або скасовано" });
-    }
-
     let totalAmount = 0;
     let totalCost = 0;
     const enrichedProducts = [];
-
     for (const item of order.products) {
       const lastMovement = await StockMovement.findOne({
         productId: item.productId,
@@ -43,14 +40,12 @@ router.post("/", authenticateAdmin, async (req, res) => {
           `❌ Немає даних зі складу для товару ${item.productId}`
         );
       }
-
       const stockLevel = await calculateStock(lastMovement.productIndex);
       if (stockLevel < item.quantity) {
-        return res.status(400).json({
-          error: `Недостатньо ${lastMovement.productName} на складі`,
-        });
+        return res
+          .status(400)
+          .json({ error: `Недостатньо ${lastMovement.productName} на складі` });
       }
-
       const productData = await Product.findById(item.productId);
       const unitPrice =
         lastMovement.unitSalePrice ||
@@ -58,16 +53,10 @@ router.post("/", authenticateAdmin, async (req, res) => {
         lastMovement.price ||
         lastMovement.unitPurchasePrice ||
         0;
-
-      const manualPrice = !!(
-        productData?.lastRetailPrice &&
-        productData.lastRetailPrice !== unitPrice
-      );
-
-      // обчислюємо прибуток
       const unitPurchasePrice = lastMovement.unitPurchasePrice || 0;
       const margin = unitPrice - unitPurchasePrice;
-
+      totalAmount += unitPrice * item.quantity;
+      totalCost += unitPurchasePrice * item.quantity;
       enrichedProducts.push({
         productId: item.productId,
         index: lastMovement.productIndex,
@@ -75,14 +64,11 @@ router.post("/", authenticateAdmin, async (req, res) => {
         quantity: item.quantity,
         unitPurchasePrice,
         price: unitPrice,
-        manualPrice,
         margin,
         photoUrl: productData?.photoUrl || "",
       });
     }
-
     const netProfit = totalAmount - totalCost;
-
     const sale = await PlatformSale.create({
       orderId,
       products: enrichedProducts,
@@ -112,13 +98,14 @@ router.post("/", authenticateAdmin, async (req, res) => {
       });
 
       const productDoc = await Product.findById(product.productId);
-      const updatedStock = await calculateStock(product.index);
-      productDoc.quantity = updatedStock;
-      productDoc.currentStock = updatedStock;
-      productDoc.inStock = updatedStock > 0;
-      await productDoc.save();
+      if (productDoc) {
+        const updatedStock = await calculateStock(product.index);
+        productDoc.quantity = updatedStock;
+        productDoc.currentStock = updatedStock;
+        productDoc.inStock = updatedStock > 0;
+        await productDoc.save();
+      }
     }
-
     await FinanceOverview.updateOne(
       {},
       {
@@ -131,10 +118,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
     order.status = "completed";
     await order.save();
 
-    res.status(201).json({
-      message: "📦 Платформений продаж створено",
-      sale,
-    });
+    res.status(201).json({ message: "📦 Платформений продаж створено", sale });
   } catch (error) {
     console.error("🔥 Platform sale error:", error);
     res.status(500).json({
@@ -145,23 +129,83 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
-    const sales = await PlatformSale.find().sort({ saleDate: -1 });
+    const filter = req.query.status ? { status: req.query.status } : {};
+    const sales = await PlatformSale.find(filter).sort({ saleDate: -1 });
     res.status(200).json({ sales });
   } catch (error) {
     console.error("🔥 Error fetching platform sales:", error);
     res.status(500).json({ error: "Не вдалося отримати дані продажів" });
   }
 });
+
 router.get("/:id", authenticateAdmin, async (req, res) => {
   try {
     const sale = await PlatformSale.findById(req.params.id);
-    if (!sale) {
-      return res.status(404).json({ error: "❌ Продаж не знайдено" });
-    }
+    if (!sale) return res.status(404).json({ error: "❌ Продаж не знайдено" });
     res.status(200).json({ sale });
   } catch (error) {
     console.error("🔥 Error fetching sale by ID:", error);
     res.status(500).json({ error: "Не вдалося отримати продаж" });
+  }
+});
+
+router.patch("/:id", authenticateAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ["pending", "completed", "cancelled", "returned"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: "Невірний статус" });
+    }
+    const sale = await PlatformSale.findById(req.params.id);
+    if (!sale) return res.status(404).json({ error: "Продаж не знайдено" });
+    sale.status = status;
+    await sale.save();
+    res.status(200).json({ message: "Статус оновлено", sale });
+  } catch (error) {
+    console.error("🔥 Error updating platform sale:", error);
+    res.status(500).json({ error: "Не вдалося оновити статус продажу" });
+  }
+});
+router.put("/:id/return", authenticateAdmin, async (req, res) => {
+  try {
+    const { refundAmount } = req.body;
+    if (refundAmount < 0) {
+      return res
+        .status(400)
+        .json({ error: "Сума повернення не може бути від’ємною" });
+    }
+    const sale = await PlatformSale.findById(req.params.id);
+    if (!sale) return res.status(404).json({ error: "Продаж не знайдено" });
+    if (sale.status === "returned")
+      return res.status(400).json({ error: "Продаж вже повернуто" });
+    for (const item of sale.products) {
+      await StockMovement.create({
+        productIndex: item.index,
+        productName: item.name,
+        quantity: item.quantity,
+        type: "return",
+        unitPurchasePrice: item.unitPurchasePrice || item.price,
+        price: item.price,
+        relatedSaleId: sale._id,
+        saleSource: "PlatformSale",
+        date: new Date(),
+        note: "Повернення товару після платформеного продажу",
+      });
+    }
+
+    await FinanceOverview.updateOne(
+      {},
+      { $inc: { totalRevenue: -refundAmount } }
+    );
+
+    sale.status = "returned";
+    sale.refundAmount = refundAmount;
+    await sale.save();
+
+    res.status(200).json({ message: "Повернення завершено", sale });
+  } catch (error) {
+    console.error("🔥 Return processing error:", error);
+    res.status(500).json({ error: "Не вдалося обробити повернення" });
   }
 });
 

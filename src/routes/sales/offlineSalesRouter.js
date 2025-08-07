@@ -1,30 +1,54 @@
 const express = require("express");
+
 const router = express.Router();
+
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 
-const PlatformOrder = require("../../schemas/orders/platformOrders");
-const PlatformSale = require("../../schemas/sales/platformSales");
-const Product = require("../../schemas/product");
-const StockMovement = require("../../schemas/accounting/stockMovement");
-const FinanceOverview = require("../../schemas/finance/financeOverview");
-
 const { calculateStock } = require("../../services/calculateStock");
+const OfflineOrder = require("../../schemas/orders/offlineOrders");
+const StockMovement = require("../../schemas/accounting/stockMovement");
+const Product = require("../../schemas/product");
+const OfflineSale = require("../../schemas/sales/offlineSales");
+const FinanceOverview = require("../../schemas/finance/financeOverview");
+const Invoice = require("../../schemas/accounting/InvoiceSchema");
+const generateInvoicePDFOffline = require("../../config/invoicePdfGeneratorOffline");
+
+router.get("/", authenticateAdmin, async (req, res) => {
+  try {
+    const filter = req.query.status ? { status: req.query.status } : {};
+    const offlineSales = await OfflineSale.find(filter).populate(
+      "products.productId",
+      "name photoUrl price"
+    );
+
+    if (!offlineSales.length) {
+      return res.status(404).json({ error: "No offline sales available" });
+    }
+
+    res.status(200).json(offlineSales);
+  } catch (error) {
+    console.error("🔥 Error fetching offline sales:", error);
+    res.status(500).json({ error: "Failed to fetch offline sales" });
+  }
+});
 
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
     const { orderId, saleDate } = req.body;
 
-    const order = await PlatformOrder.findById(orderId);
-    if (!order)
+    const order = await OfflineOrder.findById(orderId);
+    if (!order) {
       return res.status(404).json({ error: "❌ Замовлення не знайдено" });
-    if (order.status !== "pending")
+    }
+
+    if (order.status !== "pending") {
       return res
         .status(400)
-        .json({ error: "Замовлення вже виконано або скасовано" });
+        .json({ error: "Order already completed or cancelled" });
+    }
 
-    let totalAmount = 0;
-    let totalCost = 0;
     const enrichedProducts = [];
+    let totalAmount = 0;
 
     for (const item of order.products) {
       const lastMovement = await StockMovement.findOne({
@@ -44,9 +68,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
       const stockLevel = await calculateStock(lastMovement.productIndex);
       if (stockLevel < item.quantity) {
-        return res
-          .status(400)
-          .json({ error: `Недостатньо ${lastMovement.productName} на складі` });
+        return res.status(400).json({
+          error: `Недостатньо ${lastMovement.productName} на складі`,
+        });
       }
 
       const productData = await Product.findById(item.productId);
@@ -57,37 +81,34 @@ router.post("/", authenticateAdmin, async (req, res) => {
         lastMovement.unitPurchasePrice ||
         0;
 
-      const unitPurchasePrice = lastMovement.unitPurchasePrice || 0;
-      const margin = unitPrice - unitPurchasePrice;
-
       totalAmount += unitPrice * item.quantity;
-      totalCost += unitPurchasePrice * item.quantity;
 
       enrichedProducts.push({
         productId: item.productId,
         index: lastMovement.productIndex,
         name: lastMovement.productName,
         quantity: item.quantity,
-        unitPurchasePrice,
+
         price: unitPrice,
-        margin,
+
         photoUrl: productData?.photoUrl || "",
       });
     }
 
-    const netProfit = totalAmount - totalCost;
-
-    const sale = await PlatformSale.create({
+    const sale = await OfflineSale.create({
       orderId,
       products: enrichedProducts,
       totalAmount,
-      totalCost,
-      netProfit,
+
       paymentMethod: order.paymentMethod,
-      platformName: order.platform,
+      buyerType: order.buyerType,
+      ...(order.buyerType === "przedsiębiorca" && {
+        buyerName: order.buyerName,
+        buyerAddress: order.buyerAddress,
+        buyerNIP: order.buyerNIP,
+      }),
       status: "completed",
       saleDate: saleDate || new Date(),
-      client: order.client,
     });
 
     for (const product of enrichedProducts) {
@@ -100,17 +121,17 @@ router.post("/", authenticateAdmin, async (req, res) => {
         unitSalePrice: product.price,
         price: product.price,
         relatedSaleId: sale._id,
-        saleSource: "PlatformSale",
+        saleSource: "OfflineSale",
         date: sale.saleDate,
-        note: "Списання при платформеному продажу",
+        note: "Списання при продажу",
       });
 
       const productDoc = await Product.findById(product.productId);
       if (productDoc) {
-        const updatedStock = await calculateStock(product.index);
-        productDoc.quantity = updatedStock;
-        productDoc.currentStock = updatedStock;
-        productDoc.inStock = updatedStock > 0;
+        const stockCount = await calculateStock(product.index);
+        productDoc.quantity = stockCount;
+        productDoc.currentStock = stockCount;
+        productDoc.inStock = stockCount > 0;
         await productDoc.save();
       }
     }
@@ -124,61 +145,60 @@ router.post("/", authenticateAdmin, async (req, res) => {
       { upsert: true }
     );
 
+    // 📌 Фактура створюється вручну при потребі — цей блок залишено на всякий випадок
+    /*
+    const invoice = new Invoice({
+      orderId,
+      invoiceType: "offline",
+      totalAmount,
+      paymentMethod: order.paymentMethod,
+      buyerType: order.buyerType,
+      ...(order.buyerType === "przedsiębiorca" && {
+        buyerName: order.buyerName,
+        buyerAddress: order.buyerAddress,
+        buyerNIP: order.buyerNIP,
+      }),
+    });
+
+    await invoice.validate();
+    await invoice.save();
+    */
+
     order.status = "completed";
     await order.save();
 
-    res.status(201).json({ message: "📦 Платформений продаж створено", sale });
+    res.status(201).json({
+      message: "Продаж успішно завершено",
+      sale,
+      // invoice, // якщо колись згенеруєш
+    });
   } catch (error) {
-    console.error("🔥 Platform sale error:", error);
-    res
-      .status(500)
-      .json({
-        error: error.message || "Помилка створення продажу на платформі",
-      });
-  }
-});
-
-router.get("/", authenticateAdmin, async (req, res) => {
-  try {
-    const filter = req.query.status ? { status: req.query.status } : {};
-    const sales = await PlatformSale.find(filter).sort({ saleDate: -1 });
-    res.status(200).json({ sales });
-  } catch (error) {
-    console.error("🔥 Error fetching platform sales:", error);
-    res.status(500).json({ error: "Не вдалося отримати дані продажів" });
-  }
-});
-
-router.get("/:id", authenticateAdmin, async (req, res) => {
-  try {
-    const sale = await PlatformSale.findById(req.params.id);
-    if (!sale) return res.status(404).json({ error: "❌ Продаж не знайдено" });
-    res.status(200).json({ sale });
-  } catch (error) {
-    console.error("🔥 Error fetching sale by ID:", error);
-    res.status(500).json({ error: "Не вдалося отримати продаж" });
+    console.error("🔥 Error completing sale:", error);
+    res.status(500).json({ error: error.message || "Помилка обробки продажу" });
   }
 });
 
 router.patch("/:id", authenticateAdmin, async (req, res) => {
   try {
     const { status } = req.body;
-    const validStatuses = ["pending", "completed", "cancelled", "returned"];
+    const validStatuses = ["pending", "completed", "cancelled"];
 
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: "Невірний статус" });
+      return res.status(400).json({ error: "Invalid status" });
     }
 
-    const sale = await PlatformSale.findById(req.params.id);
-    if (!sale) return res.status(404).json({ error: "Продаж не знайдено" });
+    const sale = await OfflineSale.findById(req.params.id);
+    if (!sale) return res.status(404).json({ error: "Offline sale not found" });
 
     sale.status = status;
     await sale.save();
 
-    res.status(200).json({ message: "Статус оновлено", sale });
+    res
+      .status(200)
+      .json({ message: "Offline sale updated successfully", sale });
   } catch (error) {
-    console.error("🔥 Error updating platform sale:", error);
-    res.status(500).json({ error: "Не вдалося оновити статус продажу" });
+    console.error("🔥 Error updating offline sale:", error);
+    res.status(500).json({ error: "Failed to update offline sale" });
   }
 });
 
@@ -188,34 +208,37 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
     if (refundAmount < 0) {
       return res
         .status(400)
-        .json({ error: "Сума повернення не може бути від’ємною" });
+        .json({ error: "Refund amount cannot be negative" });
     }
 
-    const sale = await PlatformSale.findById(req.params.id);
-    if (!sale) return res.status(404).json({ error: "Продаж не знайдено" });
+    const sale = await OfflineSale.findById(req.params.id);
+    if (!sale) return res.status(404).json({ error: "Sale not found" });
     if (sale.status === "returned")
-      return res.status(400).json({ error: "Продаж вже повернуто" });
+      return res.status(400).json({ error: "Sale already returned" });
 
     for (const item of sale.products) {
+      // 📦 Склад бачить повернення
       await StockMovement.create({
         productIndex: item.index,
         productName: item.name,
         quantity: item.quantity,
         type: "return",
-        unitPurchasePrice: item.unitPurchasePrice || item.price,
+        unitPurchasePrice: item.price, // або item.unitPurchasePrice якщо є
         price: item.price,
         relatedSaleId: sale._id,
-        saleSource: "PlatformSale",
+        saleSource: "OfflineSale",
         date: new Date(),
-        note: "Повернення товару після платформеного продажу",
+        note: "Повернення товару після продажу",
       });
     }
 
+    // 💰 Оновлення фінансів
     await FinanceOverview.updateOne(
       {},
       { $inc: { totalRevenue: -refundAmount } }
     );
 
+    // 🌀 Статус продажу
     sale.status = "returned";
     sale.refundAmount = refundAmount;
     await sale.save();
