@@ -148,7 +148,7 @@ router.get("/", authenticateAdmin, async (req, res) => {
     const completedSalesPlatform = await PlatformSale.find({
       status: "completed",
     })
-      .select("products totalAmount paymentMethod createdAt")
+      .select("products totalAmount paymentMethod createdAt saleDate")
       .lean();
 
     const completedSales = [

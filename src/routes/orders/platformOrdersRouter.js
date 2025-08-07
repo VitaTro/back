@@ -41,6 +41,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       paymentMethod,
       notes,
       client,
+      saleDate,
     } = req.body;
 
     const validPlatforms = ["allegro", "facebook", "instagram"];
@@ -121,6 +122,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       paymentMethod,
       notes,
       client,
+      saleDate,
       status: "pending",
     });
 
