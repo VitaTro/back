@@ -2769,6 +2769,81 @@
             "description": "Помилка сервера"
           }
         }
+      },
+      "patch": {
+        "tags": ["Platform"],
+        "summary": "Оновлення статусу платформного продажу",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID продажу"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["pending", "completed", "cancelled", "returned"],
+                    "example": "cancelled"
+                  }
+                },
+                "required": ["status"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Статус оновлено" },
+          "400": { "description": "Невірний статус" },
+          "404": { "description": "Продаж не знайдено" },
+          "500": { "description": "Помилка сервера" }
+        }
+      },
+      "put": {
+        "tags": ["Platform"],
+        "summary": "Повернення товару після платформного продажу",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID продажу"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refundAmount": {
+                    "type": "number",
+                    "example": 120.5
+                  }
+                },
+                "required": ["refundAmount"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Повернення завершено" },
+          "400": { "description": "Невірна сума або продаж вже повернуто" },
+          "404": { "description": "Продаж не знайдено" },
+          "500": { "description": "Помилка сервера" }
+        }
       }
     },
     "/api/admin/finance/offline/orders": {
@@ -5458,6 +5533,103 @@
           }
         }
       },
+      "PlatformOrder": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": { "type": "string" },
+                "quantity": { "type": "number" }
+              }
+            }
+          },
+          "client": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "example": "Іван Іванов" },
+              "email": { "type": "string", "example": "ivan@example.com" },
+              "phone": { "type": "string", "example": "+380991234567" }
+            }
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": ["payu", "blik", "terminal", "bank_transfer", "cash"],
+            "example": "payu"
+          },
+          "platform": {
+            "type": "string",
+            "example": "Allegro"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "completed", "cancelled"],
+            "example": "pending"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "products",
+          "client",
+          "paymentMethod",
+          "platform",
+          "status"
+        ]
+      },
+
+      "PlatformSale": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "orderId": { "type": "string" },
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": { "type": "string" },
+                "index": { "type": "string" },
+                "name": { "type": "string" },
+                "quantity": { "type": "number" },
+                "unitPurchasePrice": { "type": "number" },
+                "price": { "type": "number" },
+                "margin": { "type": "number" },
+                "photoUrl": { "type": "string" }
+              }
+            }
+          },
+          "totalAmount": { "type": "number" },
+          "totalCost": { "type": "number" },
+          "netProfit": { "type": "number" },
+          "paymentMethod": { "type": "string" },
+          "platformName": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "completed", "cancelled", "returned"]
+          },
+          "saleDate": { "type": "string", "format": "date-time" },
+          "client": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "email": { "type": "string" },
+              "phone": { "type": "string" }
+            }
+          },
+          "refundAmount": { "type": "number" }
+        }
+      },
+
       "MonthlyReport": {
         "type": "object",
         "properties": {

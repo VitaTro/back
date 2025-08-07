@@ -1,25 +1,53 @@
 const express = require("express");
 const router = express.Router();
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
+
 const PlatformOrder = require("../../schemas/orders/platformOrders");
 const Product = require("../../schemas/product");
 const StockMovement = require("../../schemas/accounting/stockMovement");
 const { calculateStock } = require("../../services/calculateStock");
 
+// 🔹 GET: Всі платформені замовлення
+router.get("/", authenticateAdmin, async (req, res) => {
+  try {
+    const orders = await PlatformOrder.find().sort({ createdAt: -1 });
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error("🧨 Error fetching platform orders:", error);
+    res.status(500).json({ error: "Failed to fetch platform orders" });
+  }
+});
+
+// 🔹 GET: Замовлення за ID
+router.get("/:id", authenticateAdmin, async (req, res) => {
+  try {
+    const order = await PlatformOrder.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    res.status(200).json(order);
+  } catch (error) {
+    console.error("🧨 Error fetching platform order by ID:", error);
+    res.status(500).json({ error: "Failed to fetch order" });
+  }
+});
+
+// 🔹 POST: Створити платформене замовлення
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
     const {
       platform,
       externalOrderId,
       products,
-      platformFee = 0,
-      paymentMethod = "platform_auto",
+      paymentMethod,
       notes,
       client,
     } = req.body;
-    if (!["allegro", "facebook", "instagram"].includes(platform)) {
+
+    const validPlatforms = ["allegro", "facebook", "instagram"];
+    if (!validPlatforms.includes(platform)) {
       return res.status(400).json({ error: "Invalid platform" });
     }
+
     if (platform === "allegro") {
       if (
         !client?.firstName?.trim() ||
@@ -29,7 +57,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       ) {
         return res.status(400).json({
           error:
-            "❌ Для Allegro потрібно вказати ім’я, номер телефону та Allegro ID клієнта",
+            "❌ Allegro requires firstName, lastName, phone, and allegroClientId",
         });
       }
     }
@@ -48,93 +76,70 @@ router.post("/", authenticateAdmin, async (req, res) => {
         !lastMovement.productIndex ||
         !lastMovement.productName
       ) {
-        return res.status(400).json({
-          error: `❌ Немає руху на складі для продукту ${item.productId}`,
-        });
+        throw new Error(
+          `❌ No stock movement found for product ${item.productId}`
+        );
       }
 
       const stockLevel = await calculateStock(lastMovement.productIndex);
       if (stockLevel < item.quantity) {
         return res.status(400).json({
-          error: `📦 Недостатньо ${lastMovement.productName} на складі`,
+          error: `Insufficient stock for ${lastMovement.productName}`,
         });
       }
 
       const productDoc = await Product.findById(item.productId);
-      const unitPriceFromStock =
+      const unitPrice =
+        item.price ||
         lastMovement.unitSalePrice ||
         lastMovement.price ||
         productDoc?.lastRetailPrice ||
         lastMovement.unitPurchasePrice ||
         0;
 
-      const finalPrice = item.price || unitPriceFromStock;
-      const manualPrice = !!item.price;
-      const productVisual = await Product.findById(item.productId);
+      totalPrice += unitPrice * item.quantity;
+
       enrichedProducts.push({
         productId: item.productId,
-        index: lastMovement?.productIndex || item.index,
-        name: lastMovement?.productName || item.name,
-        photoUrl: productVisual?.photoUrl || "",
+        index: lastMovement.productIndex,
+        name: lastMovement.productName,
         quantity: item.quantity,
-        price: finalPrice,
+        price: unitPrice,
+        photoUrl: productDoc?.photoUrl || "",
         unitPurchasePrice: lastMovement.unitPurchasePrice || 0,
-        manualPrice,
-        margin: finalPrice - (lastMovement.unitPurchasePrice || 0),
+        margin: unitPrice - (lastMovement.unitPurchasePrice || 0),
+        manualPrice: !!item.price,
         color: item.color || productDoc?.color || "",
       });
-
-      totalPrice += finalPrice * item.quantity;
     }
 
-    const newOrder = await PlatformOrder.create({
+    const order = await PlatformOrder.create({
       platform,
       externalOrderId,
       products: enrichedProducts,
       totalPrice,
-      platformFee,
       paymentMethod,
       notes,
       client,
       status: "pending",
     });
 
-    res
-      .status(201)
-      .json({ message: "Platform order created", order: newOrder });
+    res.status(201).json({ message: "Platform order created", order });
   } catch (error) {
-    console.error("🚨 Error creating platform order:", error);
-    res.status(500).json({ error: error.message || "Failed to create order" });
+    console.error("🔥 Error creating platform order:", error);
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to create platform order" });
   }
 });
 
-router.get("/", authenticateAdmin, async (req, res) => {
-  try {
-    const orders = await PlatformOrder.find().sort({ createdAt: -1 });
-    res.status(200).json({ orders });
-  } catch (error) {
-    console.error("🚨 Error fetching platform orders:", error);
-    res.status(500).json({ error: "Failed to retrieve orders" });
-  }
-});
-router.get("/:id", authenticateAdmin, async (req, res) => {
-  try {
-    const order = await PlatformOrder.findById(req.params.id);
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-    res.status(200).json({ order });
-  } catch (error) {
-    console.error("🚨 Error fetching platform order:", error);
-    res.status(500).json({ error: "Failed to retrieve order" });
-  }
-});
+// 🔹 PATCH: Оновити статус платформного замовлення
 router.patch("/:id", authenticateAdmin, async (req, res) => {
   try {
     const { status } = req.body;
-
-    if (!["pending", "confirmed", "completed", "cancelled"].includes(status)) {
-      return res.status(400).json({ error: "⛔ Невалідний статус" });
+    const validStatuses = ["pending", "confirmed", "completed", "cancelled"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: "Invalid status value" });
     }
 
     const order = await PlatformOrder.findByIdAndUpdate(
@@ -143,14 +148,12 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
       { new: true }
     );
 
-    if (!order) {
-      return res.status(404).json({ error: "❌ Замовлення не знайдено" });
-    }
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
-    res.status(200).json({ message: "✅ Статус оновлено", order });
+    res.status(200).json({ message: "Order status updated", order });
   } catch (error) {
-    console.error("🔥 Помилка при оновленні статусу:", error);
-    res.status(500).json({ error: "Не вдалося оновити статус замовлення" });
+    console.error("🧨 Error updating platform order status:", error);
+    res.status(500).json({ error: "Failed to update platform order" });
   }
 });
 
