@@ -15,7 +15,7 @@ const offlineSaleValidationSchema = Joi.object({
     )
     .required(),
   totalAmount: Joi.number().required(), // 💰 Загальна сума продажу
-  paymentMethod: Joi.string().valid("BLIK", "bank_transfer").required(),
+  paymentMethod: Joi.string().valid("BLIK", "bank_transfer", "cash").required(),
   status: Joi.string()
     .valid("pending", "completed", "cancelled", "returned")
     .required(),

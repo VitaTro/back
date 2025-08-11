@@ -49,7 +49,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       saleDate,
     } = req.body;
 
-    const validMethods = ["BLIK", "bank_transfer", "terminal"];
+    const validMethods = ["BLIK", "bank_transfer", "terminal", "cash"];
     if (!validMethods.includes(paymentMethod)) {
       return res.status(400).json({ error: "Invalid payment method" });
     }
