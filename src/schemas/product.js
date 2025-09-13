@@ -89,6 +89,12 @@ const productSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    materials: {
+      type: String,
+      required: false,
+      description: "Склад виробу: бісер, нитка, камені тощо",
+    },
+
     rating: {
       type: Number,
       default: 0,
