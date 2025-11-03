@@ -40,6 +40,7 @@ const allowedOrigins = [
   "https://nika-gold.net",
   "https://nika-gold.netlify.app",
   "http://localhost:5173",
+  "http://localhost:4173",
 ];
 
 app.use(
