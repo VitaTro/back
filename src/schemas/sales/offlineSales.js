@@ -25,6 +25,10 @@ const offlineSaleSchema = new mongoose.Schema(
       },
     ],
     totalAmount: { type: Number, required: true },
+    discount: { type: Number, default: 0 },
+    discountPercent: { type: Number, default: 0 },
+    finalPrice: { type: Number, required: true },
+
     paymentMethod: {
       type: String,
       enum: ["BLIK", "bank_transfer", "terminal", "cash"],

@@ -12,7 +12,7 @@ const Invoice = require("../../schemas/accounting/InvoiceSchema");
 const StockMovement = require("../../schemas/accounting/stockMovement");
 const { calculateStock } = require("../../services/calculateStock");
 const generateUniversalInvoice = require("../../services/generateUniversalInvoice");
-
+const { calculateDiscount } = require("../../services/discountCalculator");
 // 🔍 Отримати всі онлайн продажі
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
@@ -81,6 +81,13 @@ router.post("/", authenticateAdmin, async (req, res) => {
         lastMovement.unitPurchasePrice ||
         0;
       totalAmount += unitPrice * item.quantity;
+      const { discount, discountPercent, final } = order.discount
+        ? {
+            discount: order.discount,
+            discountPercent: order.discountPercent,
+            final: order.finalPrice,
+          }
+        : calculateDiscount(totalAmount);
 
       enrichedProducts.push({
         productId: item.productId,
@@ -123,6 +130,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
       userId: order.userId,
       products: enrichedProducts,
       totalAmount,
+      discount,
+      discountPercent,
+      finalPrice: final,
       paymentMethod: order.paymentMethod,
       status: "completed",
       deliveryDetails: `${order.deliveryType}`,
@@ -137,7 +147,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
     await FinanceOverview.updateOne(
       {},
       {
-        $inc: { totalRevenue: totalAmount },
+        $inc: { totalRevenue: final },
         $push: { completedOnlineSales: onlineSale._id },
       },
       { upsert: true }
@@ -238,6 +248,9 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
           userId: existingOnlineOrder.userId,
           onlineOrderId: existingOnlineOrder._id,
           totalAmount: existingOnlineOrder.totalPrice,
+          discount: existingOnlineOrder.discount,
+          discountPercent: existingOnlineOrder.discountPercent,
+          finalPrice: existingOnlineOrder.finalPrice,
           paymentMethod: salePaymentMethod,
           processedBy: saleProcessedBy, // 🔹 Гарантовано ObjectId або null
           products: saleProducts,
@@ -255,7 +268,7 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
       {},
       {
         $push: { completedOnlineOrders: existingOnlineOrder._id },
-        $inc: { totalRevenue: existingOnlineOrder.totalPrice },
+        $inc: { totalRevenue: existingOnlineOrder.finalPrice },
       },
       { upsert: true }
     );
@@ -317,7 +330,14 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
 
     await FinanceOverview.updateOne(
       {},
-      { $inc: { totalRevenue: -totalRefunded } }
+      {
+        $inc: {
+          totalRevenue: -Math.min(
+            totalRefunded,
+            sale.finalPrice || sale.totalAmount
+          ),
+        },
+      }
     );
 
     sale.products = sale.products.filter((p) => p.quantity > 0);

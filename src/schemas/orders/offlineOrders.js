@@ -23,6 +23,9 @@ const offlineOrderSchema = new mongoose.Schema(
 
     // Загальна ціна замовлення
     totalPrice: { type: Number, required: true },
+    discount: { type: Number, default: 0 },
+    discountPercent: { type: Number, default: 0 },
+    finalPrice: { type: Number, required: true },
 
     // Метод оплати
     paymentMethod: {

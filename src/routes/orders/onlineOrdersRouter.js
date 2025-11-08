@@ -9,6 +9,7 @@ const { handleSaleStockByIndex } = require("../../controller/stockController");
 const StockMovement = require("../../schemas/accounting/stockMovement");
 const Product = require("../../schemas/product");
 const { calculateStock } = require("../../services/calculateStock");
+const { calculateDiscount } = require("../../services/discountCalculator");
 // ✅ Отримати всі онлайн-замовлення з пагінацією і фільтром
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
@@ -83,6 +84,8 @@ router.post("/", authenticateAdmin, async (req, res) => {
       const unitPrice =
         lastMovement.unitSalePrice || lastMovement.unitPurchasePrice || 0;
       totalPrice += unitPrice * item.quantity;
+      const { discount, discountPercent, final } =
+        calculateDiscount(totalPrice);
 
       const visualProduct = await Product.findById(item.productId);
 
@@ -100,6 +103,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
       products: enrichedProducts,
       totalQuantity: enrichedProducts.reduce((sum, p) => sum + p.quantity, 0),
       totalPrice,
+      discount,
+      discountPercent,
+      finalPrice: final,
       paymentStatus: "unpaid",
       paymentMethod,
       deliveryType: deliveryType || "courier",
@@ -169,7 +175,7 @@ router.put("/:id/sale", authenticateAdmin, async (req, res) => {
     // ✅ Створюємо запис продажу
     const newSale = await OnlineSale.create({
       orderId: order._id,
-      totalAmount: order.totalPrice,
+      totalAmount: order.finalPrice,
       products: enrichedProducts,
       userId: order.userId,
       paymentMethod: order.paymentMethod,

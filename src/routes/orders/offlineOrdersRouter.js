@@ -12,6 +12,7 @@ const {
   generateUniversalInvoice,
 } = require("../../services/generateUniversalInvoice");
 const { calculateStock } = require("../../services/calculateStock");
+const { calculateDiscount } = require("../../services/discountCalculator");
 // 🔹 GET: Отримати всі офлайн-замовлення
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
@@ -100,10 +101,13 @@ router.post("/", authenticateAdmin, async (req, res) => {
         price: unitPrice,
       });
     }
-
+    const { discount, discountPercent, final } = calculateDiscount(totalAmount);
     const order = await OfflineOrder.create({
       products: enrichedProducts,
       totalPrice: totalAmount,
+      discount,
+      discountPercent,
+      finalPrice: final,
       paymentMethod,
       status: "pending",
       buyerType,

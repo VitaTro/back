@@ -32,6 +32,9 @@ const platformOrderSchema = new mongoose.Schema(
     ],
 
     totalPrice: { type: Number, required: true },
+    discount: { type: Number, default: 0 },
+    discountPercent: { type: Number, default: 0 },
+    finalPrice: { type: Number, required: true },
 
     paymentMethod: {
       type: String,

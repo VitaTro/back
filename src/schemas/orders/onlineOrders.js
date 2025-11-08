@@ -26,6 +26,10 @@ const onlineOrderSchema = new mongoose.Schema(
     ],
     totalQuantity: { type: Number, required: true, default: 0 },
     totalPrice: { type: Number, required: true },
+    discount: { type: Number, default: 0 },
+    discountPercent: { type: Number, default: 0 },
+    finalPrice: { type: Number, required: true },
+
     buyerType: {
       type: String,
       enum: ["anonim", "przedsiębiorca"],

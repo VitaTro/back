@@ -30,7 +30,7 @@ router.get("/", authenticateAdmin, async (req, res) => {
       PlatformSale.countDocuments({ status: "completed" }),
       Invoice.aggregate([
         {
-          $group: { _id: null, totalInvoicesAmount: { $sum: "$totalAmount" } },
+          $group: { _id: null, totalInvoicesAmount: { $sum: "$finalPrice" } },
         },
       ]).then((data) => data[0]?.totalInvoicesAmount || 0),
     ]);
@@ -42,8 +42,8 @@ router.get("/", authenticateAdmin, async (req, res) => {
           {
             $group: {
               _id: null,
-              totalSales: { $sum: "$totalAmount" },
-              netProfit: { $sum: { $subtract: ["$totalAmount", "$cost"] } },
+              totalSales: { $sum: "$finalPrice" },
+              netProfit: { $sum: { $subtract: ["$finalPrice", "$cost"] } },
             },
           },
         ]),
@@ -51,8 +51,8 @@ router.get("/", authenticateAdmin, async (req, res) => {
           {
             $group: {
               _id: null,
-              totalSales: { $sum: "$totalAmount" },
-              netProfit: { $sum: { $subtract: ["$totalAmount", "$cost"] } },
+              totalSales: { $sum: "$finalPrice" },
+              netProfit: { $sum: { $subtract: ["$finalPrice", "$cost"] } },
             },
           },
         ]),
@@ -64,7 +64,7 @@ router.get("/", authenticateAdmin, async (req, res) => {
           {
             $group: {
               _id: null,
-              totalSales: { $sum: "$totalAmount" },
+              totalSales: { $sum: "$finalPrice" },
               netProfit: { $sum: "$netProfit" },
             },
           },
@@ -93,7 +93,7 @@ router.get("/", authenticateAdmin, async (req, res) => {
         {
           $group: {
             _id: "$paymentMethod",
-            total: { $sum: "$totalAmount" },
+            total: { $sum: "$finalPrice" },
           },
         },
       ]),
@@ -101,7 +101,7 @@ router.get("/", authenticateAdmin, async (req, res) => {
         {
           $group: {
             _id: "$paymentMethod",
-            total: { $sum: "$totalAmount" },
+            total: { $sum: "$finalPrice" },
           },
         },
       ]),
@@ -109,7 +109,7 @@ router.get("/", authenticateAdmin, async (req, res) => {
         {
           $group: {
             _id: "$paymentMethod",
-            total: { $sum: "$totalAmount" },
+            total: { $sum: "$finalPrice" },
           },
         },
       ]),
@@ -155,17 +155,17 @@ router.get("/", authenticateAdmin, async (req, res) => {
       ...completedSalesOffline.map((sale) => ({
         ...sale,
         source: "offline",
-        totalPrice: sale.totalPrice,
+        totalPrice: sale.finalPrice,
       })),
       ...completedSalesOnline.map((sale) => ({
         ...sale,
         source: "online",
-        totalPrice: sale.totalAmount,
+        totalPrice: sale.finalPrice,
       })),
       ...completedSalesPlatform.map((sale) => ({
         ...sale,
         source: "platform",
-        totalPrice: sale.totalAmount,
+        totalPrice: sale.finalPrice,
       })),
     ];
 

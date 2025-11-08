@@ -12,7 +12,7 @@ const OfflineSale = require("../../schemas/sales/offlineSales");
 const FinanceOverview = require("../../schemas/finance/financeOverview");
 const Invoice = require("../../schemas/accounting/InvoiceSchema");
 const generateInvoicePDFOffline = require("../../config/invoicePdfGeneratorOffline");
-
+const { calculateDiscount } = require("../../services/discountCalculator");
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
     const filter = req.query.status ? { status: req.query.status } : {};
@@ -83,6 +83,14 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
       totalAmount += unitPrice * item.quantity;
 
+      const { discount, discountPercent, final } = order.discount
+        ? {
+            discount: order.discount,
+            discountPercent: order.discountPercent,
+            final: order.finalPrice,
+          }
+        : calculateDiscount(totalAmount);
+
       enrichedProducts.push({
         productId: item.productId,
         index: lastMovement.productIndex,
@@ -99,7 +107,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
       orderId,
       products: enrichedProducts,
       totalAmount,
-
+      discount,
+      discountPercent,
+      finalPrice: final,
       paymentMethod: order.paymentMethod,
       buyerType: order.buyerType,
       ...(order.buyerType === "przedsiębiorca" && {
@@ -139,7 +149,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
     await FinanceOverview.updateOne(
       {},
       {
-        $inc: { totalRevenue: totalAmount },
+        $inc: { totalRevenue: final },
         $push: { completedSales: sale._id },
       },
       { upsert: true }
@@ -235,7 +245,14 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
     // 💰 Оновлення фінансів
     await FinanceOverview.updateOne(
       {},
-      { $inc: { totalRevenue: -refundAmount } }
+      {
+        $inc: {
+          totalRevenue: -Math.min(
+            refundAmount,
+            sale.finalPrice || sale.totalAmount
+          ),
+        },
+      }
     );
 
     // 🌀 Статус продажу

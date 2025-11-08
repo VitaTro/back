@@ -77,7 +77,14 @@ router.post("/", authenticateAdmin, async (req, res) => {
       const margin = unitPrice - unitPurchasePrice;
       totalAmount += unitPrice * item.quantity;
       totalCost += unitPurchasePrice * item.quantity;
-
+      const { discount, discountPercent, final } =
+        order.manualPrice || typeof order.finalPrice === "number"
+          ? {
+              discount: order.discount || 0,
+              discountPercent: order.discountPercent || 0,
+              final: order.finalPrice,
+            }
+          : calculateDiscount(totalAmount);
       enrichedProducts.push({
         productId: item.productId,
         index: lastMovement.productIndex,
@@ -97,6 +104,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
       orderId,
       products: enrichedProducts,
       totalAmount,
+      finalPrice: final,
+      discount,
+      discountPercent,
       totalCost,
       netProfit,
       paymentMethod: order.paymentMethod,
@@ -134,7 +144,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
     await FinanceOverview.updateOne(
       {},
       {
-        $inc: { totalRevenue: totalAmount },
+        $inc: { totalRevenue: final },
         $push: { completedSales: sale._id },
       },
       { upsert: true }

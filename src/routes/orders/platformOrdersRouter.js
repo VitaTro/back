@@ -6,7 +6,7 @@ const PlatformOrder = require("../../schemas/orders/platformOrders");
 const Product = require("../../schemas/product");
 const StockMovement = require("../../schemas/accounting/stockMovement");
 const { calculateStock } = require("../../services/calculateStock");
-
+const { calculateDiscount } = require("../../services/discountCalculator");
 // 🔹 GET: Всі платформені замовлення
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
@@ -113,12 +113,16 @@ router.post("/", authenticateAdmin, async (req, res) => {
         color: item.color || productDoc?.color || "",
       });
     }
+    const { discount, discountPercent, final } = calculateDiscount(totalPrice);
 
     const order = await PlatformOrder.create({
       platform,
       externalOrderId,
       products: enrichedProducts,
       totalPrice,
+      discount,
+      discountPercent,
+      finalPrice: final,
       paymentMethod,
       notes,
       client,
