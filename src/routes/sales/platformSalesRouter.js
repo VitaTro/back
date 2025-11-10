@@ -77,14 +77,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       const margin = unitPrice - unitPurchasePrice;
       totalAmount += unitPrice * item.quantity;
       totalCost += unitPurchasePrice * item.quantity;
-      const { discount, discountPercent, final } =
-        order.manualPrice || typeof order.finalPrice === "number"
-          ? {
-              discount: order.discount || 0,
-              discountPercent: order.discountPercent || 0,
-              final: order.finalPrice,
-            }
-          : calculateDiscount(totalAmount);
+
       enrichedProducts.push({
         productId: item.productId,
         index: lastMovement.productIndex,
@@ -99,7 +92,20 @@ router.post("/", authenticateAdmin, async (req, res) => {
     }
 
     const netProfit = totalAmount - totalCost;
+    let discount = 0;
+    let discountPercent = 0;
+    let final = 0;
 
+    if (order.discount) {
+      discount = order.discount;
+      discountPercent = order.discountPercent;
+      final = order.finalPrice;
+    } else {
+      const calculated = calculateDiscount(totalAmount);
+      discount = calculated.discount;
+      discountPercent = calculated.discountPercent;
+      final = calculated.final;
+    }
     const sale = await PlatformSale.create({
       orderId,
       products: enrichedProducts,

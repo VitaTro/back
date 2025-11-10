@@ -83,26 +83,29 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
       totalAmount += unitPrice * item.quantity;
 
-      const { discount, discountPercent, final } = order.discount
-        ? {
-            discount: order.discount,
-            discountPercent: order.discountPercent,
-            final: order.finalPrice,
-          }
-        : calculateDiscount(totalAmount);
-
       enrichedProducts.push({
         productId: item.productId,
         index: lastMovement.productIndex,
         name: lastMovement.productName,
         quantity: item.quantity,
-
         price: unitPrice,
-
         photoUrl: productData?.photoUrl || "",
       });
     }
+    let discount = 0;
+    let discountPercent = 0;
+    let final = 0;
 
+    if (order.discount) {
+      discount = order.discount;
+      discountPercent = order.discountPercent;
+      final = order.finalPrice;
+    } else {
+      const calculated = calculateDiscount(totalAmount);
+      discount = calculated.discount;
+      discountPercent = calculated.discountPercent;
+      final = calculated.final;
+    }
     const sale = await OfflineSale.create({
       orderId,
       products: enrichedProducts,
