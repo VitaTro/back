@@ -50,6 +50,18 @@ const stockMovementSchema = new mongoose.Schema({
     type: Number, // Рекомендована ціна продажу
     required: true,
   },
+  discount: {
+    type: Number,
+    default: 0,
+  },
+  discountPercent: {
+    type: Number,
+    default: 0,
+  },
+  finalUnitPrice: {
+    type: Number,
+  },
+
   relatedSaleId: {
     type: mongoose.Schema.Types.ObjectId,
     refPath: "saleSource",

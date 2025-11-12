@@ -33,7 +33,7 @@ const AllegroRouter = require("./src/routes/allegroRouter");
 const InvoiceArchiveRouter = require("./src/routes/admin/invoiceArchiveRouter");
 const PlatformOrdersRouter = require("./src/routes/orders/platformOrdersRouter");
 const PlatformSalesRouter = require("./src/routes/sales/platformSalesRouter");
-// const ElavonRouter = require("./src/routes/payment/elavonRouter");
+
 const app = express();
 
 const allowedOrigins = [
@@ -76,10 +76,6 @@ app.use(
   "/favicon.ico",
   express.static(path.join(__dirname, "public", "favicon.ico"))
 );
-
-app.get("/test", (req, res) => {
-  res.send("This is a test route");
-});
 
 // Routes
 app.use("/api", MainRouter);

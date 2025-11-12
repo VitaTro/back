@@ -31,6 +31,35 @@ router.post("/", authenticateAdmin, async (req, res) => {
         .status(404)
         .json({ error: "Product not found by name + index" });
     }
+    let finalUnitPrice = unitSalePrice;
+    let discount = 0;
+    let discountPercent = 0;
+
+    if (["sale", "externalSale"].includes(type) && relatedSaleId) {
+      const saleModel =
+        saleSource === "OfflineSale"
+          ? OfflineSales
+          : saleSource === "OnlineSale"
+          ? OnlineSale
+          : saleSource === "PlatformSale"
+          ? PlatformSale
+          : null;
+
+      if (saleModel) {
+        const sale = await saleModel.findById(relatedSaleId).lean();
+        if (sale && sale.discount > 0) {
+          discount = sale.discount;
+          discountPercent = sale.discountPercent;
+
+          const totalQty = sale.products.reduce(
+            (sum, p) => sum + (Number(p.quantity) || 0),
+            0
+          );
+          const discountPerUnit = totalQty > 0 ? discount / totalQty : 0;
+          finalUnitPrice = unitSalePrice - discountPerUnit;
+        }
+      }
+    }
     const movement = new StockMovement({
       productId: product._id,
       productIndex,
@@ -45,6 +74,11 @@ router.post("/", authenticateAdmin, async (req, res) => {
       unitSalePrice: ["sale", "externalSale"].includes(type)
         ? unitSalePrice
         : undefined,
+      finalUnitPrice: ["sale", "externalSale"].includes(type)
+        ? finalUnitPrice
+        : undefined,
+      discount,
+      discountPercent,
       note,
       relatedSaleId,
       saleSource,

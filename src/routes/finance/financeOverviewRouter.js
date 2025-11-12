@@ -178,6 +178,20 @@ router.get("/", authenticateAdmin, async (req, res) => {
       operatingCosts: 0,
       budgetForProcurement: 0,
     };
+    const offlineDiscounts = await OfflineSale.aggregate([
+      { $match: { status: "completed", discount: { $gt: 0 } } },
+      { $group: { _id: null, total: { $sum: "$discount" } } },
+    ]);
+
+    const onlineDiscounts = await OnlineSale.aggregate([
+      { $match: { status: "completed", discount: { $gt: 0 } } },
+      { $group: { _id: null, total: { $sum: "$discount" } } },
+    ]);
+
+    const platformDiscounts = await PlatformSale.aggregate([
+      { $match: { status: "completed", discount: { $gt: 0 } } },
+      { $group: { _id: null, total: { $sum: "$discount" } } },
+    ]);
 
     // 📊 Підсумковий звіт
     const financialOverview = {
@@ -209,6 +223,11 @@ router.get("/", authenticateAdmin, async (req, res) => {
         },
         refunds: refundsData[0]?.totalRefunds || 0,
         profitForecast,
+        discounts: {
+          offline: offlineDiscounts[0]?.total || 0,
+          online: onlineDiscounts[0]?.total || 0,
+          platform: platformDiscounts[0]?.total || 0,
+        },
       },
       financeSettings,
       expenses: {
