@@ -138,17 +138,23 @@ router.get("/", authenticateAdmin, async (req, res) => {
     const completedSalesOffline = await OfflineSale.find({
       status: "completed",
     })
-      .select("products totalPrice paymentMethod createdAt")
+      .select(
+        "products finalPrice discount discountPercent paymentMethod createdAt"
+      )
       .lean();
 
     const completedSalesOnline = await OnlineSale.find({ status: "completed" })
-      .select("products totalAmount paymentMethod createdAt")
+      .select(
+        "products finalPrice discount discountPercent paymentMethod createdAt"
+      )
       .lean();
 
     const completedSalesPlatform = await PlatformSale.find({
       status: "completed",
     })
-      .select("products totalAmount paymentMethod createdAt saleDate")
+      .select(
+        "products finalPrice discount discountPercent paymentMethod createdAt saleDate"
+      )
       .lean();
 
     const completedSales = [
