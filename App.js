@@ -35,7 +35,6 @@ const PlatformOrdersRouter = require("./src/routes/orders/platformOrdersRouter")
 const PlatformSalesRouter = require("./src/routes/sales/platformSalesRouter");
 
 const app = express();
-
 const allowedOrigins = [
   "https://nika-gold.net",
   "https://nika-gold.netlify.app",
@@ -52,30 +51,55 @@ app.use(
         callback(new Error("Not allowed by CORS"));
       }
     },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   }),
 );
-app.use((req, res, next) => {
-  res.header(
-    "Access-Control-Allow-Origin",
-    allowedOrigins.includes(req.headers.origin)
-      ? req.headers.origin
-      : "https://nika-gold.net",
-  );
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
-  );
-  next();
-});
-app.use((req, res, next) => {
-  if (req.method === "OPTIONS") {
-    res.sendStatus(200);
-    return;
-  }
-  next();
-});
+
+// важливо: відповідаємо на preflight
+app.options("*", cors());
+
+// const allowedOrigins = [
+//   "https://nika-gold.net",
+//   "https://nika-gold.netlify.app",
+//   "http://localhost:5173",
+//   "http://localhost:4173",
+// ];
+
+// app.use(
+//   cors({
+//     origin: function (origin, callback) {
+//       if (!origin || allowedOrigins.includes(origin)) {
+//         callback(null, true);
+//       } else {
+//         callback(new Error("Not allowed by CORS"));
+//       }
+//     },
+//     credentials: true,
+//   }),
+// );
+// app.use((req, res, next) => {
+//   res.header(
+//     "Access-Control-Allow-Origin",
+//     allowedOrigins.includes(req.headers.origin)
+// //       ? req.headers.origin
+//       : "https://nika-gold.net",
+//   );
+//   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+//   res.header(
+//     "Access-Control-Allow-Headers",
+//     "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+//   );
+//   next();
+// });
+// app.use((req, res, next) => {
+//   if (req.method === "OPTIONS") {
+//     res.sendStatus(200);
+//     return;
+//   }
+//   next();
+// });
 
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Зробити папку з файлами доступною
