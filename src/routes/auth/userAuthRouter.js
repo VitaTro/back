@@ -10,6 +10,10 @@ const {
   sendVerificationEmail,
   sendResetPasswordEmail,
 } = require("../../config/emailService");
+const {
+  googleAuthController,
+  facebookAuthController,
+} = require("../../controller/user/socialAuthController");
 const { userValidationSchema } = require("../../validation/userJoi");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
@@ -53,7 +57,7 @@ router.post("/login", async (req, res) => {
       try {
         const decoded = jwt.verify(
           refreshToken,
-          process.env.JWT_REFRESH_SECRET
+          process.env.JWT_REFRESH_SECRET,
         );
         const user = await User.findById(decoded.id);
 
@@ -72,7 +76,7 @@ router.post("/login", async (req, res) => {
         const accessToken = jwt.sign(
           { id: user._id, role: user.role },
           process.env.JWT_SECRET,
-          { expiresIn: "15m" }
+          { expiresIn: "15m" },
         );
 
         return res.json({
@@ -103,12 +107,12 @@ router.post("/login", async (req, res) => {
     const accessToken = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "15m" },
     );
     const newRefreshToken = jwt.sign(
       { id: user._id },
       process.env.JWT_REFRESH_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
     user.refreshToken = newRefreshToken;
     user.passwordChangedAt = Date.now(); // 🔹 Фіксуємо час зміни пароля
@@ -188,7 +192,7 @@ router.post("/update-password", async (req, res) => {
     await User.findOneAndUpdate(
       { email },
       { password: newHashedPassword, resetCode: null, resetCodeExpires: null },
-      { new: true }
+      { new: true },
     );
 
     res.json({ message: "Password updated successfully" });
@@ -214,5 +218,7 @@ router.get("/verify-email", async (req, res) => {
   }
 });
 router.post("/refresh", refreshToken);
+router.post("/google", googleAuthController);
+router.post("/facebook", facebookAuthController);
 
 module.exports = router;

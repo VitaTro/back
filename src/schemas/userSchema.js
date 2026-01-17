@@ -7,10 +7,11 @@ const ShoppingCart = require("../schemas/shopping");
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   username: { type: String, required: true },
-  password: { type: String, required: true },
+  password: { type: String, required: false },
   role: { type: String, default: "user" },
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String },
+  provider: { type: String, default: "local" },
   refreshToken: { type: String },
   createdAt: { type: Date, default: Date.now },
   firstName: { type: String },
@@ -26,6 +27,11 @@ const userSchema = new mongoose.Schema({
   },
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Wishlist" }],
   shoppingCart: [{ type: mongoose.Schema.Types.ObjectId, ref: "ShoppingCart" }],
+  cart: {
+    type: Array,
+    default: [],
+  },
+
   resetCode: { type: String },
   resetCodeExpires: { type: Date },
   passwordChangedAt: { type: Date },

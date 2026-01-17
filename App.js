@@ -53,19 +53,19 @@ app.use(
       }
     },
     credentials: true,
-  })
+  }),
 );
 app.use((req, res, next) => {
   res.header(
     "Access-Control-Allow-Origin",
     allowedOrigins.includes(req.headers.origin)
       ? req.headers.origin
-      : "https://nika-gold.net"
+      : "https://nika-gold.net",
   );
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
   );
   next();
 });
@@ -74,7 +74,7 @@ app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Зробити папку з файлами доступною
 app.use(
   "/favicon.ico",
-  express.static(path.join(__dirname, "public", "favicon.ico"))
+  express.static(path.join(__dirname, "public", "favicon.ico")),
 );
 
 // Routes
@@ -109,6 +109,8 @@ app.use("/api/public", PublicRouter);
 app.use("/api/allegro", AllegroRouter);
 app.use("/api/admin/reporting", ReportingRouter);
 app.use("/api/admin/invoices", InvoiceArchiveRouter);
+
+// /api/user/cart/merge
 app.post("/upload", upload.single("photo"), (req, res) => {
   try {
     if (!req.file) {

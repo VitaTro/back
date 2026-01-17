@@ -1,0 +1,161 @@
+const User = require("../../schemas/userSchema");
+const fetch = require("node-fetch");
+const jwt = require("jsonwebtoken");
+
+// Генерація accessToken (аналогічно твоєму локальному логіну)
+const generateAccessToken = (user) =>
+  jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+    expiresIn: "15m",
+  });
+
+// Генерація refreshToken
+const generateRefreshToken = (user) =>
+  jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: "365d",
+  });
+
+//  FACEBOOK LOGIN
+
+exports.facebookAuthController = async (req, res) => {
+  try {
+    const { accessToken } = req.body;
+
+    if (!accessToken) {
+      return res.status(400).json({ message: "No access token provided" });
+    }
+
+    // 1. Отримуємо дані від Facebook
+    const response = await fetch(
+      `https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`,
+    );
+
+    const data = await response.json();
+
+    if (!data.email) {
+      return res.status(400).json({
+        message: "Facebook did not return an email. Cannot authenticate.",
+      });
+    }
+
+    // 2. Шукаємо користувача
+    let user = await User.findOne({ email: data.email });
+
+    // 3. Якщо email існує, але provider інший → блокуємо
+    if (user && user.provider === "local") {
+      return res.status(400).json({
+        message:
+          "Ten adres e-mail jest już zarejestrowany przez zwykłą rejestrację. Zaloguj się za pomocą adresu e-mail i hasła.",
+      });
+    }
+
+    if (user && user.provider === "google") {
+      return res.status(400).json({
+        message:
+          "Ten e-mail jest już używany do logowania przez Google. Skorzystaj z logowania przez Google.",
+      });
+    }
+
+    // 4. Якщо користувача немає — створюємо
+    if (!user) {
+      user = await User.create({
+        email: data.email,
+        username: data.name,
+        provider: "facebook",
+        password: null,
+        isVerified: true,
+        cart: [],
+      });
+    }
+
+    // 5. Генеруємо токени
+    const accessTokenJWT = generateAccessToken(user);
+    const refreshTokenJWT = generateRefreshToken(user);
+
+    user.refreshToken = refreshTokenJWT;
+    await user.save();
+
+    res.json({
+      accessToken: accessTokenJWT,
+      refreshToken: refreshTokenJWT,
+      user,
+    });
+  } catch (err) {
+    res.status(400).json({
+      message: "Facebook login failed",
+      error: err.message,
+    });
+  }
+};
+
+//  GOOGLE LOGIN
+
+const { OAuth2Client } = require("google-auth-library");
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+exports.googleAuthController = async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ message: "No Google credential provided" });
+    }
+
+    // 1. Перевіряємо Google токен
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const email = payload.email;
+    const name = payload.name;
+
+    // 2. Шукаємо користувача
+    let user = await User.findOne({ email });
+
+    // 3. Якщо email існує, але provider інший → блокуємо
+    if (user && user.provider === "local") {
+      return res.status(400).json({
+        message:
+          "Ten adres e-mail jest już zarejestrowany przez zwykłą rejestrację. Zaloguj się za pomocą adresu e-mail i hasła.",
+      });
+    }
+
+    if (user && user.provider === "facebook") {
+      return res.status(400).json({
+        message:
+          "Ten e-mail jest już używany do logowania przez Facebook. Skorzystaj z logowania przez Facebook.",
+      });
+    }
+
+    // 4. Якщо користувача немає — створюємо
+    if (!user) {
+      user = await User.create({
+        email,
+        username: name,
+        provider: "google",
+        password: null,
+        isVerified: true,
+        cart: [],
+      });
+    }
+
+    // 5. Генеруємо токени
+    const accessTokenJWT = generateAccessToken(user);
+    const refreshTokenJWT = generateRefreshToken(user);
+
+    user.refreshToken = refreshTokenJWT;
+    await user.save();
+
+    res.json({
+      accessToken: accessTokenJWT,
+      refreshToken: refreshTokenJWT,
+      user,
+    });
+  } catch (err) {
+    res.status(400).json({
+      message: "Google login failed",
+      error: err.message,
+    });
+  }
+};

@@ -7,13 +7,16 @@ const generateAccessToken = (user) =>
   jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "30d" });
 
 const refreshToken = async (req, res) => {
-  const { refreshToken } = req.body;
-  if (!refreshToken) {
+  const { refreshToken: incomingRefreshToken } = req.body;
+  if (!incomingRefreshToken) {
     return res.status(401).json({ message: "No refresh token provided" });
   }
 
   try {
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const decoded = jwt.verify(
+      incomingRefreshToken,
+      process.env.JWT_REFRESH_SECRET,
+    );
     console.log("🔍 Decoded Refresh Token:", decoded);
 
     let user = await User.findById(decoded.id);

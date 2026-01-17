@@ -504,6 +504,99 @@
         }
       }
     },
+    "/api/user/auth/google": {
+      "post": {
+        "tags": ["User Auth"],
+        "summary": "Авторизація користувача через Google",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "credential": {
+                    "type": "string",
+                    "description": "Google ID token"
+                  }
+                },
+                "required": ["credential"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Успішна авторизація через Google",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessToken": { "type": "string" },
+                    "refreshToken": { "type": "string" },
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка авторизації або некоректний токен"
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      }
+    },
+    "/api/user/auth/facebook": {
+      "post": {
+        "tags": ["User Auth"],
+        "summary": "Авторизація користувача через Facebook",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accessToken": {
+                    "type": "string",
+                    "description": "Facebook access token"
+                  }
+                },
+                "required": ["accessToken"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Успішна авторизація через Facebook",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessToken": { "type": "string" },
+                    "refreshToken": { "type": "string" },
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Помилка авторизації або відсутній email у Facebook"
+          },
+          "500": {
+            "description": "Внутрішня помилка сервера"
+          }
+        }
+      }
+    },
+
     "/api/admin/auth/send-email": {
       "post": {
         "tags": ["Admin Auth"],
