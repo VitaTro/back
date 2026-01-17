@@ -69,6 +69,13 @@ app.use((req, res, next) => {
   );
   next();
 });
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+    return;
+  }
+  next();
+});
 
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Зробити папку з файлами доступною
