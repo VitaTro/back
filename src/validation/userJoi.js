@@ -19,9 +19,9 @@ const userValidationSchema = Joi.object({
     "string.email": "Invalid email format",
   }),
 
-  password: Joi.string().min(10).required().messages({
+  password: Joi.string().min(8).required().messages({
     "string.empty": "Password cannot be empty",
-    "string.min": "Password must be at least 10 characters long",
+    "string.min": "Password must be at least 8 characters long",
   }),
   confirmPassword: Joi.ref("password"),
 });
