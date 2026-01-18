@@ -11,7 +11,11 @@ const userSchema = new mongoose.Schema({
   role: { type: String, default: "user" },
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String },
-  provider: { type: String, default: "local" },
+  providers: {
+    local: { type: Boolean, default: false },
+    google: { type: Boolean, default: false },
+    facebook: { type: Boolean, default: false },
+  },
   refreshToken: { type: String },
   createdAt: { type: Date, default: Date.now },
   firstName: { type: String },

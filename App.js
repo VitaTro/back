@@ -141,7 +141,6 @@ app.use("/api/allegro", AllegroRouter);
 app.use("/api/admin/reporting", ReportingRouter);
 app.use("/api/admin/invoices", InvoiceArchiveRouter);
 
-// /api/user/cart/merge
 app.post("/upload", upload.single("photo"), (req, res) => {
   try {
     if (!req.file) {

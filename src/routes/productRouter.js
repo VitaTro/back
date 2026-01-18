@@ -5,6 +5,7 @@ const Product = require("../schemas/product");
 const { cloudinary, upload } = require("../config/cloudinary");
 const searchController = require("../controller/searchController");
 const RecentView = require("../schemas/recent");
+const StockMovement = require("../schemas/accounting/stockMovement");
 // Маршрут для отримання всіх продуктів
 router.get("/", async (req, res) => {
   try {
@@ -14,17 +15,33 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch products" });
   }
 });
+
 router.get("/:id", async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
+
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    res.json(product);
+
+    // Отримуємо останній запис складу
+    const latestStock = await StockMovement.findOne({
+      productId: product._id,
+    }).sort({ date: -1 });
+
+    // Формуємо відповідь
+    res.json({
+      ...product.toObject(),
+      availableQuantity: latestStock?.quantity ?? 0,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Failed to fetch product", error });
+    res.status(500).json({
+      message: "Failed to fetch product",
+      error: error.message,
+    });
   }
 });
+
 // Маршрут для отримання продуктів за типом
 router.get("/:type", async (req, res) => {
   try {

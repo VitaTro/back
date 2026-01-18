@@ -33,9 +33,14 @@ router.post("/register", async (req, res) => {
     if (existingUser)
       return res.status(400).json({ message: "Email already exists" });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 8);
     const verificationToken = crypto.randomBytes(32).toString("hex");
-    const newUser = new User({ username, email, password: hashedPassword });
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
+      providers: { local: true },
+    });
     await newUser.save();
     await sendVerificationEmail(newUser);
 
@@ -52,7 +57,8 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password, refreshToken } = req.body;
 
-    // 🔹 Якщо refreshToken є, перевіряємо його замість логіну
+    // 1️⃣ LOGOWANIE PRZEZ REFRESH TOKEN
+
     if (refreshToken) {
       try {
         const decoded = jwt.verify(
@@ -60,8 +66,6 @@ router.post("/login", async (req, res) => {
           process.env.JWT_REFRESH_SECRET,
         );
         const user = await User.findById(decoded.id);
-
-        // 🔹 Якщо пароль був змінений, очищаємо refreshToken та примушуємо новий логін
         if (
           !user ||
           user.refreshToken !== refreshToken ||
@@ -69,41 +73,50 @@ router.post("/login", async (req, res) => {
         ) {
           return res
             .status(403)
-            .json({ message: "Session expired. Please log in again." });
+            .json({ message: "Sesja wygasła. Zaloguj się ponownie." });
         }
-
-        // Генеруємо новий accessToken
-        const accessToken = jwt.sign(
+        const newAccessToken = jwt.sign(
           { id: user._id, role: user.role },
           process.env.JWT_SECRET,
           { expiresIn: "15m" },
         );
-
         return res.json({
-          accessToken,
+          accessToken: newAccessToken,
           refreshToken,
           isVerified: user.isVerified,
         });
       } catch (error) {
         return res
           .status(403)
-          .json({ message: "Refresh token expired or invalid" });
+          .json({ message: "Refresh token wygasł lub jest nieprawidłowy." });
       }
     }
 
-    // 🔹 Використовуємо стандартний логін
+    // 2️⃣ STANDARDOWE LOGOWANIE (EMAIL + HASŁO)
+
     const user = await User.findOne({ email });
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res
+        .status(401)
+        .json({ message: "Nieprawidłowy e-mail lub hasło." });
     }
     if (!user.isVerified) {
-      return res.status(403).json({ message: "Email not verified" });
+      return res
+        .status(403)
+        .json({ message: "Adres e-mail nie został jeszcze zweryfikowany." });
     }
 
-    // 🔹 Очищаємо старий refreshToken після скидання пароля
+    // Jeśli użytkownik loguje się lokalnie po raz pierwszy → dodajemy provider
+    if (!user.providers.local) {
+      user.providers.local = true;
+      await user.save();
+    }
+
+    // Czyścimy stary refreshToken (np. po zmianie hasła)
     await User.findOneAndUpdate({ email }, { refreshToken: null });
 
-    // Генеруємо нові токени
+    // 3️⃣ GENEROWANIE NOWYCH TOKENÓW
+
     const accessToken = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
@@ -112,19 +125,20 @@ router.post("/login", async (req, res) => {
     const newRefreshToken = jwt.sign(
       { id: user._id },
       process.env.JWT_REFRESH_SECRET,
-      { expiresIn: "7d" },
+      { expiresIn: "365d" },
     );
     user.refreshToken = newRefreshToken;
-    user.passwordChangedAt = Date.now(); // 🔹 Фіксуємо час зміни пароля
+    user.passwordChangedAt = Date.now();
     await user.save();
-
-    res.json({
+    return res.json({
       accessToken,
       refreshToken: newRefreshToken,
       isVerified: user.isVerified,
     });
   } catch (error) {
-    res.status(500).json({ message: "Login error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Błąd logowania.", error: error.message });
   }
 });
 
