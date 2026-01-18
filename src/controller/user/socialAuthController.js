@@ -48,13 +48,6 @@ exports.facebookAuthController = async (req, res) => {
       }
     }
 
-    if (user && user.provider === "google") {
-      return res.status(400).json({
-        message:
-          "Ten e-mail jest już używany do logowania przez Google. Skorzystaj z logowania przez Google.",
-      });
-    }
-
     // 4. Якщо користувача немає — створюємо
     if (!user) {
       user = await User.create({
