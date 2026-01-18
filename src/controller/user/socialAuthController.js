@@ -39,11 +39,18 @@ exports.facebookAuthController = async (req, res) => {
 
     // 2. Шукаємо користувача
     let user = await User.findOne({ email: data.email });
-
+    if (user && user.providers.local) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Ten adres e-mail jest już zarejestrowany przez zwykłą rejestrację. Zaloguj się za pomocą adresu e-mail i hasła.",
+        });
+    }
     // 3. Якщо email існує, але provider інший → блокуємо
     if (user) {
-      if (!user.providers.includes("facebook")) {
-        user.providers.push("facebook");
+      if (!user.providers.facebook) {
+        user.providers.facebook = true;
         await user.save();
       }
     }
@@ -53,7 +60,7 @@ exports.facebookAuthController = async (req, res) => {
       user = await User.create({
         email: data.email,
         username: data.name,
-        providers: ["facebook"],
+        providers: { facebook: true },
         password: null,
         isVerified: true,
         cart: [],
@@ -102,11 +109,18 @@ exports.googleAuthController = async (req, res) => {
 
     // 2. Шукаємо користувача
     let user = await User.findOne({ email });
-
+    if (user && user.providers.local) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Ten adres e-mail jest już zarejestrowany przez zwykłą rejestrację. Zaloguj się za pomocą adresu e-mail i hasła.",
+        });
+    }
     // 3. Якщо email існує, але provider інший → блокуємо
     if (user) {
-      if (!user.providers.includes("google")) {
-        user.providers.push("google");
+      if (!user.providers.google) {
+        user.providers.google = true;
         await user.save();
       }
     }
@@ -116,7 +130,7 @@ exports.googleAuthController = async (req, res) => {
       user = await User.create({
         email,
         username: name,
-        providers: ["google"],
+        providers: { google: true },
         password: null,
         isVerified: true,
         cart: [],
