@@ -36,7 +36,7 @@ router.put("/profile/info", authenticateUser, async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
       { username, email, firstName, lastName, phone },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).select("username email firstName lastName phone");
 
     if (!updatedUser) {
@@ -78,7 +78,7 @@ router.put("/profile/address", authenticateUser, async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
       { address },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).select("address");
 
     if (!updatedUser) {
@@ -207,12 +207,49 @@ router.put("/settings", authenticateUser, async (req, res) => {
     const updated = await User.findByIdAndUpdate(
       req.user.id,
       { "settings.allowWalletUsage": !!allowWalletUsage },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).select("settings");
 
     res.status(200).json(updated.settings);
   } catch (error) {
     res.status(500).json({ error: "Nie udało się zaktualizować ustawień" });
+  }
+});
+router.get("/main", authenticateUser, async (req, res) => {
+  try {
+    console.log("🟢 Fetching data for user:", req.user);
+
+    if (!req.user || !req.user.id) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized: No user ID found." });
+    }
+
+    const user = await User.findById(req.user.id).populate(
+      "shoppingCart wishlist",
+    );
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    return res.json({
+      message: `Witamy, ${user.username}!`,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        isVerified: user.isVerified,
+        shoppingCart: user.shoppingCart || [],
+        wishlist: user.wishlist || [],
+      },
+    });
+  } catch (error) {
+    console.error("🔥 Error fetching user data:", error);
+    return res.status(500).json({
+      message: "Błąd pobierania danych użytkownika.",
+      details: error.message,
+    });
   }
 });
 
