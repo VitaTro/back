@@ -17,7 +17,6 @@ const refreshToken = async (req, res) => {
       incomingRefreshToken,
       process.env.JWT_REFRESH_SECRET,
     );
-    console.log("🔍 Decoded Refresh Token:", decoded);
 
     let user = await User.findById(decoded.id);
     let admin = await Admin.findById(decoded.id);
@@ -32,7 +31,15 @@ const refreshToken = async (req, res) => {
       role: user ? user.role : "admin", // ✅ Гарантовано зберігаємо роль
     });
 
-    res.json({ accessToken: newAccessToken });
+    res.json({
+      accessToken: newAccessToken,
+      user: {
+        id: user ? user._id : admin._id,
+        email: user ? user.email : admin.email,
+        username: user ? user.username : admin.username,
+        role: user ? user.role : "admin",
+      },
+    });
   } catch (error) {
     res.status(403).json({ message: "Invalid or expired refresh token" });
   }
