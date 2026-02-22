@@ -84,8 +84,6 @@ router.post("/", authenticateAdmin, async (req, res) => {
       const unitPrice =
         lastMovement.unitSalePrice || lastMovement.unitPurchasePrice || 0;
       totalPrice += unitPrice * item.quantity;
-      const { discount, discountPercent, final } =
-        calculateDiscount(totalPrice);
 
       const visualProduct = await Product.findById(item.productId);
 
@@ -98,6 +96,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         photoUrl: visualProduct?.photoUrl || "",
       });
     }
+    const { discount, discountPercent, final } = calculateDiscount(totalPrice);
     const newOrder = new OnlineOrder({
       userId,
       products: enrichedProducts,
@@ -188,7 +187,7 @@ router.put("/:id/sale", authenticateAdmin, async (req, res) => {
     // 💰 Оновлюємо фінансову аналітику
     await FinanceOverview.updateOne(
       {},
-      { $inc: { totalRevenue: order.totalPrice } }
+      { $inc: { totalRevenue: order.totalPrice } },
     );
 
     // 🔄 Оновлюємо статус замовлення
