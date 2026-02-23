@@ -52,6 +52,11 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    additionalPhotos: {
+      type: [String],
+      default: [],
+    },
+
     size: {
       type: String, // Залишаємо для старих типів розмірів
       required: true,
@@ -111,7 +116,7 @@ const productSchema = new mongoose.Schema(
       description: "Популярність продукту",
     },
   },
-  { collection: "products" }
+  { collection: "products" },
 );
 productSchema.pre("save", function (next) {
   if (this.quantity <= 0) {
