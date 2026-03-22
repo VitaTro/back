@@ -90,6 +90,21 @@ const productSchema = new mongoose.Schema(
       type: String, // Може використовуватись для категоризації чи позиції
       required: true,
     },
+    clasp: {
+      type: String,
+      enum: [
+        "stud",
+        "english",
+        "round",
+        "hoop",
+        "hook",
+        "spring",
+        "carabiner",
+        "box",
+      ],
+      required: false,
+    },
+
     createdAt: {
       type: Date,
       default: Date.now,
