@@ -124,14 +124,43 @@
                 "category": "box",
                 "subcategory": "box",
                 "price": 30,
+
+                "purchasePrice": {
+                  "value": 15,
+                  "currency": "PLN",
+                  "exchangeRateToPLN": null
+                },
+
+                "currentStock": 10,
+                "lastRetailPrice": 30,
+
                 "description": "Beautiful red rose in a box",
                 "photoUrl": "https://example.com/photo.jpg",
+                "additionalPhotos": [
+                  "https://example.com/photo2.jpg",
+                  "https://example.com/photo3.jpg"
+                ],
+
                 "size": "rose red",
                 "width": 100,
                 "length": 150,
                 "color": "red",
+
+                "quantity": 10,
                 "inStock": true,
-                "visible": true
+                "visible": true,
+                "index": "BOX-001",
+
+                "clasp": "box",
+                "materials": "paper, textile",
+
+                "extension": null,
+
+                "rating": 0,
+                "discount": 0,
+                "popularity": 0,
+
+                "createdAt": "2026-03-26T11:06:00.000Z"
               }
             }
           },
