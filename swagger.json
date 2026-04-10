@@ -1564,6 +1564,46 @@
         }
       }
     },
+    "/api/admin/analytics/stats": {
+      "get": {
+        "tags": ["Admin Analytics"],
+        "summary": "Get analytics statistics",
+        "description": "Returns all analytics records. Admin only.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of analytics records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "_id": { "type": "string" },
+                      "page": { "type": "string" },
+                      "date": { "type": "string", "example": "2025-06-18" },
+                      "count": { "type": "number", "example": 42 }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — admin token required"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+
     "/api/admin/dashboard": {
       "get": {
         "tags": ["Admin"],
@@ -4930,6 +4970,42 @@
       }
     }
   },
+  "/api/analytics/visit": {
+    "post": {
+      "tags": ["Analytics"],
+      "summary": "Записати перегляд сторінки",
+      "description": "Зберігає або збільшує лічильник переглядів для вказаної сторінки. Публічний ендпоінт.",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "page": {
+                  "type": "string",
+                  "example": "/products/earring-1574-24"
+                }
+              },
+              "required": ["page"]
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Перегляд успішно записано"
+        },
+        "400": {
+          "description": "Поле 'page' є обов’язковим"
+        },
+        "500": {
+          "description": "Внутрішня помилка сервера"
+        }
+      }
+    }
+  },
+
   "components": {
     "schemas": {
       "Error": {
@@ -4945,6 +5021,13 @@
             "description": "Опис помилки.",
             "example": "Internal server error."
           }
+        }
+      },
+      "securitySchemas": {
+        "bearerAuth": {
+          "type": "http",
+          "scheme": "bearer",
+          "bearerFormat": "JWT"
         }
       },
       "AdminRegister": {

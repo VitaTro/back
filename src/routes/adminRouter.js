@@ -6,6 +6,7 @@ const Wishlist = require("../schemas/wishlist");
 const { sendAdminMessage } = require("../config/emailService");
 const { authenticateAdmin } = require("../middleware/authenticateAdmin");
 const { authenticateUser } = require("../middleware/authenticateUser");
+const Analytics = require("../schemas/Analytics");
 // Маршрут для отримання користувачів
 router.get("/users", authenticateAdmin, async (req, res) => {
   try {
@@ -94,7 +95,7 @@ router.get("/dashboard", authenticateAdmin, async (req, res) => {
 
     // Огляд продуктів
     const lowStockItems = await Product.find({ quantity: { $lte: 1 } }).select(
-      "name quantity photo index"
+      "name quantity photo index",
     );
     const popularItems = [
       {
@@ -151,4 +152,13 @@ router.post("/email", authenticateUser, async (req, res) => {
       .json({ error: "Nie udało się wysłać wiadomości do administratora." });
   }
 });
+router.get("/analytics/stats", authenticateAdmin, async (req, res) => {
+  try {
+    const stats = await Analytics.find().sort({ date: -1 });
+    res.status(200).json(stats);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch analytics stats" });
+  }
+});
+
 module.exports = router;

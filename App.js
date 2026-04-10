@@ -33,7 +33,7 @@ const AllegroRouter = require("./src/routes/allegroRouter");
 const InvoiceArchiveRouter = require("./src/routes/admin/invoiceArchiveRouter");
 const PlatformOrdersRouter = require("./src/routes/orders/platformOrdersRouter");
 const PlatformSalesRouter = require("./src/routes/sales/platformSalesRouter");
-
+const AnalyticsRouter = require("./src/routes/analyticsRouter");
 const app = express();
 const allowedOrigins = [
   "https://nika-gold.net",
@@ -140,7 +140,7 @@ app.use("/api/public", PublicRouter);
 app.use("/api/allegro", AllegroRouter);
 app.use("/api/admin/reporting", ReportingRouter);
 app.use("/api/admin/invoices", InvoiceArchiveRouter);
-
+app.use("/api/analytics", AnalyticsRouter);
 app.post("/upload", upload.single("photo"), (req, res) => {
   try {
     if (!req.file) {
