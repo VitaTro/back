@@ -146,7 +146,34 @@ router.get("/dashboard", authenticateAdmin, async (req, res) => {
       .limit(10)
       .select("name popularity photoUrl index");
 
-    const wishlist = await Wishlist.find().populate("productId");
+    const wishlistItems = await Wishlist.aggregate([
+      {
+        $group: {
+          _id: "$productId",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      { $unwind: "$product" },
+      {
+        $project: {
+          productId: "$_id",
+          count: 1,
+          name: "$product.name",
+          photoUrl: "$product.photoUrl",
+          popularity: "$product.popularity",
+        },
+      },
+      { $sort: { count: -1 } }, // ⭐ СОРТУВАННЯ ЗА КІЛЬКІСТЮ
+      { $limit: 20 },
+    ]);
 
     res.status(200).json({
       message: "Welcome to the dashboard, admin@example.com!",
