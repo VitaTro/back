@@ -169,10 +169,11 @@ router.get("/dashboard", authenticateAdmin, async (req, res) => {
           name: "$product.name",
           photoUrl: "$product.photoUrl",
           popularity: "$product.popularity",
+          index: "$product.index",
         },
       },
       { $sort: { count: -1 } }, // ⭐ СОРТУВАННЯ ЗА КІЛЬКІСТЮ
-      { $limit: 20 },
+      { $limit: 100 },
     ]);
 
     res.status(200).json({
@@ -198,12 +199,7 @@ router.get("/dashboard", authenticateAdmin, async (req, res) => {
         lowStockItems,
         popularItems,
       },
-      wishlistOverview: wishlist.map((item) => ({
-        name: item.productId.name,
-        count: item.quantity,
-        photo: item.productId.photo,
-        index: item.productId.index,
-      })),
+      wishlistOverview: wishlistItems,
     });
   } catch (error) {
     console.error("Error in /dashboard route:", error);
