@@ -86,14 +86,58 @@ router.delete("/products/:id", authenticateAdmin, async (req, res) => {
 // Маршрут для адмін-панелі
 router.get("/dashboard", authenticateAdmin, async (req, res) => {
   try {
+    const today = new Date().toISOString().slice(0, 10);
+    const date7 = new Date();
+    date7.setDate(date7.getDate() - 7);
+    const last7 = date7.toISOString().slice(0, 10);
+
+    const date30 = new Date();
+    date30.setDate(date30.getDate() - 30);
+    const last30 = date30.toISOString().slice(0, 10);
     // Загальна статистика
     const stats = {
       totalUsers: await User.countDocuments(),
       totalProducts: await Product.countDocuments(),
       activeUsers: await User.countDocuments({ isActive: true }),
     };
+    const visitsToday = await Analytics.aggregate([
+      { $match: { date: today } },
+      { $group: { _id: null, total: { $sum: "$count" } } },
+    ]);
 
-    // Огляд продуктів
+    // === ВІЗИТИ ЗА 7 ДНІВ ===
+    const visits7days = await Analytics.aggregate([
+      { $match: { date: { $gte: last7 } } },
+      { $group: { _id: null, total: { $sum: "$count" } } },
+    ]);
+
+    // === ВІЗИТИ ЗА 30 ДНІВ ===
+    const visits30days = await Analytics.aggregate([
+      { $match: { date: { $gte: last30 } } },
+      { $group: { _id: null, total: { $sum: "$count" } } },
+    ]);
+
+    // === ВСІ ВІЗИТИ ===
+    const visitsTotal = await Analytics.aggregate([
+      { $group: { _id: null, total: { $sum: "$count" } } },
+    ]);
+
+    // === ГРАФІК ЗА 30 ДНІВ ===
+    const visitsGraphData = await Analytics.aggregate([
+      { $match: { date: { $gte: last30 } } },
+      { $group: { _id: "$date", total: { $sum: "$count" } } },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // === ТОП СТОРІНОК ===
+    const topPages = await Analytics.aggregate([
+      { $group: { _id: "$page", total: { $sum: "$count" } } },
+      { $sort: { total: -1 } },
+      { $limit: 10 },
+    ]);
+
+    await Analytics.deleteMany({ date: { $lt: last30 } });
+
     const lowStockItems = await Product.find({ quantity: { $lte: 1 } }).select(
       "name quantity photo index",
     );
@@ -115,7 +159,23 @@ router.get("/dashboard", authenticateAdmin, async (req, res) => {
 
     res.status(200).json({
       message: "Welcome to the dashboard, admin@example.com!",
-      stats,
+      stats: {
+        ...stats,
+        visitsToday: visitsToday[0]?.total || 0,
+        visits7days: visits7days[0]?.total || 0,
+        visits30days: visits30days[0]?.total || 0,
+        visitsTotal: visitsTotal[0]?.total || 0,
+      },
+      analyticsOverview: {
+        graph: visitsGraphData.map((i) => ({
+          date: i._id,
+          count: i.total,
+        })),
+        topPages: topPages.map((i) => ({
+          page: i._id,
+          count: i.total,
+        })),
+      },
       productsOverview: {
         lowStockItems,
         popularItems,
