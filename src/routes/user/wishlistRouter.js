@@ -9,7 +9,7 @@ const StockMovement = require("../../schemas/accounting/stockMovement");
 router.get("/", authenticateUser, async (req, res) => {
   try {
     const wishlist = await Wishlist.find({ userId: req.user.id }).populate(
-      "productId"
+      "productId",
     );
     res.json({ wishlist }); // ✅ Віддаємо повні дані тільки авторизованим
   } catch (error) {
@@ -62,6 +62,9 @@ router.post("/add", authenticateUser, async (req, res) => {
     });
 
     await newItem.save();
+    await Product.findByIdAndUpdate(productId, {
+      $inc: { popularity: 1 },
+    });
     res.status(201).json({ message: "Item added to wishlist", item: newItem });
   } catch (error) {
     res.status(500).json({ error: "Failed to add item to wishlist" });

@@ -70,6 +70,9 @@ router.post("/add", authenticateUser, async (req, res) => {
       }
 
       await existingItem.save();
+      await Product.findByIdAndUpdate(productId, {
+        $inc: { popularity: 2 },
+      });
 
       return res.json({
         message: "Item quantity updated in cart",
@@ -94,6 +97,9 @@ router.post("/add", authenticateUser, async (req, res) => {
     });
 
     await newItem.save();
+    await Product.findByIdAndUpdate(productId, {
+      $inc: { popularity: 2 },
+    });
 
     res.status(201).json({
       message: "Item added to cart",

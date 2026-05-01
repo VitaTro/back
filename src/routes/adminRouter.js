@@ -141,20 +141,11 @@ router.get("/dashboard", authenticateAdmin, async (req, res) => {
     const lowStockItems = await Product.find({ quantity: { $lte: 1 } }).select(
       "name quantity photo index",
     );
-    const popularItems = [
-      {
-        name: "Gold Necklace",
-        popularity: 95,
-        photo: "/path/to/photo1.jpg",
-        index: "GN-123",
-      },
-      {
-        name: "Silver Bracelet",
-        popularity: 88,
-        photo: "/path/to/photo2.jpg",
-        index: "SB-456",
-      },
-    ]; // Логіка для визначення популярності
+    const popularItems = await Product.find()
+      .sort({ popularity: -1 })
+      .limit(10)
+      .select("name popularity photoUrl index");
+
     const wishlist = await Wishlist.find().populate("productId");
 
     res.status(200).json({

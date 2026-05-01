@@ -163,6 +163,10 @@ router.put("/:id/sale", authenticateAdmin, async (req, res) => {
     for (const item of order.products) {
       const product = await Product.findById(item.productId);
       if (!product || !product.index) continue;
+      await Product.findByIdAndUpdate(item.productId, {
+        $inc: { popularity: 5 },
+      });
+
       enrichedProducts.push({
         index: product.index,
         name: product.name,
