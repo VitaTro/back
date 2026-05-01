@@ -143,7 +143,7 @@ router.get("/dashboard", authenticateAdmin, async (req, res) => {
     );
     const popularItems = await Product.find()
       .sort({ popularity: -1 })
-      .limit(10)
+      .limit(100)
       .select("name popularity photoUrl index");
 
     const wishlistItems = await Wishlist.aggregate([

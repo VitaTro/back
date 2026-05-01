@@ -1,4 +1,5 @@
 const express = require("express");
+const Product = require("../schemas/product");
 const router = express.Router();
 
 router.post("/data-request-email", async (req, res) => {
@@ -44,4 +45,17 @@ router.post("/contact-email", async (req, res) => {
   }
 });
 
+router.get("/popular-products", async (req, res) => {
+  try {
+    const popularItems = await Product.find()
+      .sort({ popularity: -1 })
+      .limit(100)
+      .select("name popularity photoUrl index price");
+
+    res.status(200).json(popularItems);
+  } catch (error) {
+    console.error("🔥 Error fetching popular products:", error);
+    res.status(500).json({ error: "Failed to fetch popular products" });
+  }
+});
 module.exports = router;

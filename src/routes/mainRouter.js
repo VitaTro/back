@@ -4,7 +4,6 @@ const router = express.Router();
 const User = require("../schemas/userSchema");
 const Product = require("../schemas/product");
 
-// ✅ Дані для гостей (без цін)
 router.get("/main", async (req, res) => {
   try {
     const products = await Product.find({}, "name description");
@@ -33,7 +32,7 @@ router.get("/user/main", authenticateUser, async (req, res) => {
     }
 
     const user = await User.findById(req.user.id).populate(
-      "shoppingCart wishlist"
+      "shoppingCart wishlist",
     );
     if (!user) {
       return res.status(404).json({ message: "User not found." });
