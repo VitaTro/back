@@ -231,35 +231,66 @@ router.post("/move-to-wishlist/:id", authenticateUser, async (req, res) => {
     res.status(500).json({ error: "Failed to move item to wishlist" });
   }
 });
+
 router.post("/merge", authenticateUser, async (req, res) => {
   try {
     const userId = req.user.id;
     const localCart = req.body.localCart || [];
 
-    const user = await User.findById(userId);
+    if (!Array.isArray(localCart) || !localCart.length) {
+      const cartItems = await ShoppingCart.find({ userId });
+      const enrichedCart = await enrichCartWithStock(cartItems);
+      return res.json({ cart: enrichedCart });
+    }
 
-    // 1. Зливаємо кошики
-    const merged = mergeCarts(user.cart, localCart);
+    for (const item of localCart) {
+      const productId = item.productId || item.id;
 
-    // 2. Додаємо доступну кількість для кожного товару
-    const enrichedCart = await Promise.all(
-      merged.map(async (item) => {
-        const latestStock = await StockMovement.findOne({
-          productId: item.productId,
-        }).sort({ date: -1 });
+      if (!productId) continue;
 
-        return {
-          ...item,
-          availableQuantity: latestStock?.quantity ?? 0,
-        };
-      }),
-    );
+      const latestStock = await StockMovement.findOne({ productId }).sort({
+        date: -1,
+      });
 
-    // 3. Зберігаємо
-    user.cart = enrichedCart;
-    await user.save();
+      if (!latestStock || latestStock.quantity < 1) {
+        continue;
+      }
 
-    // 4. Повертаємо enriched cart
+      const existing = await ShoppingCart.findOne({ userId, productId });
+
+      if (existing) {
+        existing.quantity += item.quantity || 1;
+
+        if (existing.quantity > latestStock.quantity) {
+          existing.quantity = latestStock.quantity;
+        }
+
+        await existing.save();
+      } else {
+        const product = await Product.findById(productId);
+
+        if (!product) continue;
+
+        await ShoppingCart.create({
+          userId,
+          productId,
+          name: latestStock.productName || product.name,
+          photoUrl: product.photoUrl,
+          price:
+            latestStock.lastRetailPrice ??
+            latestStock.unitSalePrice ??
+            latestStock.price ??
+            0,
+          quantity: Math.min(item.quantity || 1, latestStock.quantity),
+          inStock: latestStock.quantity > 0,
+          color: product.color,
+        });
+      }
+    }
+
+    const cartItems = await ShoppingCart.find({ userId });
+    const enrichedCart = await enrichCartWithStock(cartItems);
+
     res.json({ cart: enrichedCart });
   } catch (err) {
     res.status(500).json({
@@ -269,18 +300,47 @@ router.post("/merge", authenticateUser, async (req, res) => {
   }
 });
 
-function mergeCarts(serverCart, localCart) {
-  const map = new Map();
+async function enrichCartWithStock(cartItems) {
+  return Promise.all(
+    cartItems.map(async (item) => {
+      const latestStock = await StockMovement.findOne({
+        productId: item.productId,
+      }).sort({ date: -1 });
 
-  [...serverCart, ...localCart].forEach((item) => {
-    if (map.has(item.productId)) {
-      map.get(item.productId).quantity += item.quantity;
-    } else {
-      map.set(item.productId, { ...item });
-    }
-  });
-
-  return [...map.values()];
+      return {
+        ...item.toObject(),
+        availableQuantity: latestStock?.quantity ?? 0,
+      };
+    }),
+  );
 }
+
+//     // 3. Зберігаємо
+//     user.cart = enrichedCart;
+//     await user.save();
+
+//     // 4. Повертаємо enriched cart
+//     res.json({ cart: enrichedCart });
+//   } catch (err) {
+//     res.status(500).json({
+//       message: "Cart merge failed",
+//       error: err.message,
+//     });
+//   }
+// });
+
+// function mergeCarts(serverCart, localCart) {
+//   const map = new Map();
+
+//   [...serverCart, ...localCart].forEach((item) => {
+//     if (map.has(item.productId)) {
+//       map.get(item.productId).quantity += item.quantity;
+//     } else {
+//       map.set(item.productId, { ...item });
+//     }
+//   });
+
+//   return [...map.values()];
+// }
 
 module.exports = router;
