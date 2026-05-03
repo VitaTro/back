@@ -1,5 +1,8 @@
 const axios = require("axios");
 require("dotenv").config();
+
+const BASE_URL = "https://uat.api.converge.eu.elavonaws.com/payment-links";
+
 async function createPaylink({
   amount,
   currency = "PLN",
@@ -9,41 +12,38 @@ async function createPaylink({
 }) {
   try {
     const payload = {
-      merchantAlias: process.env.ELAVON_MERCHANT_ALIAS,
-      processorId: process.env.ELAVON_PROCESSOR_ID,
-      amount,
-      currency,
-      orderId,
-      customerEmail: email,
-      expiryDate,
-      returnUrl: "https://nika-gold.net/success",
-      cancelUrl: "https://nika-gold.net/cancel",
-      failUrl: "https://nika-gold.net/fail",
+      expiresAt: `${expiryDate}T23:59:00.000Z`,
+      doCapture: true,
+      total: {
+        amount: Number(amount).toFixed(2),
+        currencyCode: currency,
+      },
+      orderReference: orderId,
+      shopperEmailAddress: email,
     };
 
-    console.log("📦 Payload sent to Elavon:", payload);
+    const authHeader =
+      "Basic " +
+      Buffer.from(
+        `${process.env.ELAVON_PUBLIC_KEY}:${process.env.ELAVON_SECRET_KEY}`,
+      ).toString("base64");
 
-    const response = await axios.post(
-      "https://api.eu.convergepay.com/hosted-payments/payment_sessions",
-      {
-        ...payload,
-        customerEmail: email || "anonim@nika-gold.net",
+    const response = await axios.post(BASE_URL, payload, {
+      headers: {
+        "Content-Type": "application/json;charset=UTF-8",
+        Accept: "application/json;charset=UTF-8",
+        Authorization: authHeader,
+        "Accept-Version": "1",
       },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.ELAVON_SECRET_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    });
 
-    const paylink = response.data?.redirectUrl;
-    if (!paylink) throw new Error("Elavon не повернув redirectUrl");
-
-    return paylink;
+    return {
+      id: response.data.id,
+      url: response.data.url,
+    };
   } catch (error) {
-    console.error("❌ Paylink error:", error.response?.data || error.message);
-    throw new Error("Не вдалося створити лінк оплати");
+    console.error("❌ Elavon Paylink Error:", error.response?.data || error);
+    return null;
   }
 }
 

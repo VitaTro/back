@@ -125,7 +125,7 @@ const onlineOrderSchema = new mongoose.Schema(
         `ORD-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const OnlineOrder = mongoose.model("OnlineOrder", onlineOrderSchema);
