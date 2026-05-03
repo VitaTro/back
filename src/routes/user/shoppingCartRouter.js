@@ -232,88 +232,88 @@ router.post("/move-to-wishlist/:id", authenticateUser, async (req, res) => {
   }
 });
 
-router.post("/merge", authenticateUser, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const localCart = req.body.localCart || [];
+// router.post("/merge", authenticateUser, async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+//     const localCart = req.body.localCart || [];
 
-    if (!Array.isArray(localCart) || !localCart.length) {
-      const cartItems = await ShoppingCart.find({ userId });
-      const enrichedCart = await enrichCartWithStock(cartItems);
-      return res.json({ cart: enrichedCart });
-    }
+//     if (!Array.isArray(localCart) || !localCart.length) {
+//       const cartItems = await ShoppingCart.find({ userId });
+//       const enrichedCart = await enrichCartWithStock(cartItems);
+//       return res.json({ cart: enrichedCart });
+//     }
 
-    for (const item of localCart) {
-      const productId = item.productId || item.id;
+//     for (const item of localCart) {
+//       const productId = item.productId || item.id;
 
-      if (!productId) continue;
+//       if (!productId) continue;
 
-      const latestStock = await StockMovement.findOne({ productId }).sort({
-        date: -1,
-      });
+//       const latestStock = await StockMovement.findOne({ productId }).sort({
+//         date: -1,
+//       });
 
-      if (!latestStock || latestStock.quantity < 1) {
-        continue;
-      }
+//       if (!latestStock || latestStock.quantity < 1) {
+//         continue;
+//       }
 
-      const existing = await ShoppingCart.findOne({ userId, productId });
+//       const existing = await ShoppingCart.findOne({ userId, productId });
 
-      if (existing) {
-        existing.quantity += item.quantity || 1;
+//       if (existing) {
+//         existing.quantity += item.quantity || 1;
 
-        if (existing.quantity > latestStock.quantity) {
-          existing.quantity = latestStock.quantity;
-        }
+//         if (existing.quantity > latestStock.quantity) {
+//           existing.quantity = latestStock.quantity;
+//         }
 
-        await existing.save();
-      } else {
-        const product = await Product.findById(productId);
+//         await existing.save();
+//       } else {
+//         const product = await Product.findById(productId);
 
-        if (!product) continue;
+//         if (!product) continue;
 
-        await ShoppingCart.create({
-          userId,
-          productId,
-          name: latestStock.productName || product.name,
-          photoUrl: product.photoUrl,
-          price:
-            latestStock.lastRetailPrice ??
-            latestStock.unitSalePrice ??
-            latestStock.price ??
-            0,
-          quantity: Math.min(item.quantity || 1, latestStock.quantity),
-          inStock: latestStock.quantity > 0,
-          color: product.color,
-        });
-      }
-    }
+//         await ShoppingCart.create({
+//           userId,
+//           productId,
+//           name: latestStock.productName || product.name,
+//           photoUrl: product.photoUrl,
+//           price:
+//             latestStock.lastRetailPrice ??
+//             latestStock.unitSalePrice ??
+//             latestStock.price ??
+//             0,
+//           quantity: Math.min(item.quantity || 1, latestStock.quantity),
+//           inStock: latestStock.quantity > 0,
+//           color: product.color,
+//         });
+//       }
+//     }
 
-    const cartItems = await ShoppingCart.find({ userId });
-    const enrichedCart = await enrichCartWithStock(cartItems);
+//     const cartItems = await ShoppingCart.find({ userId });
+//     const enrichedCart = await enrichCartWithStock(cartItems);
 
-    res.json({ cart: enrichedCart });
-  } catch (err) {
-    res.status(500).json({
-      message: "Cart merge failed",
-      error: err.message,
-    });
-  }
-});
+//     res.json({ cart: enrichedCart });
+//   } catch (err) {
+//     res.status(500).json({
+//       message: "Cart merge failed",
+//       error: err.message,
+//     });
+//   }
+// });
 
-async function enrichCartWithStock(cartItems) {
-  return Promise.all(
-    cartItems.map(async (item) => {
-      const latestStock = await StockMovement.findOne({
-        productId: item.productId,
-      }).sort({ date: -1 });
+// async function enrichCartWithStock(cartItems) {
+//   return Promise.all(
+//     cartItems.map(async (item) => {
+//       const latestStock = await StockMovement.findOne({
+//         productId: item.productId,
+//       }).sort({ date: -1 });
 
-      return {
-        ...item.toObject(),
-        availableQuantity: latestStock?.quantity ?? 0,
-      };
-    }),
-  );
-}
+//       return {
+//         ...item.toObject(),
+//         availableQuantity: latestStock?.quantity ?? 0,
+//       };
+//     }),
+//   );
+// }
 
 //     // 3. Зберігаємо
 //     user.cart = enrichedCart;
@@ -342,5 +342,84 @@ async function enrichCartWithStock(cartItems) {
 
 //   return [...map.values()];
 // }
+router.post("/merge", authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const localCart = req.body.localCart || [];
+
+    // Якщо гостьовий кошик порожній → просто повертаємо бекендовий
+    if (!Array.isArray(localCart) || localCart.length === 0) {
+      const cartItems = await ShoppingCart.find({ userId });
+      const enrichedCart = await enrichCartWithStock(cartItems);
+      return res.json({ cart: enrichedCart });
+    }
+
+    for (const item of localCart) {
+      const productId = item.productId || item.id;
+
+      // ❗ 1. Перевірка валідності ObjectId
+      if (!mongoose.Types.ObjectId.isValid(productId)) {
+        console.warn("❌ Invalid productId in guest cart:", productId);
+        continue;
+      }
+
+      // ❗ 2. Перевіряємо, чи існує продукт
+      const product = await Product.findById(productId);
+      if (!product) {
+        console.warn("❌ Product not found:", productId);
+        continue;
+      }
+
+      // ❗ 3. Беремо останній stock
+      const latestStock = await StockMovement.findOne({ productId }).sort({
+        date: -1,
+      });
+      if (!latestStock || latestStock.quantity < 1) {
+        console.warn("❌ No stock for:", productId);
+        continue;
+      }
+
+      // ❗ 4. Шукаємо товар у кошику юзера
+      const existing = await ShoppingCart.findOne({ userId, productId });
+
+      if (existing) {
+        // Оновлюємо кількість
+        existing.quantity = Math.min(
+          existing.quantity + (item.quantity || 1),
+          latestStock.quantity,
+        );
+        await existing.save();
+      } else {
+        // Створюємо новий товар
+        await ShoppingCart.create({
+          userId,
+          productId,
+          name: latestStock.productName || product.name,
+          photoUrl: product.photoUrl,
+          price:
+            latestStock.lastRetailPrice ??
+            latestStock.unitSalePrice ??
+            latestStock.price ??
+            0,
+          quantity: Math.min(item.quantity || 1, latestStock.quantity),
+          inStock: latestStock.quantity > 0,
+          color: product.color,
+        });
+      }
+    }
+
+    // Повертаємо оновлений кошик
+    const cartItems = await ShoppingCart.find({ userId });
+    const enrichedCart = await enrichCartWithStock(cartItems);
+
+    res.json({ cart: enrichedCart });
+  } catch (err) {
+    console.error("❌ MERGE ERROR:", err);
+    res.status(500).json({
+      message: "Cart merge failed",
+      error: err.message,
+    });
+  }
+});
 
 module.exports = router;
