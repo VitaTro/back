@@ -355,14 +355,14 @@ router.post("/merge", authenticateUser, async (req, res) => {
     }
 
     for (const item of localCart) {
-      const productId = item.productId || item.id;
+      const rawId = item.productId || item.id;
 
       // ❗ 1. Перевірка валідності ObjectId
-      if (!mongoose.Types.ObjectId.isValid(productId)) {
-        console.warn("❌ Invalid productId in guest cart:", productId);
+      if (!mongoose.Types.ObjectId.isValid(rawId)) {
+        console.warn("❌ Invalid productId in guest cart:", rawId);
         continue;
       }
-
+      const productId = new mongoose.Types.ObjectId(rawId);
       // ❗ 2. Перевіряємо, чи існує продукт
       const product = await Product.findById(productId);
       if (!product) {
