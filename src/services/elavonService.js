@@ -39,7 +39,7 @@ async function createPaylink({
 
     return {
       id: response.data.id,
-      url: response.data.url,
+      url: response.data.redirectUrl,
     };
   } catch (error) {
     console.error("❌ Elavon Paylink Error:", error.response?.data || error);

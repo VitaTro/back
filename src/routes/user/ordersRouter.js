@@ -174,6 +174,8 @@ router.post("/", authenticateUser, async (req, res) => {
       const expiryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
         .toISOString()
         .split("T")[0];
+      console.log("🔥 PAYMENT METHOD:", paymentMethod);
+      console.log("🔥 CREATING PAYLINK FOR ORDER:", newOrder.orderId);
 
       payLink = await createPaylink({
         amount: totalPrice,
@@ -182,6 +184,7 @@ router.post("/", authenticateUser, async (req, res) => {
         email: req.user.email,
         expiryDate,
       });
+      console.log("🔥 PAYLINK RESPONSE:", payLink);
 
       newOrder.payLink = payLink;
       await newOrder.save();
