@@ -300,21 +300,6 @@ router.post("/move-to-wishlist/:id", authenticateUser, async (req, res) => {
 //   }
 // });
 
-// async function enrichCartWithStock(cartItems) {
-//   return Promise.all(
-//     cartItems.map(async (item) => {
-//       const latestStock = await StockMovement.findOne({
-//         productId: item.productId,
-//       }).sort({ date: -1 });
-
-//       return {
-//         ...item.toObject(),
-//         availableQuantity: latestStock?.quantity ?? 0,
-//       };
-//     }),
-//   );
-// }
-
 //     // 3. Зберігаємо
 //     user.cart = enrichedCart;
 //     await user.save();
@@ -421,5 +406,18 @@ router.post("/merge", authenticateUser, async (req, res) => {
     });
   }
 });
+async function enrichCartWithStock(cartItems) {
+  return Promise.all(
+    cartItems.map(async (item) => {
+      const latestStock = await StockMovement.findOne({
+        productId: item.productId,
+      }).sort({ date: -1 });
 
+      return {
+        ...item.toObject(),
+        availableQuantity: latestStock?.quantity ?? 0,
+      };
+    }),
+  );
+}
 module.exports = router;
