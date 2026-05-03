@@ -29,7 +29,7 @@ router.get("/", authenticateUser, async (req, res) => {
       })
       .populate(
         "products.productId",
-        "name photoUrl price quantity color size width length"
+        "name photoUrl price quantity color size width length",
       );
     res.status(200).json(userOrders);
   } catch {
@@ -61,6 +61,7 @@ router.post("/", authenticateUser, async (req, res) => {
       smartboxDetails,
       paymentMethod,
       notes,
+      finalPrice,
     } = req.body;
 
     if (!products || products.length === 0)
@@ -137,19 +138,21 @@ router.post("/", authenticateUser, async (req, res) => {
 
     const totalQuantity = enrichedProducts.reduce(
       (sum, p) => sum + p.quantity,
-      0
+      0,
     );
 
     const newOrder = new OnlineOrder({
       userId: req.user.id,
       products: enrichedProducts,
       totalPrice,
+      finalPrice,
       totalQuantity,
       paymentMethod,
       pickupPointId,
       deliveryType,
       deliveryAddress,
       smartboxDetails,
+
       notes,
       status: "new",
     });
@@ -238,7 +241,7 @@ router.put("/:orderId/return", authenticateUser, async (req, res) => {
 
     for (const returned of returnedProducts) {
       const originalItem = order.products.find(
-        (p) => p.productId.toString() === returned.productId
+        (p) => p.productId.toString() === returned.productId,
       );
 
       if (!originalItem) {
