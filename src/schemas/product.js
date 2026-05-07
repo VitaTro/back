@@ -104,7 +104,10 @@ const productSchema = new mongoose.Schema(
       ],
       required: false,
     },
-
+    material: {
+      type: String,
+      required: false,
+    },
     createdAt: {
       type: Date,
       default: Date.now,
