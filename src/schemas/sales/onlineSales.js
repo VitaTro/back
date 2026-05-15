@@ -1,18 +1,19 @@
 const mongoose = require("mongoose");
-const OnlineOrder = require("../orders/onlineOrders");
-const User = require("../userSchema");
+
 const onlineSaleSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // 🔹 Зв'язок з користувачем
+      ref: "User",
       required: true,
     },
+
     onlineOrderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "OnlineOrder",
       required: true,
     },
+
     products: [
       {
         _id: false,
@@ -26,42 +27,29 @@ const onlineSaleSchema = new mongoose.Schema(
         photoUrl: { type: String, required: true },
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
-        color: { type: String }, // якщо потрібно
+        color: { type: String },
       },
     ],
-    totalAmount: { type: Number, required: true },
-    discount: { type: Number, default: 0 },
-    discountPercent: { type: Number, default: 0 },
-    finalPrice: { type: Number, required: true },
-    discount: { type: Number, default: 0 },
+
+    totalAmount: { type: Number, required: true }, // сума товарів
+    shippingCost: { type: Number, required: true }, // доставка
+    finalPrice: { type: Number, required: true }, // totalAmount + shippingCost
+
     paymentMethod: {
       type: String,
-      enum: ["elavon_link", "bank_transfer"],
+      enum: ["tpay"],
       required: true,
     },
+
     status: {
       type: String,
       enum: ["new", "completed", "cancelled", "returned"],
       default: "new",
     },
-    buyerType: {
-      type: String,
-      enum: ["anonim", "przedsiębiorca"],
-      default: "anonim",
-    },
-    buyerName: String,
-    buyerAddress: String,
-    buyerNIP: String,
-    deliveryDetails: { type: String },
-    processedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
+
     saleDate: { type: Date, default: Date.now },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-const OnlineSale = mongoose.model("OnlineSale", onlineSaleSchema);
-module.exports = OnlineSale;
+module.exports = mongoose.model("OnlineSale", onlineSaleSchema);

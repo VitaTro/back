@@ -9,15 +9,27 @@ const offlineOrderValidationSchema = Joi.object({
         name: Joi.string().required(),
         price: Joi.number().required(),
         photoUrl: Joi.string().uri().required(),
-      })
+      }),
     )
     .required(),
   totalPrice: Joi.number().required(),
   paymentMethod: Joi.string()
     .valid("BLIK", "bank_transfer", "terminal", "cash")
-    .required(),
-  status: Joi.string().valid("pending", "completed", "cancelled").required(),
+    .when("isReservation", {
+      is: true,
+      then: Joi.forbidden(),
+      otherwise: Joi.required(),
+    }),
 
+  status: Joi.string()
+    .valid("pending", "completed", "cancelled", "reserved")
+    .required(),
+  isReservation: Joi.boolean().default(false),
+  reservationExpiresAt: Joi.date().when("isReservation", {
+    is: true,
+    then: Joi.required(),
+    otherwise: Joi.forbidden(),
+  }),
   buyerType: Joi.string().valid("anonim", "przedsiębiorca").optional(),
   buyerName: Joi.when("buyerType", {
     is: "przedsiębiorca",

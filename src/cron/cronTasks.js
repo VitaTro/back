@@ -1,12 +1,14 @@
 const cron = require("node-cron");
 const OfflineSale = require("../schemas/sales/offlineSales");
-const Payment = require("../schemas/paymentSchema");
-const OnlineOrder = require("../schemas/orders/onlineOrders");
+const StockMovement = require("../schemas/accounting/stockMovement");
+const { calculateStock } = require("../services/calculateStock");
+const Product = require("../schemas/product");
+
 require("events").EventEmitter.defaultMaxListeners = 20;
 
-// Запуск `cron`-задачі кожен день о 2:00 ночі
 console.log("✅ cronTasks.js loaded!");
 
+// 🟡 Архівація продажів старших за 1 місяць
 cron.schedule("0 2 * * *", async () => {
   try {
     console.log("🔍 Checking for sales older than 1 month...");
@@ -25,6 +27,7 @@ cron.schedule("0 2 * * *", async () => {
   }
 });
 
+// 🟡 Видалення продажів старших за 3 роки
 cron.schedule("0 3 * * *", async () => {
   try {
     console.log("🗑 Checking for sales older than 3 years...");
@@ -42,52 +45,52 @@ cron.schedule("0 3 * * *", async () => {
   }
 });
 
-// 🔄 Перевірка статусів Elavon Payment Links кожні 2 хвилини
-cron.schedule("*/2 * * * *", async () => {
+cron.schedule("0 1 * * *", async () => {
   try {
-    console.log("🔍 Sprawdzanie statusów płatności Elavon...");
+    console.log("🔍 Checking expired offline reservations...");
 
-    const pendingPayments = await Payment.find({
-      status: "pending",
-      paymentMethod: "elavon_link",
-      paymentLinkId: { $exists: true, $ne: null },
+    const now = new Date();
+
+    const expired = await OfflineSale.find({
+      status: "reserved",
+      isReservation: true,
+      reservationExpiresAt: { $lte: now },
     });
 
-    for (const payment of pendingPayments) {
-      const authHeader =
-        "Basic " +
-        Buffer.from(
-          `${process.env.ELAVON_PUBLIC_KEY}:${process.env.ELAVON_SECRET_KEY}`,
-        ).toString("base64");
-
-      const response = await axios.get(
-        `https://uat.api.converge.eu.elavonaws.com/payment-links/${payment.paymentLinkId}`,
-        {
-          headers: {
-            Accept: "application/json;charset=UTF-8",
-            Authorization: authHeader,
-            "Accept-Version": "1",
-          },
-        },
-      );
-
-      const status = response.data.status?.[0];
-
-      if (status === "completed") {
-        console.log(`💰 Płatność ${payment._id} została zakończona.`);
-
-        payment.status = "paid";
-        await payment.save();
-
-        const order = await OnlineOrder.findById(payment.orderId);
-        if (order) {
-          order.paymentStatus = "paid";
-          order.status = "completed";
-          await order.save();
+    for (const sale of expired) {
+      console.log(`⏳ Reservation expired for sale ${sale._id}`);
+      // повертаємо товар на склад
+      for (const item of sale.products) {
+        await StockMovement.create({
+          productId: item.productId,
+          productIndex: item.index,
+          productName: item.name,
+          quantity: item.quantity,
+          type: "return",
+          unitPurchasePrice: item.price,
+          price: item.price,
+          saleSource: "OfflineReservationExpired",
+          relatedSaleId: sale._id,
+          date: new Date(),
+          note: "Offline reservation expired — returned to stock",
+        });
+        // оновлюємо кількість у Product
+        const productDoc = await Product.findById(item.productId);
+        if (productDoc) {
+          const stockCount = await calculateStock(item.index);
+          productDoc.quantity = stockCount;
+          productDoc.currentStock = stockCount;
+          productDoc.inStock = stockCount > 0;
+          await productDoc.save();
         }
       }
+
+      sale.status = "cancelled";
+      sale.isReservation = false;
+      await sale.save();
     }
+    console.log(`✅ Processed ${expired.length} expired offline reservations.`);
   } catch (error) {
-    console.error("🔥 Błąd podczas sprawdzania płatności Elavon:", error);
+    console.error("🔥 Error processing offline reservations:", error);
   }
 });

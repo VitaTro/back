@@ -48,7 +48,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         !lastMovement.productName
       ) {
         throw new Error(
-          `❌ Немає даних зі складу для товару ${item.productId}`
+          `❌ Немає даних зі складу для товару ${item.productId}`,
         );
       }
 
@@ -66,7 +66,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       const unitPrice =
         typeof item.price === "number"
           ? item.price
-          : lastMovement.unitSalePrice ?? 0;
+          : (lastMovement.unitSalePrice ?? 0);
       console.log("🧾 Ціна для продукту:", {
         productId: item.productId,
         itemPrice: item.price,
@@ -153,7 +153,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         $inc: { totalRevenue: final },
         $push: { completedSales: sale._id },
       },
-      { upsert: true }
+      { upsert: true },
     );
 
     order.status = "completed";
@@ -236,7 +236,7 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
 
     await FinanceOverview.updateOne(
       {},
-      { $inc: { totalRevenue: -refundAmount } }
+      { $inc: { totalRevenue: -refundAmount } },
     );
 
     sale.status = "returned";

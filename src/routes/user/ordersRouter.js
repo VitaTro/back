@@ -1,93 +1,86 @@
 const express = require("express");
 const router = express.Router();
-const dotenv = require("dotenv");
-const axios = require("axios");
-const { getAllPoints, trackShipment } = require("../../config/inpostService");
+
 const {
   sendAdminOrderNotification,
   sendAdminReturnNotification,
 } = require("../../config/emailService");
+
 const { authenticateUser } = require("../../middleware/authenticateUser");
 const { getIo } = require("../../config/socket");
+
 const StockMovement = require("../../schemas/accounting/stockMovement");
 const User = require("../../schemas/userSchema");
 const OnlineOrder = require("../../schemas/orders/onlineOrders");
 const OnlineSale = require("../../schemas/sales/onlineSales");
 const Product = require("../../schemas/product");
 const Payment = require("../../schemas/paymentSchema");
-const FinanceOverview = require("../../schemas/finance/financeOverview");
-const { calculateStock } = require("../../services/calculateStock");
-const { createPaylink } = require("../../services/elavonService");
-require("dotenv").config();
 
-// ✅ Отримати всі замовлення користувача
+const { calculateStock } = require("../../services/calculateStock");
+const { createTpayTransaction } = require("../../services/tpayService");
+
+// ===============================
+// GET USER ORDERS
+// ===============================
 router.get("/", authenticateUser, async (req, res) => {
   try {
     const userOrders = await OnlineOrder.find({ userId: req.user.id })
-      .sort({
-        createdAt: -1,
-      })
+      .sort({ createdAt: -1 })
       .populate(
         "products.productId",
         "name photoUrl price quantity color size width length",
       );
+
     res.status(200).json(userOrders);
   } catch {
     res.status(500).json({ error: "Failed to fetch user orders" });
   }
 });
 
-// ✅ Фільтрація по статусу
-const createStatusRoute = (status) =>
-  router.get(`/${status}`, authenticateUser, async (req, res) => {
-    try {
-      const orders = await OnlineOrder.find({ userId: req.user.id, status });
-      res.status(200).json(orders);
-    } catch {
-      res.status(500).json({ error: `Failed to fetch ${status} orders` });
-    }
-  });
-
-["unpaid", "processing", "shipped"].forEach(createStatusRoute);
-
-// ✅ Створення нового замовлення
+// ===============================
+// CREATE NEW ORDER (FULLY UPDATED)
+// ===============================
 router.post("/", authenticateUser, async (req, res) => {
   try {
     const {
       products,
+      country,
       pickupPointId,
-      deliveryType,
       deliveryAddress,
-      smartboxDetails,
       paymentMethod,
       notes,
-      finalPrice,
     } = req.body;
 
-    if (!products || products.length === 0)
+    // Validate products
+    if (!products || products.length === 0) {
       return res.status(400).json({ error: "Не передано товари" });
+    }
 
-    if (deliveryType === "pickup" && !pickupPointId)
-      return res.status(400).json({ error: "Pickup point is required" });
-
-    if (deliveryType === "courier") {
-      const requiredFields = ["postalCode", "city", "street", "houseNumber"];
+    // Validate delivery
+    if (country === "Poland") {
+      if (!pickupPointId) {
+        return res
+          .status(400)
+          .json({ error: "Paczkomat is required for Poland" });
+      }
+    } else {
+      const requiredFields = [
+        "fullName",
+        "street",
+        "houseNumber",
+        "city",
+        "postalCode",
+      ];
       for (const field of requiredFields) {
         if (!deliveryAddress?.[field]) {
           return res
             .status(400)
-            .json({ error: `Missing delivery address: ${field}` });
+            .json({ error: `Missing delivery address field: ${field}` });
         }
       }
     }
 
-    if (deliveryType === "smartbox") {
-      if (!smartboxDetails?.boxId || !smartboxDetails?.location)
-        return res
-          .status(400)
-          .json({ error: "Missing smartbox delivery details" });
-    }
-
+    // Process products
     const enrichedProducts = [];
     let totalPrice = 0;
 
@@ -97,11 +90,7 @@ router.post("/", authenticateUser, async (req, res) => {
         type: { $in: ["sale", "purchase"] },
       }).sort({ date: -1 });
 
-      if (
-        !lastMovement ||
-        !lastMovement.productIndex ||
-        !lastMovement.productName
-      ) {
+      if (!lastMovement) {
         return res
           .status(400)
           .json({ error: `Немає рухів по товару ${item.productId}` });
@@ -136,81 +125,62 @@ router.post("/", authenticateUser, async (req, res) => {
       });
     }
 
-    const totalQuantity = enrichedProducts.reduce(
-      (sum, p) => sum + p.quantity,
-      0,
-    );
+    // Shipping cost
+    let shippingCost = 0;
 
+    if (country === "Poland") {
+      shippingCost = 15;
+    } else if (["Germany", "Czech Republic", "Slovakia"].includes(country)) {
+      shippingCost = 25;
+    } else if (["Lithuania", "Latvia", "Estonia"].includes(country)) {
+      shippingCost = 35;
+    } else {
+      shippingCost = 80;
+    }
+
+    const finalPrice = totalPrice + shippingCost;
+
+    // Create order
     const newOrder = new OnlineOrder({
       userId: req.user.id,
       products: enrichedProducts,
       totalPrice,
+      shippingCost,
       finalPrice,
-      totalQuantity,
-      paymentMethod,
-      pickupPointId,
-      deliveryType,
-      deliveryAddress,
-      smartboxDetails,
-
+      paymentMethod: "tpay",
+      country,
+      pickupPointId: country === "Poland" ? pickupPointId : null,
+      deliveryAddress: country !== "Poland" ? deliveryAddress : null,
       notes,
       status: "new",
     });
 
     await newOrder.save();
 
-    await User.findByIdAndUpdate(req.user.id, {
-      address: deliveryAddress,
+    // Create Tpay transaction
+    const tpay = await createTpayTransaction({
+      amount: finalPrice,
+      orderId: newOrder.orderId,
+      email: req.user.email,
+      name: deliveryAddress?.fullName || req.user.name || req.user.email,
     });
 
-    const expiryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0];
-
-    let payLink = null;
-    let bankDetails = null;
-
-    if (paymentMethod === "elavon_link") {
-      const expiryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0];
-      console.log("🔥 PAYMENT METHOD:", paymentMethod);
-      console.log("🔥 CREATING PAYLINK FOR ORDER:", newOrder.orderId);
-
-      payLink = await createPaylink({
-        amount: totalPrice,
-        currency: "PLN",
-        orderId: newOrder.orderId,
-        email: req.user.email,
-        expiryDate,
-      });
-      console.log("🔥 PAYLINK RESPONSE:", payLink);
-
-      newOrder.payLink = payLink;
-      await newOrder.save();
+    if (!tpay) {
+      return res
+        .status(500)
+        .json({ error: "Не вдалося створити транзакцію Tpay" });
     }
 
-    if (paymentMethod === "bank_transfer") {
-      bankDetails = {
-        bankName: "NIKA BANK POLSKA",
-        iban: "PL76114020040000300201355387",
-        swift: "BREXPLPWMBK",
-        reference: newOrder.orderId,
-        amount: totalPrice,
-        currency: "PLN",
-      };
-    }
-    newOrder.payLink = payLink;
+    newOrder.transactionId = tpay.transactionId;
+    newOrder.paymentUrl = tpay.paymentUrl;
     await newOrder.save();
 
     await sendAdminOrderNotification(newOrder);
 
     res.status(201).json({
-      message: "✅ Замовлення створено і перевірено по складу",
+      message: "✅ Замовлення створено",
       order: newOrder,
-      paymentMethod,
-      payLink,
-      bankDetails,
+      paymentUrl: tpay.paymentUrl,
     });
   } catch (error) {
     console.error("❌ Помилка створення замовлення:", error);
@@ -220,20 +190,25 @@ router.post("/", authenticateUser, async (req, res) => {
   }
 });
 
-// ✅ Запит на повернення
+// ===============================
+// RETURN REQUEST
+// ===============================
 router.put("/:orderId/return", authenticateUser, async (req, res) => {
   try {
     const { returnedProducts, refundAmount } = req.body;
+
     if (!returnedProducts?.length) {
       return res
         .status(400)
         .json({ error: "Не вибрано товари для повернення" });
     }
+
     const order = await OnlineOrder.findOne({
       _id: req.params.orderId,
       userId: req.user.id,
       status: { $in: ["completed", "paid", "shipped"] },
     });
+
     if (!order) {
       return res
         .status(404)
@@ -252,6 +227,7 @@ router.put("/:orderId/return", authenticateUser, async (req, res) => {
           error: `❌ Товар не знайдено в замовленні: ${returned.productId}`,
         });
       }
+
       if (returned.quantity > originalItem.quantity) {
         return res.status(400).json({
           error: `🚫 Кількість повернення перевищує куплену для ${originalItem.name}`,
@@ -272,7 +248,6 @@ router.put("/:orderId/return", authenticateUser, async (req, res) => {
         note: "Повернення товару користувачем",
       });
 
-      // 🧮 Оновлюємо продукт через calculateStock
       const productDoc = await Product.findById(originalItem.productId);
       if (productDoc) {
         const stockCount = await calculateStock(originalItem.index);
@@ -285,7 +260,6 @@ router.put("/:orderId/return", authenticateUser, async (req, res) => {
       totalRefunded += returned.quantity * originalItem.price;
     }
 
-    // 💳 Оновлення статусу платежу, якщо є
     const payment = await Payment.findOne({ orderId: req.params.orderId });
     if (payment) {
       payment.status = "refunded";
@@ -308,13 +282,17 @@ router.put("/:orderId/return", authenticateUser, async (req, res) => {
     return res.status(500).json({ error: "❌ Не вдалося обробити повернення" });
   }
 });
-// ✅ Користувач підтверджує отримання
+
+// ===============================
+// CONFIRM RECEIVED
+// ===============================
 router.patch("/:id/received", authenticateUser, async (req, res) => {
   try {
     const order = await OnlineOrder.findOne({
       _id: req.params.id,
       userId: req.user.id,
     });
+
     if (!order) return res.status(404).json({ error: "Order not found" });
     if (order.status !== "shipped")
       return res.status(400).json({ error: "Order not ready" });
@@ -327,6 +305,7 @@ router.patch("/:id/received", authenticateUser, async (req, res) => {
     });
 
     await order.save();
+
     getIo().emit("adminOrderUpdate", {
       orderId: order._id,
       status: "completed",
@@ -338,7 +317,9 @@ router.patch("/:id/received", authenticateUser, async (req, res) => {
   }
 });
 
-// ✅ Історія покупок
+// ===============================
+// PURCHASE HISTORY
+// ===============================
 router.get("/purchase-history", authenticateUser, async (req, res) => {
   try {
     const { startDate, endDate, status, page = 1, limit = 25 } = req.query;
@@ -347,6 +328,7 @@ router.get("/purchase-history", authenticateUser, async (req, res) => {
     if (startDate && endDate) {
       filter.saleDate = { $gte: new Date(startDate), $lte: new Date(endDate) };
     }
+
     if (status) {
       filter.status = status;
     }
@@ -375,33 +357,6 @@ router.get("/purchase-history", authenticateUser, async (req, res) => {
     });
   } catch {
     res.status(500).json({ error: "Failed to fetch purchase history" });
-  }
-});
-
-// ✅ Отримання поштоматів
-router.get("/pickup-points", authenticateUser, async (req, res) => {
-  try {
-    const pickupPoints = await getAllPoints();
-    if (!pickupPoints?.length)
-      return res.status(404).json({ error: "No pickup points found" });
-
-    res.status(200).json({ points: pickupPoints });
-  } catch (error) {
-    console.error("Pickup points error:", error);
-    res.status(500).json({ error: "Failed to fetch pickup points" });
-  }
-});
-
-// ✅ Трекінг доставки
-router.get("/track/:trackingNumber", authenticateUser, async (req, res) => {
-  try {
-    const shipmentStatus = await trackShipment(req.params.trackingNumber);
-    if (!shipmentStatus)
-      return res.status(404).json({ error: "Tracking number not found" });
-
-    res.status(200).json(shipmentStatus);
-  } catch {
-    res.status(500).json({ error: "Failed to fetch tracking status" });
   }
 });
 

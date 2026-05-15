@@ -10,15 +10,22 @@ const onlineSaleValidationSchema = Joi.object({
         productId: Joi.string().required(),
         quantity: Joi.number().min(1).required(),
         salePrice: Joi.number().required(),
-      })
+      }),
     )
     .required(),
-  totalAmount: Joi.number().required(),
-  paymentMethod: Joi.string().valid("elavon_link", "bank_transfer").required(),
+
+  totalAmount: Joi.number().min(0).required(),
+
+  shippingCost: Joi.number().min(0).required(),
+
+  paymentMethod: Joi.string().valid("tpay").required(),
+
   processedBy: Joi.string().optional(),
+
   status: Joi.string()
     .valid("new", "completed", "cancelled", "returned")
     .required(),
+
   notes: Joi.string().optional(),
 });
 

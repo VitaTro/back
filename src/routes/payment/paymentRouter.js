@@ -5,96 +5,58 @@ const { authenticateUser } = require("../../middleware/authenticateUser");
 const Payment = require("../../schemas/paymentSchema");
 const OnlineOrder = require("../../schemas/orders/onlineOrders");
 const OnlineSale = require("../../schemas/sales/onlineSales");
-const { createPaylink } = require("../../services/elavonService");
+const { createTrayTransaction } = require("../../services/tpayService");
 
 // ===============================
 // 🔵 INITIATE PAYMENT
 // ===============================
 router.post("/initiate", authenticateUser, async (req, res) => {
   try {
-    const { orderId, paymentMethod } = req.body;
+    const { orderId } = req.body;
 
     const order = await OnlineOrder.findById(orderId);
-    if (!order)
+    if (!order || order.userId.toString() !== req.user.id) {
       return res.status(404).json({ error: "❌ Nie znaleziono zamówienia." });
+    }
 
-    const amount = order.totalPrice;
-    if (!orderId || !amount || !paymentMethod) {
+    const amount = order.finalPrice;
+    if (!amount) {
       return res
         .status(400)
-        .json({ error: "❌ Nieprawidłowe dane płatności." });
+        .json({ error: "❌ Brak kwoty do płatności dla tego zamówienia." });
     }
 
-    // 🟢 ELAVON PAYMENT LINK
-    if (paymentMethod === "elavon_link") {
-      const expiryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0];
+    const payment = await Payment.create({
+      userId: req.user.id,
+      orderId: order._id,
+      amount,
+      paymentMethod: "tpay",
+      status: "pending",
+    });
 
-      const payLink = await createPaylink({
-        amount,
-        currency: "PLN",
-        orderId,
-        email: req.user.email,
-        expiryDate,
-      });
+    const tpay = await createTrayTransaction({
+      amount,
+      orderId: order.orderId,
+      email: req.user.email,
+      name: order.deliveryAddress?.fullName || req.user.name || req.user.email,
+    });
 
-      if (!payLink || !payLink.url) {
-        return res
-          .status(502)
-          .json({ error: "❌ Elavon nie zwrócił linku do płatności." });
-      }
-
-      const payment = await Payment.create({
-        userId: req.user.id,
-        orderId,
-        amount,
-        paymentMethod: "elavon_link",
-        status: "pending",
-        paymentLinkId: payLink.id,
-        paymentLinkUrl: payLink.url,
-        transactionId: orderId,
-      });
-
-      return res.status(201).json({
-        message: "✅ Link do płatności Elavon został utworzony",
-        payLink: payLink.url,
-        paymentId: payment._id,
-      });
+    if (!tpay || !tpay.paymentUrl || !tpay.transactionId) {
+      return res
+        .status(502)
+        .json({ error: "❌ Tpay nie zwrócił poprawnych danych transakcji." });
     }
+    payment.transactionId = tpay.transactionId;
+    payment.paymentLinkUrl = tpay.paymentUrl;
+    await payment.save();
 
-    // 🟡 BANK TRANSFER
-    if (paymentMethod === "bank_transfer") {
-      const payment = await Payment.create({
-        userId: req.user.id,
-        orderId,
-        amount,
-        paymentMethod: "bank_transfer",
-        status: "pending",
-        transactionId: `BT-${orderId}`,
-      });
-
-      const bankDetails = {
-        bankName: "Credit Agricole",
-        iban: "PL27194010763280694000000000",
-        swift: "AGRIPLPR",
-        recipientName: "Nika Gold",
-        reference: `ZAMÓWIENIE #${order._id}`,
-        amount,
-        currency: "PLN",
-      };
-
-      return res.status(201).json({
-        message: "✅ Dane do przelewu zostały utworzone.",
-        bankDetails,
-        paymentId: payment._id,
-      });
-    }
-
-    return res
-      .status(400)
-      .json({ error: "❌ Nieobsługiwana metoda płatności." });
+    return res.status(201).json({
+      message: "✅ Link do płatności Tpay został utworzony",
+      paymentUrl: tpay.paymentUrl,
+      paymentId: payment._id,
+    });
   } catch (error) {
+    console.error("❌ INITIATE PAYMENT ERROR:", error);
     res.status(500).json({ error: "❌ Nie udało się zainicjować płatności." });
   }
 });
@@ -147,9 +109,16 @@ router.post("/confirm/:orderId", authenticateUser, async (req, res) => {
 
     await OnlineSale.create({
       userId: req.user.id,
-      orderId: order._id,
+      onlineOrderId: order._id,
+      products: order.products.map((p) => ({
+        productId: p.productId,
+        quantity: p.quantity,
+        salePrice: p.price,
+      })),
       totalAmount: payment.amount,
+      shippingCost: order.shippingCost || 0,
       paymentMethod: payment.paymentMethod,
+      status: "completed",
       saleDate: new Date(),
     });
 
@@ -206,7 +175,7 @@ router.post("/refund/:orderId", authenticateUser, async (req, res) => {
     }
 
     payment.status = "refund_requested";
-    payment.refundAmount = refundAmount;
+    payment.refundAmount = refundAmount || payment.amount;
     await payment.save();
 
     res.status(200).json({
@@ -223,48 +192,10 @@ router.post("/refund/:orderId", authenticateUser, async (req, res) => {
 // ===============================
 router.get("/methods", authenticateUser, async (req, res) => {
   try {
-    res.status(200).json({ methods: ["BLIK", "bank_transfer"] });
+    res.status(200).json({ methods: ["tpay"] });
   } catch (error) {
     res.status(500).json({ error: "❌ Nie udało się pobrać metod płatności." });
   }
 });
-
-// ===============================
-// 🔵 CHECK ELAVON PAYMENT STATUS
-// ===============================
-router.get(
-  "/elavon/check/:paymentLinkId",
-  authenticateUser,
-  async (req, res) => {
-    try {
-      const { paymentLinkId } = req.params;
-
-      const authHeader =
-        "Basic " +
-        Buffer.from(
-          `${process.env.ELAVON_PUBLIC_KEY}:${process.env.ELAVON_SECRET_KEY}`,
-        ).toString("base64");
-
-      const response = await axios.get(
-        `https://uat.api.converge.eu.elavonaws.com/payment-links/${paymentLinkId}`,
-        {
-          headers: {
-            Accept: "application/json;charset=UTF-8",
-            Authorization: authHeader,
-            "Accept-Version": "1",
-          },
-        },
-      );
-
-      const status = response.data.status?.[0];
-
-      res.json({ status });
-    } catch (error) {
-      res
-        .status(500)
-        .json({ error: "❌ Nie udało się pobrać statusu Elavon." });
-    }
-  },
-);
 
 module.exports = router;
