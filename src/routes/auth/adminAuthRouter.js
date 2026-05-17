@@ -58,8 +58,9 @@ router.post("/login", async (req, res) => {
     // 🔥 СТАВИМО COOKIE ЗАМІСТЬ JSON TOKEN
     res.cookie("adminToken", token, {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 днів
     });
 
