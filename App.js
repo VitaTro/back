@@ -86,8 +86,6 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api", SearchRouter);
 app.use("/api/products", FilterRouter);
 app.use("/api/admin", AdminRouter);
-// app.use("/api/pay-session", ElavonRouter);
-
 app.use("/api/admin/accounting/monthly-report", MonthlyReportRouter);
 app.use("/api/admin/finance/platform-orders", PlatformOrdersRouter);
 app.use("/api/admin/finance/platform-sales", PlatformSalesRouter);

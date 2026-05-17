@@ -40,12 +40,10 @@ exports.facebookAuthController = async (req, res) => {
     // 2. Шукаємо користувача
     let user = await User.findOne({ email: data.email });
     if (user && user.providers.local) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Ten adres e-mail jest już zarejestrowany przez zwykłą rejestrację. Zaloguj się za pomocą adresu e-mail i hasła.",
-        });
+      return res.status(400).json({
+        message:
+          "Ten adres e-mail jest już zarejestrowany przez zwykłą rejestrację. Zaloguj się za pomocą adresu e-mail i hasła.",
+      });
     }
     // 3. Якщо email існує, але provider інший → блокуємо
     if (user) {
@@ -74,11 +72,19 @@ exports.facebookAuthController = async (req, res) => {
     user.refreshToken = refreshTokenJWT;
     await user.save();
 
-    res.json({
-      accessToken: accessTokenJWT,
-      refreshToken: refreshTokenJWT,
-      user,
+    // res.json({
+    //   accessToken: accessTokenJWT,
+    //   refreshToken: refreshTokenJWT,
+    //   user,
+    // });
+    res.cookie("userToken", accessTokenJWT, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 днів
     });
+
+    res.json({ message: "Login successful", user });
   } catch (err) {
     res.status(400).json({
       message: "Logowanie przez Facebook nie powiodło się.",
@@ -110,12 +116,10 @@ exports.googleAuthController = async (req, res) => {
     // 2. Шукаємо користувача
     let user = await User.findOne({ email });
     if (user && user.providers.local) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Ten adres e-mail jest już zarejestrowany przez zwykłą rejestrację. Zaloguj się za pomocą adresu e-mail i hasła.",
-        });
+      return res.status(400).json({
+        message:
+          "Ten adres e-mail jest już zarejestrowany przez zwykłą rejestrację. Zaloguj się za pomocą adresu e-mail i hasła.",
+      });
     }
     // 3. Якщо email існує, але provider інший → блокуємо
     if (user) {
@@ -144,11 +148,19 @@ exports.googleAuthController = async (req, res) => {
     user.refreshToken = refreshTokenJWT;
     await user.save();
 
-    res.json({
-      accessToken: accessTokenJWT,
-      refreshToken: refreshTokenJWT,
-      user,
+    // res.json({
+    //   accessToken: accessTokenJWT,
+    //   refreshToken: refreshTokenJWT,
+    //   user,
+    // });
+    res.cookie("userToken", accessTokenJWT, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 30,
     });
+
+    res.json({ message: "Login successful", user });
   } catch (err) {
     res.status(400).json({
       message: "Logowanie przez Google nie powiodło się.",

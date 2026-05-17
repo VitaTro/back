@@ -80,9 +80,20 @@ router.post("/login", async (req, res) => {
           process.env.JWT_SECRET,
           { expiresIn: "15m" },
         );
+        // return res.json({
+        //   accessToken: newAccessToken,
+        //   refreshToken,
+        //   isVerified: user.isVerified,
+        // });
+        res.cookie("userToken", newAccessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+          maxAge: 1000 * 60 * 60 * 24 * 30, // 30 днів
+        });
+
         return res.json({
-          accessToken: newAccessToken,
-          refreshToken,
+          message: "Login successful",
           isVerified: user.isVerified,
         });
       } catch (error) {
@@ -141,22 +152,57 @@ router.post("/login", async (req, res) => {
       .json({ message: "Błąd logowania.", error: error.message });
   }
 });
-
 router.post("/logout", async (req, res) => {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken)
-      return res.status(400).json({ message: "No refresh token provided" });
+
+    // 🔹 1. Чистимо cookie — це треба зробити ПЕРШИМ
+    res.clearCookie("userToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
+
+    // 🔹 2. Якщо немає refreshToken → просто виходимо
+    // (бо соцлогіни можуть не мати refreshToken)
+    if (!refreshToken) {
+      return res.json({ message: "Logged out successfully" });
+    }
+
+    // 🔹 3. Якщо refreshToken є — чистимо його в базі
     const user = await User.findOne({ refreshToken });
-    if (!user)
-      return res.status(403).json({ message: "Invalid refresh token" });
-    user.refreshToken = null;
-    await user.save();
+    if (user) {
+      user.refreshToken = null;
+      await user.save();
+    }
+
     res.json({ message: "Logged out successfully" });
   } catch (error) {
     res.status(500).json({ message: "Logout error", error });
   }
 });
+
+// router.post("/logout", async (req, res) => {
+//   try {
+//     const { refreshToken } = req.body;
+//     if (!refreshToken)
+//       return res.status(400).json({ message: "No refresh token provided" });
+//     const user = await User.findOne({ refreshToken });
+//     res.clearCookie("userToken", {
+//   httpOnly: true,
+//   secure: true,
+//   sameSite: "none",
+// });
+
+//     if (!user)
+//       return res.status(403).json({ message: "Invalid refresh token" });
+//     user.refreshToken = null;
+//     await user.save();
+//     res.json({ message: "Logged out successfully" });
+//   } catch (error) {
+//     res.status(500).json({ message: "Logout error", error });
+//   }
+// });
 
 router.post("/reset-password", async (req, res) => {
   try {
@@ -226,11 +272,26 @@ router.get("/verify-email", async (req, res) => {
     }
     user.isVerified = true;
     await user.save();
-    res.redirect("https://nika-gold.netlify.app/user/auth/login");
+    res.redirect("https://nika-gold.net/user/auth/login");
   } catch (error) {
     res.status(500).json({ message: "Error verifying email" });
   }
 });
+router.get("/check", async (req, res) => {
+  try {
+    const token = req.cookies.userToken;
+    if (!token) return res.json({ isUser: false });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (!decoded || !decoded.id) return res.json({ isUser: false });
+
+    return res.json({ isUser: true, userId: decoded.id });
+  } catch (error) {
+    return res.json({ isUser: false });
+  }
+});
+
 router.post("/refresh", refreshToken);
 router.post("/google", googleAuthController);
 router.post("/facebook", facebookAuthController);
