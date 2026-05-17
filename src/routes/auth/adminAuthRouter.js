@@ -134,6 +134,26 @@ router.post("/send-email", async (req, res) => {
 //     res.status(500).json({ error: "Logout failed", details: error.message });
 //   }
 // });
+
+router.get("/check", async (req, res) => {
+  try {
+    const token = req.cookies.adminToken;
+    if (!token) {
+      return res.json({ isAdmin: false });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (!decoded || !decoded.isAdmin) {
+      return res.json({ isAdmin: false });
+    }
+
+    return res.json({ isAdmin: true });
+  } catch (error) {
+    return res.json({ isAdmin: false });
+  }
+});
+
 router.post("/logout", async (req, res) => {
   try {
     res.clearCookie("adminToken", {
