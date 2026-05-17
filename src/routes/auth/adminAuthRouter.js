@@ -25,7 +25,7 @@ router.post("/register", async (req, res) => {
     await sendEmail(
       email,
       "Welcome Admin!",
-      `Hello ${username}, your admin account is now active!`
+      `Hello ${username}, your admin account is now active!`,
     );
 
     res.status(201).json({ message: "Admin registered successfully!" });
@@ -35,7 +35,6 @@ router.post("/register", async (req, res) => {
       .json({ error: "Registration failed", details: error.message });
   }
 });
-
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -44,38 +43,73 @@ router.post("/login", async (req, res) => {
     if (!admin) {
       return res.status(403).json({ message: "Invalid credentials" });
     }
+
     const isPasswordValid = await bcrypt.compare(password, admin.password);
     if (!isPasswordValid) {
       return res.status(403).json({ message: "Invalid credentials" });
     }
 
-    console.log("🛠 Admin Login Payload:", { id: admin._id, role: admin.role });
-
     const token = jwt.sign(
       { id: admin._id, role: "admin", isAdmin: true },
       process.env.JWT_SECRET,
-      { expiresIn: "2h" }
-    );
-    const refreshToken = jwt.sign(
-      { id: admin._id },
-      process.env.JWT_REFRESH_SECRET,
-      { expiresIn: "30d" }
+      { expiresIn: "7d" },
     );
 
-    await sendEmail(
-      email,
-      "Admin Login",
-      `Hello ${admin.username}, you have logged in successfully!`
-    );
-    console.log("✅ Login successful!");
+    // 🔥 СТАВИМО COOKIE ЗАМІСТЬ JSON TOKEN
+    res.cookie("adminToken", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 днів
+    });
 
-    // ✅ **Змінюємо відповідь — додаємо `token`**
-    res.json({ message: "Login successful", token, refreshToken });
+    return res.json({ message: "Login successful" });
   } catch (error) {
     console.error("🔥 Login error:", error);
     res.status(500).json({ error: "Login failed", details: error.message });
   }
 });
+
+// router.post("/login", async (req, res) => {
+//   const { email, password } = req.body;
+
+//   try {
+//     const admin = await Admin.findOne({ email });
+//     if (!admin) {
+//       return res.status(403).json({ message: "Invalid credentials" });
+//     }
+//     const isPasswordValid = await bcrypt.compare(password, admin.password);
+//     if (!isPasswordValid) {
+//       return res.status(403).json({ message: "Invalid credentials" });
+//     }
+
+//     console.log("🛠 Admin Login Payload:", { id: admin._id, role: admin.role });
+
+//     const token = jwt.sign(
+//       { id: admin._id, role: "admin", isAdmin: true },
+//       process.env.JWT_SECRET,
+//       { expiresIn: "2h" }
+//     );
+//     const refreshToken = jwt.sign(
+//       { id: admin._id },
+//       process.env.JWT_REFRESH_SECRET,
+//       { expiresIn: "30d" }
+//     );
+
+//     await sendEmail(
+//       email,
+//       "Admin Login",
+//       `Hello ${admin.username}, you have logged in successfully!`
+//     );
+//     console.log("✅ Login successful!");
+
+//     // ✅ **Змінюємо відповідь — додаємо `token`**
+//     res.json({ message: "Login successful", token, refreshToken });
+//   } catch (error) {
+//     console.error("🔥 Login error:", error);
+//     res.status(500).json({ error: "Login failed", details: error.message });
+//   }
+// });
 
 router.post("/refresh", refreshToken);
 
@@ -92,8 +126,21 @@ router.post("/send-email", async (req, res) => {
   }
 });
 
+// router.post("/logout", async (req, res) => {
+//   try {
+//     res.json({ message: "Admin logged out successfully!" });
+//   } catch (error) {
+//     res.status(500).json({ error: "Logout failed", details: error.message });
+//   }
+// });
 router.post("/logout", async (req, res) => {
   try {
+    res.clearCookie("adminToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
+
     res.json({ message: "Admin logged out successfully!" });
   } catch (error) {
     res.status(500).json({ error: "Logout failed", details: error.message });

@@ -34,6 +34,7 @@ const InvoiceArchiveRouter = require("./src/routes/admin/invoiceArchiveRouter");
 const PlatformOrdersRouter = require("./src/routes/orders/platformOrdersRouter");
 const PlatformSalesRouter = require("./src/routes/sales/platformSalesRouter");
 const AnalyticsRouter = require("./src/routes/analyticsRouter");
+const TpayPaymentRouter = require("./src/routes/payment/tpayWebhookRouter");
 const app = express();
 const allowedOrigins = [
   "https://nika-gold.net",
@@ -60,47 +61,6 @@ app.use(
 // важливо: відповідаємо на preflight
 app.options("*", cors());
 
-// const allowedOrigins = [
-//   "https://nika-gold.net",
-//   "https://nika-gold.netlify.app",
-//   "http://localhost:5173",
-//   "http://localhost:4173",
-// ];
-
-// app.use(
-//   cors({
-//     origin: function (origin, callback) {
-//       if (!origin || allowedOrigins.includes(origin)) {
-//         callback(null, true);
-//       } else {
-//         callback(new Error("Not allowed by CORS"));
-//       }
-//     },
-//     credentials: true,
-//   }),
-// );
-// app.use((req, res, next) => {
-//   res.header(
-//     "Access-Control-Allow-Origin",
-//     allowedOrigins.includes(req.headers.origin)
-// //       ? req.headers.origin
-//       : "https://nika-gold.net",
-//   );
-//   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-//   res.header(
-//     "Access-Control-Allow-Headers",
-//     "Origin, X-Requested-With, Content-Type, Accept, Authorization",
-//   );
-//   next();
-// });
-// app.use((req, res, next) => {
-//   if (req.method === "OPTIONS") {
-//     res.sendStatus(200);
-//     return;
-//   }
-//   next();
-// });
-
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Зробити папку з файлами доступною
 app.use(
@@ -112,6 +72,7 @@ app.use(
 app.use("/api", MainRouter);
 app.use("/api/products", ProductRouter);
 app.use("/api/user", ProfileRouter);
+app.use("/api/tpay", TpayPaymentRouter);
 app.use("/api/user/orders", OrdersRouter);
 app.use("/api/user/payments", PaymentRouter);
 app.use("/api/user/invoices", InvoicesRouter);
