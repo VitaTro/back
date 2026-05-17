@@ -35,6 +35,7 @@ const PlatformOrdersRouter = require("./src/routes/orders/platformOrdersRouter")
 const PlatformSalesRouter = require("./src/routes/sales/platformSalesRouter");
 const AnalyticsRouter = require("./src/routes/analyticsRouter");
 const TpayPaymentRouter = require("./src/routes/payment/tpayWebhookRouter");
+const cookieParser = require("cookie-parser");
 const app = express();
 const allowedOrigins = [
   "https://nika-gold.net",
@@ -62,6 +63,7 @@ app.use(
 app.options("*", cors());
 
 app.use(express.json());
+app.use(cookieParser());
 app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Зробити папку з файлами доступною
 app.use(
   "/favicon.ico",
