@@ -38,12 +38,16 @@ const TpayPaymentRouter = require("./src/routes/payment/tpayWebhookRouter");
 const cookieParser = require("cookie-parser");
 const app = express();
 app.enable("trust proxy");
-app.use((req, res, next) => {
-  if (req.secure || req.headers["x-forwarded-proto"] === "https") {
-    return next();
-  }
-  return res.redirect("https://" + req.headers.host + req.url);
-});
+
+if (process.env.NODE_ENV === "production") {
+  app.use((req, res, next) => {
+    const proto = req.headers["x-forwarded-proto"];
+    if (proto === "https") {
+      return next();
+    }
+    return res.redirect("https://" + req.headers.host + req.url);
+  });
+}
 
 const allowedOrigins = [
   "https://nika-gold.net",
