@@ -141,6 +141,12 @@ router.post("/login", async (req, res) => {
     user.refreshToken = newRefreshToken;
     user.passwordChangedAt = Date.now();
     await user.save();
+    res.cookie("userToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 30,
+    });
     return res.json({
       accessToken,
       refreshToken: newRefreshToken,
@@ -217,9 +223,6 @@ router.post("/reset-password", async (req, res) => {
     user.resetCode = resetCode;
     user.resetCodeExpires = Date.now() + 600000;
     await user.save();
-    console.log("Введений resetCode:", resetCode);
-    console.log("Збережений в базі:", user.resetToken);
-    console.log("Чи ще дійсний:", user.resetTokenExpires > Date.now());
     await sendResetPasswordEmail(user, resetCode);
 
     res.json({ message: "Password reset code sent" });
@@ -280,15 +283,27 @@ router.get("/verify-email", async (req, res) => {
 router.get("/check", async (req, res) => {
   try {
     const token = req.cookies.userToken;
-    if (!token) return res.json({ isUser: false });
+    if (!token) return res.json({ isUser: false, user: null });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded || !decoded.id) return res.json({ isUser: false, user: null });
 
-    if (!decoded || !decoded.id) return res.json({ isUser: false });
+    const user = await User.findById(decoded.id).select(
+      "_id email username role",
+    );
+    if (!user) return res.json({ isUser: false, user: null });
 
-    return res.json({ isUser: true, userId: decoded.id });
+    return res.json({
+      isUser: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+      },
+    });
   } catch (error) {
-    return res.json({ isUser: false });
+    return res.json({ isUser: false, user: null });
   }
 });
 
