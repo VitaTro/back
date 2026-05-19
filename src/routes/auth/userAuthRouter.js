@@ -90,6 +90,7 @@ router.post("/login", async (req, res) => {
           secure: process.env.NODE_ENV === "production",
           sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
           maxAge: 1000 * 60 * 60 * 24 * 30, // 30 днів
+          path: "/",
         });
 
         return res.json({
@@ -146,6 +147,7 @@ router.post("/login", async (req, res) => {
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 1000 * 60 * 60 * 24 * 30,
+      path: "/",
     });
     return res.json({
       accessToken,

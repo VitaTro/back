@@ -62,6 +62,7 @@ router.post("/login", async (req, res) => {
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
 
       maxAge: 1000 * 60 * 60 * 24 * 30,
+      path: "/",
     });
 
     return res.json({ message: "Login successful" });
