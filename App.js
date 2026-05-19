@@ -37,6 +37,14 @@ const AnalyticsRouter = require("./src/routes/analyticsRouter");
 const TpayPaymentRouter = require("./src/routes/payment/tpayWebhookRouter");
 const cookieParser = require("cookie-parser");
 const app = express();
+app.enable("trust proxy");
+app.use((req, res, next) => {
+  if (req.secure || req.headers["x-forwarded-proto"] === "https") {
+    return next();
+  }
+  return res.redirect("https://" + req.headers.host + req.url);
+});
+
 const allowedOrigins = [
   "https://nika-gold.net",
   "https://nika-gold.netlify.app",
