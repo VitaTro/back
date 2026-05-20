@@ -87,8 +87,10 @@ router.post("/login", async (req, res) => {
         // });
         res.cookie("userToken", newAccessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+          secure: false,
+          sameSite: "lax",
+          // secure: process.env.NODE_ENV === "production",
+          // sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
           maxAge: 1000 * 60 * 60 * 24 * 30, // 30 днів
           path: "/",
         });
@@ -144,8 +146,10 @@ router.post("/login", async (req, res) => {
     await user.save();
     res.cookie("userToken", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: false,
+      sameSite: "lax",
+      // secure: process.env.NODE_ENV === "production",
+      // sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 1000 * 60 * 60 * 24 * 30,
       path: "/",
     });
