@@ -216,7 +216,8 @@ router.post("/reserve", authenticateAdmin, async (req, res) => {
         type: "sale",
         unitPurchasePrice: unitPrice,
         price: unitPrice,
-        saleSource: "OfflineReservation",
+        saleSource: "OfflineSale",
+        unitSalePrice: unitPrice,
         date: new Date(),
         note: "Reservation created",
       });
