@@ -13,7 +13,6 @@ const {
 } = require("../../services/generateUniversalInvoice");
 const { calculateStock } = require("../../services/calculateStock");
 const { calculateDiscount } = require("../../services/discountCalculator");
-const OfflineReservation = require("../../schemas/sales/offlineReservation");
 // 🔹 GET: Отримати всі офлайн-замовлення
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
@@ -231,15 +230,14 @@ router.post("/reserve", authenticateAdmin, async (req, res) => {
     }
 
     // 🔥 Створюємо резерв як OfflineSale
-    const reservation = await OfflineReservation.create({
-      orderId: new mongoose.Types.ObjectId(), // фіктивний orderId
+    const reservation = await OfflineSale.create({
+      isReservation: true,
+      status: "reserved",
+      reservationExpiresAt,
       products: enrichedProducts,
       totalAmount,
       finalPrice: totalAmount,
-      paymentMethod: "cash", // неважливо, бо це резерв
-      status: "reserved",
-      isReservation: true,
-      reservationExpiresAt,
+      paymentMethod: "cash",
       notes,
     });
 
