@@ -13,6 +13,7 @@ const {
 } = require("../../services/generateUniversalInvoice");
 const { calculateStock } = require("../../services/calculateStock");
 const { calculateDiscount } = require("../../services/discountCalculator");
+const OfflineReservation = require("../../schemas/sales/offlineReservation");
 // 🔹 GET: Отримати всі офлайн-замовлення
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
@@ -230,7 +231,7 @@ router.post("/reserve", authenticateAdmin, async (req, res) => {
     }
 
     // 🔥 Створюємо резерв як OfflineSale
-    const reservation = await OfflineSale.create({
+    const reservation = await OfflineReservation.create({
       orderId: new mongoose.Types.ObjectId(), // фіктивний orderId
       products: enrichedProducts,
       totalAmount,
@@ -324,6 +325,12 @@ router.patch("/reserve/:id/extend", authenticateAdmin, async (req, res) => {
     console.error("🔥 Error extending reservation:", error);
     res.status(500).json({ error: "Failed to extend reservation" });
   }
+});
+router.get("/reserve", authenticateAdmin, async (req, res) => {
+  const reservations = await OfflineSale.find({ isReservation: true }).sort({
+    createdAt: -1,
+  });
+  res.json(reservations);
 });
 
 module.exports = router;
