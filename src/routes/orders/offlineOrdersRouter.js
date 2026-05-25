@@ -332,4 +332,51 @@ router.get("/reserve", authenticateAdmin, async (req, res) => {
   res.json(reservations);
 });
 
+router.delete("/reserve/:id", authenticateAdmin, async (req, res) => {
+  try {
+    const reservation = await OfflineSale.findById(req.params.id);
+
+    if (!reservation) {
+      return res.status(404).json({ error: "Reservation not found" });
+    }
+
+    if (!reservation.isReservation || reservation.status !== "reserved") {
+      return res
+        .status(400)
+        .json({ error: "This sale is not an active reservation" });
+    }
+
+    // 🔥 Повертаємо товар на склад
+    for (const item of reservation.products) {
+      await StockMovement.create({
+        productId: item.productId,
+        productIndex: item.index,
+        productName: item.name,
+        quantity: item.quantity,
+        type: "restock",
+        unitPurchasePrice: item.price,
+        price: item.price,
+        saleSource: "OfflineSale",
+        date: new Date(),
+        note: "Reservation cancelled — stock restored",
+      });
+
+      // Оновлюємо кількість у Product
+      const productDoc = await Product.findById(item.productId);
+      const stockCount = await calculateStock(item.index);
+      productDoc.quantity = stockCount;
+      productDoc.currentStock = stockCount;
+      productDoc.inStock = stockCount > 0;
+      await productDoc.save();
+    }
+
+    await reservation.deleteOne();
+
+    res.status(200).json({ message: "Reservation deleted" });
+  } catch (error) {
+    console.error("🔥 Error deleting reservation:", error);
+    res.status(500).json({ error: "Failed to delete reservation" });
+  }
+});
+
 module.exports = router;
