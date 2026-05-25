@@ -214,7 +214,7 @@ router.post("/reserve", authenticateAdmin, async (req, res) => {
         productName: lastMovement.productName,
         quantity: item.quantity,
         type: "sale",
-        unitPurchasePrice: unitPrice,
+        // unitPurchasePrice: unitPrice,
         price: unitPrice,
         saleSource: "OfflineSale",
         unitSalePrice: unitPrice,
