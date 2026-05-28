@@ -205,15 +205,13 @@ router.post("/logout", async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: "none",
+      path: "/",
     });
 
-    // 🔹 2. Якщо немає refreshToken → просто виходимо
-    // (бо соцлогіни можуть не мати refreshToken)
     if (!refreshToken) {
       return res.json({ message: "Logged out successfully" });
     }
 
-    // 🔹 3. Якщо refreshToken є — чистимо його в базі
     const user = await User.findOne({ refreshToken });
     if (user) {
       user.refreshToken = null;
