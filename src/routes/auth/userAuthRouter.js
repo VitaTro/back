@@ -110,11 +110,42 @@ router.post("/login", async (req, res) => {
     // 2️⃣ STANDARDOWE LOGOWANIE (EMAIL + HASŁO)
 
     const user = await User.findOne({ email });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+
+    // if (!user || !(await bcrypt.compare(password, user.password))) {
+    //   return res
+    //     .status(401)
+    //     .json({ message: "Nieprawidłowy e-mail lub hasło." });
+    // }
+    // ❗ Якщо акаунт створений через Google
+    if (user && user.providers.google) {
+      return res.status(400).json({
+        message: "Ten email jest powiązany z Google. Zaloguj się przez Google.",
+      });
+    }
+
+    // ❗ Якщо акаунт створzony через Facebook
+    if (user && user.providers.facebook) {
+      return res.status(400).json({
+        message:
+          "Ten email jest powiązany z Facebook. Zaloguj się przez Facebook.",
+      });
+    }
+
+    // ❗ Якщо локальний пароль відсутній
+    if (!user || !user.password) {
+      return res.status(401).json({
+        message:
+          "Ten email nie ma ustawionego hasła. Użyj logowania Google/Facebook.",
+      });
+    }
+
+    // ❗ Тільки тепер bcrypt
+    if (!(await bcrypt.compare(password, user.password))) {
       return res
         .status(401)
         .json({ message: "Nieprawidłowy e-mail lub hasło." });
     }
+
     if (!user.isVerified) {
       return res
         .status(403)
