@@ -1,6 +1,46 @@
 const jwt = require("jsonwebtoken");
-const User = require("../schemas/userSchema"); // Підключаємо User модель
+const User = require("../schemas/userSchema");
 
+const authenticateUser = async (req, res, next) => {
+  try {
+    const token = req.cookies.userToken;
+
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized: No token" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (!decoded || !decoded.id) {
+      return res.status(403).json({ message: "Invalid token" });
+    }
+
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(403).json({ message: "User not found" });
+    }
+
+    // 🔥 ВАЖЛИВО: токен недійсний, якщо пароль змінено після його видачі
+    if (user.passwordChangedAt && decoded.iat * 1000 < user.passwordChangedAt) {
+      return res
+        .status(403)
+        .json({ message: "Token expired after password change" });
+    }
+
+    req.user = {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+    };
+
+    next();
+  } catch (error) {
+    return res.status(403).json({ message: "Invalid or expired token" });
+  }
+};
+
+module.exports = { authenticateUser };
 // const extractToken = (req) => req.headers.authorization?.split(" ")[1];
 
 // const authenticateUser = async (req, res, next) => {
@@ -67,37 +107,3 @@ const User = require("../schemas/userSchema"); // Підключаємо User м
 //     return res.status(403).json({ message: "Invalid or expired token" });
 //   }
 // };
-
-const authenticateUser = async (req, res, next) => {
-  try {
-    const token = req.cookies.userToken;
-
-    if (!token) {
-      return res.status(401).json({ message: "Unauthorized: No token" });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    if (!decoded || !decoded.id) {
-      return res.status(403).json({ message: "Invalid token" });
-    }
-
-    const user = await User.findById(decoded.id);
-
-    if (!user) {
-      return res.status(403).json({ message: "User not found" });
-    }
-
-    req.user = {
-      id: user._id,
-      email: user.email,
-      role: user.role,
-    };
-
-    next();
-  } catch (error) {
-    return res.status(403).json({ message: "Invalid or expired token" });
-  }
-};
-
-module.exports = { authenticateUser };

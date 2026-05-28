@@ -4,7 +4,8 @@ const mongoose = require("mongoose");
 const User = require("../../schemas/userSchema");
 const jwt = require("jsonwebtoken");
 const router = express.Router();
-const { authenticateJWT } = require("../../middleware/authenticateMiddleware");
+// const { authenticateJWT } = require("../../middleware/authenticateMiddleware");
+const { authenticateUser } = require("../../middleware/authenticateUser");
 const { refreshToken } = require("../../middleware/refreshTokenMiddleware");
 const {
   sendVerificationEmail,
