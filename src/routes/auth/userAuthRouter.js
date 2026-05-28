@@ -203,8 +203,8 @@ router.post("/logout", async (req, res) => {
     // 🔹 1. Чистимо cookie — це треба зробити ПЕРШИМ
     res.clearCookie("userToken", {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: false,
+      sameSite: "lax",
       path: "/",
     });
 
