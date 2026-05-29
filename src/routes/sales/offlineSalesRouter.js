@@ -232,6 +232,7 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
     for (const item of sale.products) {
       // 📦 Склад бачить повернення
       await StockMovement.create({
+        productId,
         productIndex: item.index,
         productName: item.name,
         quantity: item.quantity,
@@ -283,6 +284,9 @@ router.post("/reserve", authenticateAdmin, async (req, res) => {
         .status(400)
         .json({ error: "Reservation expiration date required" });
     }
+
+    const expiresAt = new Date(reservationExpiresAt);
+    expiresAt.setHours(23, 59, 59, 999);
 
     const enrichedProducts = [];
     let totalAmount = 0;
@@ -356,7 +360,7 @@ router.post("/reserve", authenticateAdmin, async (req, res) => {
       paymentMethod: "cash", // неважливо, бо це резерв
       status: "reserved",
       isReservation: true,
-      reservationExpiresAt,
+      reservationExpiresAt: expiresAt,
       notes,
     });
 

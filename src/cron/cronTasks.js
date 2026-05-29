@@ -3,6 +3,7 @@ const OfflineSale = require("../schemas/sales/offlineSales");
 const StockMovement = require("../schemas/accounting/stockMovement");
 const { calculateStock } = require("../services/calculateStock");
 const Product = require("../schemas/product");
+const autoExpireReservations = require("./cronReserv");
 
 require("events").EventEmitter.defaultMaxListeners = 20;
 
@@ -44,53 +45,7 @@ cron.schedule("0 3 * * *", async () => {
     console.error("🔥 Error deleting old sales:", error);
   }
 });
-
-cron.schedule("0 1 * * *", async () => {
-  try {
-    console.log("🔍 Checking expired offline reservations...");
-
-    const now = new Date();
-
-    const expired = await OfflineSale.find({
-      status: "reserved",
-      isReservation: true,
-      reservationExpiresAt: { $lte: now },
-    });
-
-    for (const sale of expired) {
-      console.log(`⏳ Reservation expired for sale ${sale._id}`);
-      // повертаємо товар на склад
-      for (const item of sale.products) {
-        await StockMovement.create({
-          productId: item.productId,
-          productIndex: item.index,
-          productName: item.name,
-          quantity: item.quantity,
-          type: "return",
-          unitPurchasePrice: item.price,
-          price: item.price,
-          saleSource: "OfflineReservationExpired",
-          relatedSaleId: sale._id,
-          date: new Date(),
-          note: "Offline reservation expired — returned to stock",
-        });
-        // оновлюємо кількість у Product
-        const productDoc = await Product.findById(item.productId);
-        if (productDoc) {
-          const stockCount = await calculateStock(item.index);
-          productDoc.quantity = stockCount;
-          productDoc.currentStock = stockCount;
-          productDoc.inStock = stockCount > 0;
-          await productDoc.save();
-        }
-      }
-
-      sale.status = "cancelled";
-      sale.isReservation = false;
-      await sale.save();
-    }
-    console.log(`✅ Processed ${expired.length} expired offline reservations.`);
-  } catch (error) {
-    console.error("🔥 Error processing offline reservations:", error);
-  }
+// авто повернення резервів, якщо я не провела вчасно продаж
+cron.schedule("*/10 * * * *", () => {
+  autoExpireReservations();
 });
