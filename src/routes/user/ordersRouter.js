@@ -18,6 +18,7 @@ const Payment = require("../../schemas/paymentSchema");
 
 const { calculateStock } = require("../../services/calculateStock");
 const { createTpayTransaction } = require("../../services/tpayService");
+const onlineOrders = require("../../schemas/orders/onlineOrders");
 
 // ===============================
 // GET USER ORDERS
@@ -323,10 +324,14 @@ router.patch("/:id/received", authenticateUser, async (req, res) => {
 router.get("/purchase-history", authenticateUser, async (req, res) => {
   try {
     const { startDate, endDate, status, page = 1, limit = 25 } = req.query;
+
     const filter = { userId: req.user.id };
 
     if (startDate && endDate) {
-      filter.saleDate = { $gte: new Date(startDate), $lte: new Date(endDate) };
+      filter.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
     }
 
     if (status) {
@@ -335,27 +340,22 @@ router.get("/purchase-history", authenticateUser, async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const purchaseHistory = await OnlineSale.find(filter)
-      .populate("onlineOrderId", "totalAmount paymentMethod saleDate status")
-      .populate("products.productId", "name photoUrl price quantity")
-      .sort({ saleDate: -1 })
+    const orders = await OnlineOrder.find(filter)
+      .populate("products.productId", "name photoUrl price")
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
-    const totalOrders = await OnlineSale.countDocuments(filter);
-
-    if (!purchaseHistory.length) {
-      return res.status(404).json({ error: "No purchase history found" });
-    }
+    const totalOrders = await OnlineOrder.countDocuments(filter);
 
     res.status(200).json({
       message: "Purchase history retrieved successfully",
       totalOrders,
       currentPage: parseInt(page),
       totalPages: Math.ceil(totalOrders / limit),
-      purchaseHistory,
+      orders,
     });
-  } catch {
+  } catch (error) {
     res.status(500).json({ error: "Failed to fetch purchase history" });
   }
 });
