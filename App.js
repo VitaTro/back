@@ -82,6 +82,7 @@ app.use(
 );
 
 // Routes
+app.use("/api/tpay", TpayRouter);
 app.use("/api", MainRouter);
 app.use("/api/products", ProductRouter);
 app.use("/api/user", ProfileRouter);
@@ -93,7 +94,7 @@ app.use("/api/user/shopping-cart", ShoppingCartRouter);
 app.use("/api/user/wishlist", WishlistRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api", SearchRouter);
-app.use("/api/tpay", TpayRouter);
+
 app.use("/api/products", FilterRouter);
 app.use("/api/admin", AdminRouter);
 app.use("/api/admin/accounting/monthly-report", MonthlyReportRouter);
