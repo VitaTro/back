@@ -138,6 +138,10 @@ router.post("/", authenticateUser, async (req, res) => {
     } else {
       shippingCost = 80;
     }
+    const totalQuantity = enrichedProducts.reduce(
+      (sum, item) => sum + item.quantity,
+      0,
+    );
 
     const finalPrice = totalPrice + shippingCost;
 
@@ -147,6 +151,7 @@ router.post("/", authenticateUser, async (req, res) => {
       products: enrichedProducts,
       totalPrice,
       shippingCost,
+      totalQuantity,
       finalPrice,
       paymentMethod: "tpay",
       country,
