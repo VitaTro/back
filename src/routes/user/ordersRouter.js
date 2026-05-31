@@ -39,16 +39,18 @@ router.get("/", authenticateUser, async (req, res) => {
 });
 
 // ===============================
-// CREATE NEW ORDER (FULLY UPDATED)
+// CREATE NEW ORDER (UPDATED FOR DELIVERY TYPES)
 // ===============================
 router.post("/", authenticateUser, async (req, res) => {
   try {
     const {
       products,
-      country,
+      deliveryType, // "pickup" | "courier"
+      parcelSize, // "small" | "medium" | "large"
+      deliveryPrice,
       pickupPointId,
       deliveryAddress,
-      paymentMethod,
+      country,
       notes,
     } = req.body;
 
@@ -57,14 +59,23 @@ router.post("/", authenticateUser, async (req, res) => {
       return res.status(400).json({ error: "Не передано товари" });
     }
 
-    // Validate delivery
-    if (country === "Poland") {
-      if (!pickupPointId) {
-        return res
-          .status(400)
-          .json({ error: "Paczkomat is required for Poland" });
-      }
-    } else {
+    // Validate delivery type
+    if (!deliveryType || !["pickup", "courier"].includes(deliveryType)) {
+      return res.status(400).json({ error: "Invalid delivery type" });
+    }
+
+    // Validate parcel size
+    if (!parcelSize) {
+      return res.status(400).json({ error: "Parcel size is required" });
+    }
+
+    // Validate pickup
+    if (deliveryType === "pickup" && !pickupPointId) {
+      return res.status(400).json({ error: "Paczkomat is required" });
+    }
+
+    // Validate courier address
+    if (deliveryType === "courier") {
       const requiredFields = [
         "fullName",
         "street",
@@ -126,23 +137,12 @@ router.post("/", authenticateUser, async (req, res) => {
       });
     }
 
-    // Shipping cost
-    let shippingCost = 0;
-
-    if (country === "Poland") {
-      shippingCost = 15;
-    } else if (["Germany", "Czech Republic", "Slovakia"].includes(country)) {
-      shippingCost = 25;
-    } else if (["Lithuania", "Latvia", "Estonia"].includes(country)) {
-      shippingCost = 35;
-    } else {
-      shippingCost = 80;
-    }
+    // Shipping cost (from frontend)
+    const shippingCost = deliveryPrice || 0;
     const totalQuantity = enrichedProducts.reduce(
       (sum, item) => sum + item.quantity,
       0,
     );
-
     const finalPrice = totalPrice + shippingCost;
 
     // Create order
@@ -154,9 +154,14 @@ router.post("/", authenticateUser, async (req, res) => {
       totalQuantity,
       finalPrice,
       paymentMethod: "tpay",
+
+      deliveryType,
+      parcelSize,
+      deliveryPrice: shippingCost,
+
+      pickupPointId: deliveryType === "pickup" ? pickupPointId : null,
+      deliveryAddress: deliveryType === "courier" ? deliveryAddress : null,
       country,
-      pickupPointId: country === "Poland" ? pickupPointId : null,
-      deliveryAddress: country !== "Poland" ? deliveryAddress : null,
       notes,
       status: "new",
     });
@@ -168,7 +173,10 @@ router.post("/", authenticateUser, async (req, res) => {
       amount: finalPrice,
       orderId: newOrder.orderId,
       email: req.user.email,
-      name: deliveryAddress?.fullName || req.user.name || req.user.email,
+      name:
+        deliveryAddress?.fullName ||
+        req.user.firstName + " " + req.user.lastName ||
+        req.user.email,
     });
 
     if (!tpay) {

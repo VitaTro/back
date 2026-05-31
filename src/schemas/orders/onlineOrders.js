@@ -35,6 +35,22 @@ const onlineOrderSchema = new mongoose.Schema(
     country: { type: String, required: true },
 
     pickupPointId: { type: String, default: null }, // тільки Польща
+    deliveryType: {
+      type: String,
+      enum: ["pickup", "courier"],
+      default: "pickup",
+    },
+
+    parcelSize: {
+      type: String,
+      enum: ["small", "medium", "large"],
+      default: null, // поки що optional
+    },
+
+    deliveryPrice: {
+      type: Number,
+      default: 0, // поки що optional
+    },
 
     deliveryAddress: {
       fullName: String,

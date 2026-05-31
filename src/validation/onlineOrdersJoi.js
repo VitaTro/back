@@ -30,9 +30,14 @@ const onlineOrderValidationSchema = Joi.object({
   paymentMethod: Joi.string().valid("tpay").required(),
 
   country: Joi.string().required(),
+  deliveryType: Joi.string().valid("pickup", "courier").default("pickup"),
 
-  pickupPointId: Joi.string().when("country", {
-    is: "Poland",
+  parcelSize: Joi.string().valid("small", "medium", "large").optional(),
+
+  deliveryPrice: Joi.number().min(0).optional(),
+
+  pickupPointId: Joi.string().when("deliveryType", {
+    is: "pickup",
     then: Joi.required(),
     otherwise: Joi.forbidden(),
   }),
@@ -44,8 +49,8 @@ const onlineOrderValidationSchema = Joi.object({
     apartmentNumber: Joi.string().allow(""),
     city: Joi.string().required(),
     postalCode: Joi.string().required(),
-  }).when("country", {
-    is: Joi.string().valid("Poland").not(),
+  }).when("deliveryType", {
+    is: "courier",
     then: Joi.required(),
     otherwise: Joi.forbidden(),
   }),
