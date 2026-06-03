@@ -270,6 +270,19 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
     res.status(500).json({ error: "Не вдалося обробити повернення" });
   }
 });
+router.get("/reserve", authenticateAdmin, async (req, res) => {
+  try {
+    const reservations = await OfflineSale.find({ status: "reserved" }).sort({
+      createdAt: -1,
+    });
+
+    res.json(reservations);
+  } catch (error) {
+    console.error("🔥 Error fetching reservations:", error);
+    res.status(500).json({ error: "Failed to fetch reservations" });
+  }
+});
+
 // 🔹 POST: Створити РЕЗЕРВАЦІЮ товару
 router.post("/reserve", authenticateAdmin, async (req, res) => {
   try {
