@@ -3,7 +3,10 @@ const OfflineSale = require("../schemas/sales/offlineSales");
 const StockMovement = require("../schemas/accounting/stockMovement");
 const { calculateStock } = require("../services/calculateStock");
 const Product = require("../schemas/product");
-const autoExpireReservations = require("./cronReserv");
+const {
+  autoExpireReservations,
+  notifyExpireReservations,
+} = require("./cronReserv");
 
 require("events").EventEmitter.defaultMaxListeners = 20;
 
@@ -44,6 +47,9 @@ cron.schedule("0 3 * * *", async () => {
   } catch (error) {
     console.error("🔥 Error deleting old sales:", error);
   }
+});
+cron.schedule("0 8 * * *", () => {
+  notifyExpireReservations();
 });
 // авто повернення резервів, якщо я не провела вчасно продаж
 cron.schedule("*/10 * * * *", () => {

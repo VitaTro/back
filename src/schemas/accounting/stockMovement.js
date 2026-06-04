@@ -68,7 +68,13 @@ const stockMovementSchema = new mongoose.Schema({
   },
   saleSource: {
     type: String,
-    enum: ["OnlineSale", "OfflineSale", "ExternalSale", "PlatformSale"],
+    enum: [
+      "OnlineSale",
+      "OfflineSale",
+      "ExternalSale",
+      "PlatformSale",
+      "OfflineReservation",
+    ],
   },
   note: {
     type: String,

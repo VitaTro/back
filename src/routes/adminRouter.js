@@ -7,6 +7,7 @@ const { sendAdminMessage } = require("../config/emailService");
 const { authenticateAdmin } = require("../middleware/authenticateAdmin");
 const { authenticateUser } = require("../middleware/authenticateUser");
 const Analytics = require("../schemas/Analytics");
+const OfflineSale = require("../schemas/sales/offlineSales");
 // Маршрут для отримання користувачів
 router.get("/users", authenticateAdmin, async (req, res) => {
   try {
@@ -176,6 +177,21 @@ router.get("/dashboard", authenticateAdmin, async (req, res) => {
       { $limit: 100 },
     ]);
 
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(23, 59, 59, 999);
+
+    const expiringReservations = await OfflineSale.find({
+      isReservation: true,
+      status: "reserved",
+      reservationExpiresAt: { $lte: tomorrow },
+    }).select("products reservationExpiresAt notes createdAt");
+    const expiredReservations = await OfflineSale.find({
+      isReservation: false,
+      status: "cancelled",
+      notes: /expired/i,
+    }).select("products reservationExpiresAt notes createdAt");
+
     res.status(200).json({
       message: "Welcome to the dashboard, admin@example.com!",
       stats: {
@@ -200,6 +216,14 @@ router.get("/dashboard", authenticateAdmin, async (req, res) => {
         popularItems,
       },
       wishlistOverview: wishlistItems,
+      expiringReservations: {
+        count: expiringReservations.length,
+        items: expiringReservations,
+      },
+      expiredReservations: {
+        count: expiredReservations.length,
+        items: expiredReservations,
+      },
     });
   } catch (error) {
     console.error("Error in /dashboard route:", error);
