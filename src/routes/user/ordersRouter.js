@@ -372,5 +372,27 @@ router.get("/purchase-history", authenticateUser, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch purchase history" });
   }
 });
+// ===============================
+// GET SINGLE USER ORDER
+// ===============================
+router.get("/:id", authenticateUser, async (req, res) => {
+  try {
+    const order = await OnlineOrder.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    })
+      .populate("products.productId", "name photoUrl price")
+      .populate("pickupPointId")
+      .populate("deliveryAddress");
+
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    res.status(200).json({ order });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch order" });
+  }
+});
 
 module.exports = router;
