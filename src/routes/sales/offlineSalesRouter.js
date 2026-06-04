@@ -1,6 +1,7 @@
 const express = require("express");
 
 const router = express.Router();
+const mongoose = require("mongoose");
 
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 
@@ -232,7 +233,7 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
     for (const item of sale.products) {
       // 📦 Склад бачить повернення
       await StockMovement.create({
-        productId,
+        productId: item.productId,
         productIndex: item.index,
         productName: item.name,
         quantity: item.quantity,
