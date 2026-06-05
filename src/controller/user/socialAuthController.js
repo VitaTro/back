@@ -77,13 +77,18 @@ exports.facebookAuthController = async (req, res) => {
     //   refreshToken: refreshTokenJWT,
     //   user,
     // });
-    res.cookie("userToken", accessTokenJWT, {
+    res.cookie("accessToken", accessTokenJWT, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 30, // 30 днів
+      maxAge: 1000 * 60 * 15, // 15 minut
     });
-
+    res.cookie("refreshToken", refreshTokenJWT, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 1 рік
+    });
     res.json({ message: "Login successful", user });
   } catch (err) {
     res.status(400).json({
@@ -153,18 +158,49 @@ exports.googleAuthController = async (req, res) => {
     //   refreshToken: refreshTokenJWT,
     //   user,
     // });
-    res.cookie("userToken", accessTokenJWT, {
+    res.cookie("accessToken", accessTokenJWT, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 30,
+      maxAge: 1000 * 60 * 15,
     });
-
+    res.cookie("refreshToken", refreshTokenJWT, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 365,
+    });
     res.json({ message: "Login successful", user });
   } catch (err) {
     res.status(400).json({
       message: "Logowanie przez Google nie powiodło się.",
       error: err.message,
     });
+  }
+};
+exports.refreshTokenController = async (req, res) => {
+  try {
+    const token = req.cookies.refreshToken;
+    if (!token) return res.sendStatus(401);
+
+    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user || user.refreshToken !== token) {
+      return res.sendStatus(403);
+    }
+
+    const newAccessToken = generateAccessToken(user);
+
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 1000 * 60 * 15,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.sendStatus(403);
   }
 };
