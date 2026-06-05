@@ -130,6 +130,10 @@ router.patch("/:id/status", authenticateAdmin, async (req, res) => {
     if (!order) return res.status(404).json({ error: "Order not found" });
 
     order.status = status;
+    if (status === "paid") {
+      order.paymentStatus = "paid";
+    }
+
     order.statusHistory.push({ status, updatedBy, updatedAt: new Date() });
     await order.save();
     const io = getIo();
