@@ -125,7 +125,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
 router.patch("/:id/status", authenticateAdmin, async (req, res) => {
   try {
     const { status } = req.body;
-    const updatedBy = req.admin?._id;
+    const updatedBy = "admin";
 
     const order = await OnlineOrder.findById(req.params.id);
     if (!order) return res.status(404).json({ error: "Order not found" });

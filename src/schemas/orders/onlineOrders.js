@@ -108,8 +108,7 @@ const onlineOrderSchema = new mongoose.Schema(
           required: true,
         },
         updatedBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
+          type: String,
           required: true,
         },
         updatedAt: { type: Date, default: Date.now },
