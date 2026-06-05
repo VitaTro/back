@@ -125,7 +125,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
 router.patch("/:id/status", authenticateAdmin, async (req, res) => {
   try {
     const { status } = req.body;
-    const updatedBy = req.admin.id;
+    const updatedBy = req.admin?._id || "admin";
     const order = await OnlineOrder.findById(req.params.id);
     if (!order) return res.status(404).json({ error: "Order not found" });
 
@@ -140,6 +140,7 @@ router.patch("/:id/status", authenticateAdmin, async (req, res) => {
 
     res.status(200).json({ message: "Order status updated", order });
   } catch (error) {
+    console.error("❌ Error updating status:", error);
     res.status(500).json({ error: "Failed to update order status" });
   }
 });
