@@ -38,6 +38,11 @@ const cookieParser = require("cookie-parser");
 const app = express();
 app.enable("trust proxy");
 
+app.use((req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
+
 if (process.env.NODE_ENV === "production") {
   app.use((req, res, next) => {
     const proto = req.headers["x-forwarded-proto"];
