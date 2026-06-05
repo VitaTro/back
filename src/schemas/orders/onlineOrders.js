@@ -87,6 +87,7 @@ const onlineOrderSchema = new mongoose.Schema(
         "completed",
         "cancelled",
         "returned",
+        "paid",
       ],
       default: "new",
     },
