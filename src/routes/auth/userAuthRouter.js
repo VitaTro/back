@@ -318,6 +318,7 @@ router.get("/verify-email", async (req, res) => {
 });
 router.get("/check", async (req, res) => {
   try {
+    res.set("Cache-Control", "no-store");
     const token = req.cookies.userToken;
     if (!token) return res.json({ isUser: false, user: null });
 
