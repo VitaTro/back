@@ -148,6 +148,9 @@ router.post("/", authenticateUser, async (req, res) => {
     // Create order
     const newOrder = new OnlineOrder({
       userId: req.user.id,
+      buyerName: req.body.buyerName,
+      buyerEmail: req.body.buyerEmail,
+      buyerPhone: req.body.buyerPhone,
       products: enrichedProducts,
       totalPrice,
       shippingCost,

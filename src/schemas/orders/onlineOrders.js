@@ -7,7 +7,9 @@ const onlineOrderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-
+    buyerName: { type: String, required: true },
+    buyerEmail: { type: String, required: true },
+    buyerPhone: { type: String, required: true },
     // 🟡 Товари
     products: [
       {

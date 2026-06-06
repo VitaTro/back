@@ -6,6 +6,9 @@ const onlineOrderValidationSchema = Joi.object({
     .required(),
 
   userId: Joi.string().required(),
+  buyerName: Joi.string().required(),
+  buyerEmail: Joi.string().email().required(),
+  buyerPhone: Joi.string().required(),
 
   products: Joi.array()
     .items(
