@@ -30,6 +30,7 @@ const onlineOrderValidationSchema = Joi.object({
       "shipped",
       "completed",
       "cancelled",
+      "returned",
       "paid",
     )
     .required(),

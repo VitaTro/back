@@ -84,6 +84,7 @@ const onlineOrderSchema = new mongoose.Schema(
       type: String,
       enum: [
         "new",
+        "received",
         "assembled",
         "shipped",
         "completed",
@@ -100,6 +101,7 @@ const onlineOrderSchema = new mongoose.Schema(
           type: String,
           enum: [
             "new",
+            "received",
             "assembled",
             "shipped",
             "completed",
