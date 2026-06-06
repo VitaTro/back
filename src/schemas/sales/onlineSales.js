@@ -26,7 +26,7 @@ const onlineSaleSchema = new mongoose.Schema(
         name: { type: String, required: true },
         photoUrl: { type: String, required: true },
         quantity: { type: Number, required: true },
-        price: { type: Number, required: true },
+        salePrice: { type: Number, required: true },
         color: { type: String },
       },
     ],

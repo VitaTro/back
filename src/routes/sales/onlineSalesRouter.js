@@ -52,6 +52,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
     const enrichedProducts = [];
     let totalAmount = 0;
 
+    let discount = 0;
+    let discountPercent = 0;
+    let final = 0;
     for (const item of order.products) {
       const lastMovement = await StockMovement.findOne({
         productId: item.productId,
@@ -81,14 +84,16 @@ router.post("/", authenticateAdmin, async (req, res) => {
         lastMovement.unitPurchasePrice ||
         0;
       totalAmount += unitPrice * item.quantity;
-      const { discount, discountPercent, final } = order.discount
+      const discountData = order.discount
         ? {
             discount: order.discount,
             discountPercent: order.discountPercent,
             final: order.finalPrice,
           }
         : calculateDiscount(totalAmount);
-
+      discount = discountData.discount;
+      discountPercent = discountData.discountPercent;
+      final = discountData.final;
       enrichedProducts.push({
         productId: item.productId,
         index: lastMovement.productIndex,
@@ -136,7 +141,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       paymentMethod: order.paymentMethod,
       status: "completed",
       deliveryDetails: `${order.deliveryType}`,
-      saleDate: saleDate || new Date(),
+      saleDate: new Date(),
       buyerType: order.buyerType,
       buyerName: order.buyerName,
       buyerAddress: order.buyerAddress,
@@ -150,7 +155,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         $inc: { totalRevenue: final },
         $push: { completedOnlineSales: onlineSale._id },
       },
-      { upsert: true }
+      { upsert: true },
     );
 
     // 📄 Генеруємо фактуру
@@ -190,7 +195,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
 router.patch("/:id", authenticateAdmin, async (req, res) => {
   try {
     console.log(
-      `🛠 Updating online order ID: ${req.params.id} with status: ${req.body.status}`
+      `🛠 Updating online order ID: ${req.params.id} with status: ${req.body.status}`,
     );
 
     const { status, processedBy, paymentMethod } = req.body;
@@ -270,7 +275,7 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
         $push: { completedOnlineOrders: existingOnlineOrder._id },
         $inc: { totalRevenue: existingOnlineOrder.finalPrice },
       },
-      { upsert: true }
+      { upsert: true },
     );
 
     res.status(200).json({
@@ -297,7 +302,7 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
 
     for (const product of sale.products) {
       const returnedItem = returnedProducts.find(
-        (p) => p.productId === product.productId.toString()
+        (p) => p.productId === product.productId.toString(),
       );
 
       if (returnedItem) {
@@ -334,10 +339,10 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
         $inc: {
           totalRevenue: -Math.min(
             totalRefunded,
-            sale.finalPrice || sale.totalAmount
+            sale.finalPrice || sale.totalAmount,
           ),
         },
-      }
+      },
     );
 
     sale.products = sale.products.filter((p) => p.quantity > 0);
