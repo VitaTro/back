@@ -137,6 +137,8 @@ router.post("/", authenticateAdmin, async (req, res) => {
       totalAmount,
       discount,
       discountPercent,
+      shippingCost: order.shippingCost,
+
       finalPrice: final,
       paymentMethod: order.paymentMethod,
       status: "completed",
