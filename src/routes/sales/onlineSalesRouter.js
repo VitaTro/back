@@ -173,17 +173,17 @@ router.post("/", authenticateAdmin, async (req, res) => {
     // });
 
     // await invoice.save();
-    const invoice = await generateUniversalInvoice(order, {
-      mode: "online",
-      buyerType: order.buyerType,
-      buyerName: order.buyerName,
-      buyerAddress: order.buyerAddress,
-      buyerNIP: order.buyerNIP,
-    });
+    // const invoice = await generateUniversalInvoice(order, {
+    //   mode: "online",
+    //   buyerType: order.buyerType,
+    //   buyerName: order.buyerName,
+    //   buyerAddress: order.buyerAddress,
+    //   buyerNIP: order.buyerNIP,
+    // });
     return res.status(201).json({
       message: "✅ Онлайн-продаж завершено",
       sale: onlineSale,
-      invoice: invoice,
+      // invoice: invoice,
     });
   } catch (error) {
     console.error("🔥 Помилка створення онлайн-продажу:", error);
