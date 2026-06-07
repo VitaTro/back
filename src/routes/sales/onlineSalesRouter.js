@@ -119,11 +119,10 @@ router.post("/", authenticateAdmin, async (req, res) => {
       { upsert: true },
     );
 
-    order.status = "sold";
     await order.save();
 
     res.status(201).json({
-      message: "Sale created successfully!",
+      message: "Продаж успішно проведено!",
       sale: newSale,
     });
   } catch (error) {
