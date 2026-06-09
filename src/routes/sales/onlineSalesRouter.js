@@ -114,7 +114,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       {},
       {
         $inc: { totalRevenue: newSale.finalPrice },
-        $push: { completedOnlineSales: newSale._id },
+        $push: { completedSales: newSale._id },
       },
       { upsert: true },
     );
