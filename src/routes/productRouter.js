@@ -56,61 +56,59 @@ router.get("/:type", async (req, res) => {
 // Маршрут для додавання нового продукту
 router.post("/", async (req, res) => {
   try {
-    const {
-      name,
-      category,
-      subcategory,
-      price,
-      purchasePrice,
-      description,
-      photoUrl,
-      additionalPhotos,
-      size,
-      width,
-      length,
-      color,
-      quantity,
-      materials,
-      inStock,
-      visible,
-      index,
-      createdAt,
-      rating,
-      discount,
-      popularity,
-    } = req.body;
+    const data = req.body;
 
     const newProduct = new Product({
-      name,
-      category,
-      subcategory,
-      price,
-      purchasePrice,
-      description,
-      photoUrl,
-      additionalPhotos: additionalPhotos || [],
-      size,
-      width,
-      length,
-      color,
-      quantity,
-      inStock,
-      visible,
-      materials,
-      index,
-      createdAt: createdAt || Date.now(),
-      rating,
-      discount,
-      popularity,
+      name: data.name,
+      category: data.category,
+      subcategory: data.subcategory,
+      price: data.price,
+
+      purchasePrice: {
+        value: data.purchasePrice?.value || 0,
+        currency: data.purchasePrice?.currency || "PLN",
+        exchangeRateToPLN:
+          data.purchasePrice?.currency !== "PLN"
+            ? Number(data.purchasePrice?.exchangeRateToPLN) || null
+            : null,
+      },
+
+      description: data.description,
+      photoUrl: data.photoUrl,
+      additionalPhotos: Array.isArray(data.additionalPhotos)
+        ? data.additionalPhotos
+        : [],
+
+      size: data.size,
+      width: data.width,
+      length: data.length,
+      color: data.color,
+      quantity: data.quantity,
+
+      index: data.index,
+      clasp: data.clasp || null,
+      material: data.material || null,
+      materials: data.materials || null,
+
+      hasExtension: data.hasExtension || false,
+      extension: data.hasExtension ? data.extension : null,
+
+      visible: data.visible ?? true,
+      rating: data.rating || 0,
+      discount: data.discount || 0,
+      popularity: data.popularity || 0,
+
+      createdAt: Date.now(),
     });
 
     await newProduct.save();
-    res.status(201).send(newProduct);
+    res.status(201).json(newProduct);
   } catch (error) {
-    console.error("Error:", error.message); // Додано для логування помилки
-    res
-      .status(500)
-      .send({ error: "Internal server error", details: error.message });
+    console.error("Error creating product:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      details: error.message,
+    });
   }
 });
 
