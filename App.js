@@ -3,7 +3,9 @@ const cors = require("cors");
 const path = require("path");
 const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./swagger.json");
-const { cloudinary, storage, upload } = require("./src/config/cloudinary");
+// const { cloudinary, storage, upload } = require("./src/config/cloudinary");
+const upload = require("./src/config/upload");
+
 const ProductRouter = require("./src/routes/productRouter");
 const OrdersRouter = require("./src/routes/user/ordersRouter");
 const ShoppingCartRouter = require("./src/routes/user/shoppingCartRouter");
@@ -118,21 +120,57 @@ app.use("/api/allegro", AllegroRouter);
 app.use("/api/admin/reporting", ReportingRouter);
 app.use("/api/admin/invoices", InvoiceArchiveRouter);
 app.use("/api/analytics", AnalyticsRouter);
-app.post("/upload", upload.single("photo"), (req, res) => {
+// app.post("/upload", upload.single("photo"), (req, res) => {
+//   try {
+//     if (!req.file) {
+//       return res.status(400).json({ error: "No file uploaded" });
+//     }
+//     cloudinary.uploader.upload(req.file.path, (error, result) => {
+//       if (error) {
+//         return res.status(500).json({ error: "Failed to upload image" });
+//       }
+//       res.json({ url: result.secure_url });
+//     });
+//   } catch (err) {
+//     res
+//       .status(500)
+//       .json({ error: "An unexpected error occurred", details: err.message });
+//   }
+// });
+const fetch = require("node-fetch");
+
+app.post("/upload", upload.single("photo"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
-    cloudinary.uploader.upload(req.file.path, (error, result) => {
-      if (error) {
-        return res.status(500).json({ error: "Failed to upload image" });
-      }
-      res.json({ url: result.secure_url });
+
+    const file = req.file;
+    const fileName = `${Date.now()}-${file.originalname}`;
+
+    const uploadUrl = `https://storage.bunnycdn.com/${process.env.BUNNY_STORAGE_NAME}/${fileName}`;
+
+    const response = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        AccessKey: process.env.BUNNY_ACCESS_KEY,
+        "Content-Type": file.mimetype,
+      },
+      body: file.buffer,
     });
+
+    if (!response.ok) {
+      return res.status(500).json({ error: "Failed to upload to BunnyCDN" });
+    }
+
+    const cdnUrl = `https://${process.env.BUNNY_STORAGE_NAME}.b-cdn.net/${fileName}`;
+
+    res.json({ url: cdnUrl });
   } catch (err) {
-    res
-      .status(500)
-      .json({ error: "An unexpected error occurred", details: err.message });
+    res.status(500).json({
+      error: "Unexpected error",
+      details: err.message,
+    });
   }
 });
 
