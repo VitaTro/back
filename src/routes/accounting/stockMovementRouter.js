@@ -17,6 +17,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       note,
       relatedSaleId,
       saleSource,
+      size,
     } = req.body;
 
     if (!productIndex || !productName || !type || !quantity) {
@@ -40,10 +41,10 @@ router.post("/", authenticateAdmin, async (req, res) => {
         saleSource === "OfflineSale"
           ? OfflineSales
           : saleSource === "OnlineSale"
-          ? OnlineSale
-          : saleSource === "PlatformSale"
-          ? PlatformSale
-          : null;
+            ? OnlineSale
+            : saleSource === "PlatformSale"
+              ? PlatformSale
+              : null;
 
       if (saleModel) {
         const sale = await saleModel.findById(relatedSaleId).lean();
@@ -53,7 +54,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
           const totalQty = sale.products.reduce(
             (sum, p) => sum + (Number(p.quantity) || 0),
-            0
+            0,
           );
           const discountPerUnit = totalQty > 0 ? discount / totalQty : 0;
           finalUnitPrice = unitSalePrice - discountPerUnit;
@@ -67,6 +68,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       type,
       price,
       quantity,
+      size,
       date: date || new Date(),
       unitPurchasePrice: ["purchase", "restock"].includes(type)
         ? unitPurchasePrice
@@ -98,7 +100,21 @@ router.post("/", authenticateAdmin, async (req, res) => {
     if (price) {
       product.lastRetailPrice = price; // якщо таке поле є
     }
+    if (["purchase", "restock", "return"].includes(type) && size) {
+      const existingVariant = product.variants.find((v) => v.size === size);
 
+      if (existingVariant) {
+        existingVariant.stock += quantity;
+      } else {
+        product.variants.push({
+          size,
+          sku: `${productIndex}-${size}`,
+          stock: quantity,
+          price,
+          purchasePrice: unitPurchasePrice,
+        });
+      }
+    }
     await product.save();
 
     res.status(201).json({ message: "Stock movement recorded", movement });
@@ -107,6 +123,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
     res.status(500).json({ error: "Failed to record movement" });
   }
 });
+
 router.post("/bulk", authenticateAdmin, async (req, res) => {
   try {
     const movementsArray = req.body;
@@ -128,6 +145,7 @@ router.post("/bulk", authenticateAdmin, async (req, res) => {
         unitSalePrice,
         date,
         note,
+        size,
       } = movementData;
 
       const product = await Product.findOne({
@@ -145,6 +163,7 @@ router.post("/bulk", authenticateAdmin, async (req, res) => {
         type,
         quantity,
         price,
+        size,
         unitPurchasePrice,
         unitSalePrice,
         date: date || new Date(),
@@ -163,7 +182,21 @@ router.post("/bulk", authenticateAdmin, async (req, res) => {
       product.inStock = product.quantity > 0;
 
       if (price !== undefined) product.lastRetailPrice = price;
+      if (size) {
+        const existingVariant = product.variants.find((v) => v.size === size);
 
+        if (existingVariant) {
+          existingVariant.stock += quantity;
+        } else {
+          product.variants.push({
+            size,
+            sku: `${productIndex}-${size}`,
+            stock: quantity,
+            price,
+            purchasePrice: unitPurchasePrice,
+          });
+        }
+      }
       await product.save();
 
       results.push({ success: true, movementId: movement._id });
@@ -211,6 +244,7 @@ router.get("/product/:productIndex", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch movements" });
   }
 });
+
 router.put("/:id", authenticateAdmin, async (req, res) => {
   try {
     const { type, quantity, date, unitPurchasePrice, unitSalePrice, note } =
@@ -236,6 +270,7 @@ router.put("/:id", authenticateAdmin, async (req, res) => {
     res.status(500).json({ error: "Не вдалося оновити рух" });
   }
 });
+
 router.get(
   "/index/:productIndex/summary",
 
@@ -284,7 +319,7 @@ router.get(
       console.error("📉 Помилка формування звіту:", err);
       res.status(500).json({ error: "Не вдалося отримати звіт" });
     }
-  }
+  },
 );
 router.delete("/:id", authenticateAdmin, async (req, res) => {
   try {
@@ -300,6 +335,7 @@ router.delete("/:id", authenticateAdmin, async (req, res) => {
     res.status(500).json({ error: "Не вдалося видалити рух" });
   }
 });
+
 router.get("/", async (req, res) => {
   try {
     const movements = await StockMovement.find().sort({ date: -1 });
