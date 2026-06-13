@@ -9,6 +9,8 @@ const offlineOrderValidationSchema = Joi.object({
         name: Joi.string().required(),
         price: Joi.number().required(),
         photoUrl: Joi.string().uri().required(),
+        size: Joi.string().optional(),
+        sku: Joi.string().optional(),
       }),
     )
     .required(),

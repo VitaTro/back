@@ -15,6 +15,8 @@ const offlineOrderSchema = new mongoose.Schema(
         name: { type: String, required: true },
         photoUrl: { type: String, required: true },
         quantity: { type: Number, required: true },
+        size: { type: String },
+        sku: { type: String },
 
         price: { type: Number, required: true },
         color: { type: String }, // Робимо поле опціональним
@@ -56,7 +58,7 @@ const offlineOrderSchema = new mongoose.Schema(
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },
-  { timestamps: true } // Додатково додає createdAt та updatedAt автоматично
+  { timestamps: true }, // Додатково додає createdAt та updatedAt автоматично
 );
 
 const OfflineOrder = mongoose.model("OfflineOrder", offlineOrderSchema);

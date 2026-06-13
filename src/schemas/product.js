@@ -59,7 +59,7 @@ const productSchema = new mongoose.Schema(
 
     size: {
       type: String, // Залишаємо для старих типів розмірів
-      required: true,
+      required: false,
     },
     width: {
       type: Number, // ширина в мм
@@ -112,11 +112,26 @@ const productSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    variants: [
+      {
+        size: { type: String, required: false },
+        stock: { type: Number, default: 0 },
+        variantIndex: { type: String, required: false },
+      },
+    ],
     materials: {
       type: String,
       required: false,
       description: "Склад виробу: бісер, нитка, камені тощо",
     },
+    variants: [
+      {
+        size: { type: String, required: false },
+        stock: { type: Number, default: 0 },
+        variantIndex: { type: String, required: false },
+      },
+    ],
+
     hasExtension: {
       type: Boolean,
       required: false,
@@ -146,21 +161,33 @@ const productSchema = new mongoose.Schema(
   { collection: "products" },
 );
 productSchema.pre("save", function (next) {
-  if (this.quantity <= 0) {
-    this.inStock = false;
+  if (this.variants && this.variants.length > 0) {
+    this.inStock = this.variants.some((v) => v.stock > 0);
   } else {
-    this.inStock = true;
+    this.inStock = this.quantity > 0;
   }
   next();
 });
 
-// Індекс для пошуку по тексту
+// 🔥 АВТО-ГЕНЕРАЦІЯ variantIndex
+productSchema.pre("save", function (next) {
+  if (this.variants && this.variants.length > 0) {
+    this.variants = this.variants.map((v) => ({
+      ...v,
+      variantIndex: v.variantIndex || `${this.index}-${v.size}`,
+    }));
+  }
+  next();
+});
+
+// 🔍 Пошук
 productSchema.index({ name: "text", description: "text" });
+
+// 💱 Автоматичний розрахунок закупки в PLN
 productSchema.virtual("purchasePricePLN").get(function () {
   if (this.purchasePrice.currency === "PLN") return this.purchasePrice.value;
   return this.purchasePrice.value * this.purchasePrice.exchangeRateToPLN;
 });
-
 const Product = mongoose.model("Product", productSchema);
 
 module.exports = Product;

@@ -10,6 +10,8 @@ const onlineSaleValidationSchema = Joi.object({
         productId: Joi.string().required(),
         quantity: Joi.number().min(1).required(),
         salePrice: Joi.number().required(),
+        size: Joi.string().optional(),
+        sku: Joi.string().optional(),
       }),
     )
     .required(),

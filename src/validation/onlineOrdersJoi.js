@@ -17,6 +17,8 @@ const onlineOrderValidationSchema = Joi.object({
         quantity: Joi.number().min(1).required(),
         name: Joi.string().required(),
         price: Joi.number().required(),
+        size: Joi.string().optional(),
+        sku: Joi.string().optional(),
       }),
     )
     .min(1)

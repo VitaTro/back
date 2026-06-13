@@ -70,6 +70,8 @@ router.post("/", authenticateAdmin, async (req, res) => {
         photoUrl: product.photoUrl || "",
         quantity: item.quantity,
         salePrice: item.price,
+        size: item.size || null,
+        sku: item.sku || null,
       });
 
       totalAmount += item.price * item.quantity;

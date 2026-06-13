@@ -11,6 +11,8 @@ const offlineSaleValidationSchema = Joi.object({
         price: Joi.number().required(),
         photoUrl: Joi.string().uri().required(),
         color: Joi.string().optional(),
+        size: Joi.string().optional(),
+        sku: Joi.string().optional(),
       }),
     )
     .required(),

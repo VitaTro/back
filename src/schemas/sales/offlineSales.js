@@ -22,6 +22,8 @@ const offlineSaleSchema = new mongoose.Schema(
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
         color: { type: String },
+        size: { type: String },
+        sku: { type: String },
       },
     ],
 

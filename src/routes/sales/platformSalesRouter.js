@@ -88,6 +88,8 @@ router.post("/", authenticateAdmin, async (req, res) => {
         margin,
         manualPrice: order.manualPrice,
         photoUrl: productData?.photoUrl || "",
+        size: item.size || null,
+        sku: item.sku || null,
       });
     }
 

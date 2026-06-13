@@ -78,7 +78,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         !lastMovement.productName
       ) {
         throw new Error(
-          `❌ No stock movement found for product ${item.productId}`
+          `❌ No stock movement found for product ${item.productId}`,
         );
       }
 
@@ -111,6 +111,8 @@ router.post("/", authenticateAdmin, async (req, res) => {
         margin: unitPrice - (lastMovement.unitPurchasePrice || 0),
         manualPrice: !!item.price,
         color: item.color || productDoc?.color || "",
+        size: item.size || null,
+        sku: item.sku || null,
       });
     }
     const { discount, discountPercent, final } = calculateDiscount(totalPrice);
@@ -151,7 +153,7 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
     const order = await PlatformOrder.findByIdAndUpdate(
       req.params.id,
       { status },
-      { new: true }
+      { new: true },
     );
 
     if (!order) return res.status(404).json({ error: "Order not found" });

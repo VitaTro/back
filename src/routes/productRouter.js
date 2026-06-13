@@ -1,13 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose");
 const Product = require("../schemas/product");
-// const { cloudinary, upload } = require("../config/cloudinary");
-const upload = require("../config/upload");
-const searchController = require("../controller/searchController");
-const RecentView = require("../schemas/recent");
 const StockMovement = require("../schemas/accounting/stockMovement");
-// Маршрут для отримання всіх продуктів
+
 router.get("/", async (req, res) => {
   try {
     const products = await Product.find();
@@ -25,12 +20,10 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Отримуємо останній запис складу
     const latestStock = await StockMovement.findOne({
       productId: product._id,
     }).sort({ date: -1 });
 
-    // Формуємо відповідь
     res.json({
       ...product.toObject(),
       availableQuantity: latestStock?.quantity ?? 0,
@@ -43,18 +36,15 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Маршрут для отримання продуктів за типом
-router.get("/:type", async (req, res) => {
+router.get("/category/:type", async (req, res) => {
   try {
-    const type = req.params.type;
-    const products = await Product.find({ category: type });
+    const products = await Product.find({ category: req.params.type });
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Маршрут для додавання нового продукту
 router.post("/", async (req, res) => {
   try {
     const data = req.body;
@@ -64,7 +54,6 @@ router.post("/", async (req, res) => {
       category: data.category,
       subcategory: data.subcategory,
       price: data.price,
-
       purchasePrice: {
         value: data.purchasePrice?.value || 0,
         currency: data.purchasePrice?.currency || "PLN",
@@ -73,32 +62,27 @@ router.post("/", async (req, res) => {
             ? Number(data.purchasePrice?.exchangeRateToPLN) || null
             : null,
       },
-
       description: data.description,
       photoUrl: data.photoUrl,
       additionalPhotos: Array.isArray(data.additionalPhotos)
         ? data.additionalPhotos
         : [],
-
-      size: data.size,
+      size: data.size || null,
       width: data.width,
       length: data.length,
       color: data.color,
       quantity: data.quantity,
-
       index: data.index,
       clasp: data.clasp || null,
       material: data.material || null,
       materials: data.materials || null,
-
       hasExtension: data.hasExtension || false,
       extension: data.hasExtension ? data.extension : null,
-
       visible: data.visible ?? true,
       rating: data.rating || 0,
       discount: data.discount || 0,
       popularity: data.popularity || 0,
-
+      variants: data.variants || [],
       createdAt: Date.now(),
     });
 
@@ -113,10 +97,10 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Маршрут для оновлення продукту
 router.patch("/:id", async (req, res) => {
   try {
     const updates = req.body;
+
     const product = await Product.findByIdAndUpdate(req.params.id, updates, {
       new: true,
     });
@@ -124,13 +108,13 @@ router.patch("/:id", async (req, res) => {
     if (!product) {
       return res.status(404).send("Product not found");
     }
+
     res.json(product);
   } catch (error) {
     res.status(500).send(error);
   }
 });
 
-// Маршрут для видалення продукту
 router.delete("/:id", async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
@@ -138,6 +122,7 @@ router.delete("/:id", async (req, res) => {
     if (!product) {
       return res.status(404).send("Product not found");
     }
+
     res.send({ message: "Product deleted successfully" });
   } catch (error) {
     res.status(500).send(error);

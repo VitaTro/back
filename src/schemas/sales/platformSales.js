@@ -10,6 +10,8 @@ const platformSaleSchema = new mongoose.Schema({
       quantity: Number,
       price: Number,
       photoUrl: String,
+      size: String,
+      sku: String,
     },
   ],
   totalAmount: Number,

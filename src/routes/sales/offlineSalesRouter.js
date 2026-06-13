@@ -91,6 +91,8 @@ router.post("/", authenticateAdmin, async (req, res) => {
         quantity: item.quantity,
         price: unitPrice,
         photoUrl: productData?.photoUrl || "",
+        size: item.size || null,
+        sku: item.sku || null,
       });
     }
     let discount = 0;
@@ -342,6 +344,8 @@ router.post("/reserve", authenticateAdmin, async (req, res) => {
         photoUrl: productDoc?.photoUrl || "",
         quantity: item.quantity,
         price: unitPrice,
+        size: item.size || null,
+        sku: item.sku || null,
       });
 
       // 🔥 Знімаємо товар зі складу (резерв = sale)

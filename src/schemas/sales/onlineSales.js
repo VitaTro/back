@@ -28,6 +28,8 @@ const onlineSaleSchema = new mongoose.Schema(
         quantity: { type: Number, required: true },
         salePrice: { type: Number, required: true },
         color: { type: String },
+        size: { type: String },
+        sku: { type: String },
       },
     ],
 

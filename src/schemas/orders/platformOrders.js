@@ -28,6 +28,8 @@ const platformOrderSchema = new mongoose.Schema(
         quantity: { type: Number, required: true },
         price: { type: Number, required: true }, // Ручне введення ціни продажу
         color: { type: String },
+        size: { type: String },
+        sku: { type: String },
       },
     ],
 
@@ -68,7 +70,7 @@ const platformOrderSchema = new mongoose.Schema(
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const PlatformOrder = mongoose.model("PlatformOrder", platformOrderSchema);

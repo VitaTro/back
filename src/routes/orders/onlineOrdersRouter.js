@@ -94,6 +94,8 @@ router.post("/", authenticateAdmin, async (req, res) => {
         quantity: item.quantity,
         price: unitPrice,
         photoUrl: visualProduct?.photoUrl || "",
+        size: item.size || null,
+        sku: item.sku || null,
       });
     }
     const { discount, discountPercent, final } = calculateDiscount(totalPrice);
@@ -178,6 +180,8 @@ router.put("/:id/sale", authenticateAdmin, async (req, res) => {
         name: product.name,
         quantity: item.quantity,
         price: item.price,
+        size: item.size || null,
+        sku: item.sku || null,
       });
     }
 
