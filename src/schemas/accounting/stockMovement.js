@@ -46,6 +46,11 @@ const stockMovementSchema = new mongoose.Schema({
       return ["sale", "externalSale"].includes(this.type);
     },
   },
+  size: {
+    type: String,
+    default: null,
+  },
+
   price: {
     type: Number, // Рекомендована ціна продажу
     required: true,
