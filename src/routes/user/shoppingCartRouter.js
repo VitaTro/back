@@ -33,17 +33,28 @@ router.get("/", authenticateUser, async (req, res) => {
 
 router.post("/add", authenticateUser, async (req, res) => {
   try {
-    const { productId, quantity, size, sku } = req.body;
+    let { productId, quantity, size, sku } = req.body;
 
     if (!productId) {
       return res.status(400).json({ error: "Product ID is required" });
     }
 
-    const latestStock = await StockMovement.findOne({ productId }).sort({
-      date: -1,
-    });
+    // 1️⃣ Спочатку знайти продукт
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
 
-    if (!latestStock || latestStock.quantity < 1) {
+    // 2️⃣ Тепер знайти stock
+    const latestStock = await StockMovement.findOne({
+      $or: [{ productId }, { productIndex: product.index }],
+    }).sort({ date: -1 });
+
+    if (
+      !latestStock ||
+      typeof latestStock.quantity !== "number" ||
+      latestStock.quantity < 1
+    ) {
       return res
         .status(400)
         .json({ error: "Item out of stock or not available" });
@@ -55,6 +66,13 @@ router.post("/add", authenticateUser, async (req, res) => {
         .json({ error: "Requested quantity exceeds stock" });
     }
 
+    // 3️⃣ Якщо sku не прийшов — визначити його по size
+    if (!sku && size) {
+      const variant = product.variants.find((v) => v.size === size);
+      if (variant) sku = variant.variantIndex;
+    }
+
+    // 4️⃣ Шукаємо існуючий товар
     const existingItem = await ShoppingCart.findOne({
       userId: req.user.id,
       productId,
@@ -65,15 +83,13 @@ router.post("/add", authenticateUser, async (req, res) => {
       existingItem.quantity += quantity || 1;
 
       if (existingItem.quantity > latestStock.quantity) {
-        return res.status(400).json({
-          error: "Updated quantity exceeds available stock",
-        });
+        return res
+          .status(400)
+          .json({ error: "Updated quantity exceeds available stock" });
       }
 
       await existingItem.save();
-      await Product.findByIdAndUpdate(productId, {
-        $inc: { popularity: 2 },
-      });
+      await Product.findByIdAndUpdate(productId, { $inc: { popularity: 2 } });
 
       return res.json({
         message: "Item quantity updated in cart",
@@ -84,8 +100,7 @@ router.post("/add", authenticateUser, async (req, res) => {
       });
     }
 
-    const product = await Product.findById(productId);
-
+    // 5️⃣ Створюємо новий товар
     const newItem = new ShoppingCart({
       userId: req.user.id,
       productId,
@@ -100,9 +115,7 @@ router.post("/add", authenticateUser, async (req, res) => {
     });
 
     await newItem.save();
-    await Product.findByIdAndUpdate(productId, {
-      $inc: { popularity: 2 },
-    });
+    await Product.findByIdAndUpdate(productId, { $inc: { popularity: 2 } });
 
     res.status(201).json({
       message: "Item added to cart",
@@ -112,9 +125,94 @@ router.post("/add", authenticateUser, async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to add item to cart" });
+    console.error("🔥 Error adding to cart:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to add item to cart", details: error.message });
   }
 });
+
+// router.post("/add", authenticateUser, async (req, res) => {
+//   try {
+// const { productId, quantity } = req.body;
+
+// if (!productId) {
+//   return res.status(400).json({ error: "Product ID is required" });
+// }
+
+// const latestStock = await StockMovement.findOne({ productId }).sort({
+//   date: -1,
+// });
+
+// if (!latestStock || latestStock.quantity < 1) {
+//   return res
+//     .status(400)
+//     .json({ error: "Item out of stock or not available" });
+// }
+
+// if (quantity > latestStock.quantity) {
+//   return res
+//     .status(400)
+//     .json({ error: "Requested quantity exceeds stock" });
+// }
+
+// const existingItem = await ShoppingCart.findOne({
+//   userId: req.user.id,
+//   productId,
+// });
+
+// if (existingItem) {
+//   existingItem.quantity += quantity || 1;
+
+//   if (existingItem.quantity > latestStock.quantity) {
+//     return res.status(400).json({
+//       error: "Updated quantity exceeds available stock",
+//     });
+//   }
+
+//   await existingItem.save();
+// await Product.findByIdAndUpdate(productId, {
+//   $inc: { popularity: 2 },
+// });
+
+// return res.json({
+//   message: "Item quantity updated in cart",
+//   item: {
+//     ...existingItem.toObject(),
+//     availableQuantity: latestStock.quantity,
+//     },
+//   });
+// }
+
+// const product = await Product.findById(productId);
+
+// const newItem = new ShoppingCart({
+//   userId: req.user.id,
+//   productId,
+//   name: latestStock.productName,
+//   photoUrl: product.photoUrl,
+//   price: latestStock.price,
+//   quantity: quantity || 1,
+//   inStock: latestStock.quantity > 0,
+//   color: product.color,
+// });
+
+// await newItem.save();
+// await Product.findByIdAndUpdate(productId, {
+//   $inc: { popularity: 2 },
+// });
+
+//     res.status(201).json({
+//       message: "Item added to cart",
+//       item: {
+//         ...newItem.toObject(),
+//         availableQuantity: latestStock.quantity,
+//       },
+//     });
+//   } catch (error) {
+//     res.status(500).json({ error: "Failed to add item to cart" });
+//   }
+// });
 
 router.patch("/update/:id", authenticateUser, async (req, res) => {
   try {
@@ -273,11 +371,7 @@ router.post("/merge", authenticateUser, async (req, res) => {
       }
 
       // ❗ 4. Шукаємо товар у кошику юзера
-      const existing = await ShoppingCart.findOne({
-        userId,
-        productId,
-        sku: item.sku || null,
-      });
+      const existing = await ShoppingCart.findOne({ userId, productId });
 
       if (existing) {
         // Оновлюємо кількість
@@ -293,8 +387,6 @@ router.post("/merge", authenticateUser, async (req, res) => {
           productId,
           name: latestStock.productName || product.name,
           photoUrl: product.photoUrl,
-          size: item.size || null,
-          sku: item.sku || null,
           price:
             latestStock.lastRetailPrice ??
             latestStock.unitSalePrice ??
