@@ -332,13 +332,11 @@ router.post("/move-to-wishlist/:id", authenticateUser, async (req, res) => {
     res.status(500).json({ error: "Failed to move item to wishlist" });
   }
 });
-
 router.post("/merge", authenticateUser, async (req, res) => {
   try {
     const userId = req.user.id;
     const localCart = req.body.localCart || [];
 
-    // Якщо гостьовий кошик порожній → просто повертаємо бекендовий
     if (!Array.isArray(localCart) || localCart.length === 0) {
       const cartItems = await ShoppingCart.find({ userId });
       const enrichedCart = await enrichCartWithStock(cartItems);
@@ -348,45 +346,47 @@ router.post("/merge", authenticateUser, async (req, res) => {
     for (const item of localCart) {
       const rawId = item.productId || item.id;
 
-      // ❗ 1. Перевірка валідності ObjectId
-      if (!mongoose.Types.ObjectId.isValid(rawId)) {
-        console.warn("❌ Invalid productId in guest cart:", rawId);
-        continue;
-      }
+      if (!mongoose.Types.ObjectId.isValid(rawId)) continue;
+
       const productId = new mongoose.Types.ObjectId(rawId);
-      // ❗ 2. Перевіряємо, чи існує продукт
       const product = await Product.findById(productId);
-      if (!product) {
-        console.warn("❌ Product not found:", productId);
-        continue;
+      if (!product) continue;
+
+      // 1️⃣ шукаємо stock по productId або productIndex
+      const latestStock = await StockMovement.findOne({
+        $or: [{ productId }, { productIndex: product.index }],
+      }).sort({ date: -1 });
+
+      if (!latestStock || latestStock.quantity < 1) continue;
+
+      // 2️⃣ визначаємо sku, якщо не прийшов
+      let sku = item.sku || null;
+      if (!sku && item.size) {
+        const variant = product.variants.find((v) => v.size === item.size);
+        if (variant) sku = variant.variantIndex;
       }
 
-      // ❗ 3. Беремо останній stock
-      const latestStock = await StockMovement.findOne({ productId }).sort({
-        date: -1,
+      // 3️⃣ шукаємо існуючий товар
+      const existing = await ShoppingCart.findOne({
+        userId,
+        productId,
+        sku,
       });
-      if (!latestStock || latestStock.quantity < 1) {
-        console.warn("❌ No stock for:", productId);
-        continue;
-      }
-
-      // ❗ 4. Шукаємо товар у кошику юзера
-      const existing = await ShoppingCart.findOne({ userId, productId });
 
       if (existing) {
-        // Оновлюємо кількість
         existing.quantity = Math.min(
           existing.quantity + (item.quantity || 1),
           latestStock.quantity,
         );
         await existing.save();
       } else {
-        // Створюємо новий товар
         await ShoppingCart.create({
           userId,
           productId,
           name: latestStock.productName || product.name,
           photoUrl: product.photoUrl,
+          size: item.size || null,
+          sku: sku || null,
           price:
             latestStock.lastRetailPrice ??
             latestStock.unitSalePrice ??
@@ -399,7 +399,6 @@ router.post("/merge", authenticateUser, async (req, res) => {
       }
     }
 
-    // Повертаємо оновлений кошик
     const cartItems = await ShoppingCart.find({ userId });
     const enrichedCart = await enrichCartWithStock(cartItems);
 
@@ -412,18 +411,98 @@ router.post("/merge", authenticateUser, async (req, res) => {
     });
   }
 });
-async function enrichCartWithStock(cartItems) {
-  return Promise.all(
-    cartItems.map(async (item) => {
-      const latestStock = await StockMovement.findOne({
-        productId: item.productId,
-      }).sort({ date: -1 });
 
-      return {
-        ...item.toObject(),
-        availableQuantity: latestStock?.quantity ?? 0,
-      };
-    }),
-  );
-}
+// router.post("/merge", authenticateUser, async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+//     const localCart = req.body.localCart || [];
+
+//     // Якщо гостьовий кошик порожній → просто повертаємо бекендовий
+//     if (!Array.isArray(localCart) || localCart.length === 0) {
+//       const cartItems = await ShoppingCart.find({ userId });
+//       const enrichedCart = await enrichCartWithStock(cartItems);
+//       return res.json({ cart: enrichedCart });
+//     }
+
+//     for (const item of localCart) {
+//       const rawId = item.productId || item.id;
+
+//       // ❗ 1. Перевірка валідності ObjectId
+//       if (!mongoose.Types.ObjectId.isValid(rawId)) {
+//         console.warn("❌ Invalid productId in guest cart:", rawId);
+//         continue;
+// }
+// const productId = new mongoose.Types.ObjectId(rawId);
+// // ❗ 2. Перевіряємо, чи існує продукт
+// const product = await Product.findById(productId);
+// if (!product) {
+//   console.warn("❌ Product not found:", productId);
+//   continue;
+// }
+
+// // ❗ 3. Беремо останній stock
+// const latestStock = await StockMovement.findOne({ productId }).sort({
+//   date: -1,
+// });
+// if (!latestStock || latestStock.quantity < 1) {
+//   console.warn("❌ No stock for:", productId);
+//   continue;
+// }
+
+// res.json({ cart: enrichedCart });
+// } catch (err) {   // ❗ 4. Шукаємо товар у кошику юзера
+//     const existing = await ShoppingCart.findOne({ userId, productId });
+
+//     if (existing) {
+//       // Оновлюємо кількість
+//       existing.quantity = Math.min(
+//         existing.quantity + (item.quantity || 1),
+//         latestStock.quantity,
+//       );
+//       await existing.save();
+//     } else {
+//       // Створюємо новий товар
+//       await ShoppingCart.create({
+//         userId,
+//         productId,
+//         name: latestStock.productName || product.name,
+//         photoUrl: product.photoUrl,
+//         price:
+//           latestStock.lastRetailPrice ??
+//           latestStock.unitSalePrice ??
+//           latestStock.price ??
+//           0,
+//         quantity: Math.min(item.quantity || 1, latestStock.quantity),
+//         inStock: latestStock.quantity > 0,
+//         color: product.color,
+//       });
+//     }
+//   }
+
+//   // Повертаємо оновлений кошик
+//   const cartItems = await ShoppingCart.find({ userId });
+//   const enrichedCart = await enrichCartWithStock(cartItems);
+
+//     console.error("❌ MERGE ERROR:", err);
+//     res.status(500).json({
+//       message: "Cart merge failed",
+//       error: err.message,
+//     });
+//   }
+// });
+// async function enrichCartWithStock(cartItems) {
+//   return Promise.all(
+//     cartItems.map(async (item) => {
+//       const latestStock = await StockMovement.findOne({
+//         productId: item.productId,
+//       }).sort({ date: -1 });
+
+//       return {
+//         ...item.toObject(),
+//         availableQuantity: latestStock?.quantity ?? 0,
+//       };
+//     }),
+//   );
+// }
+
 module.exports = router;
