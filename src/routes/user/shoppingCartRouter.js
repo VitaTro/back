@@ -33,7 +33,7 @@ router.get("/", authenticateUser, async (req, res) => {
 
 router.post("/add", authenticateUser, async (req, res) => {
   try {
-    const { productId, quantity } = req.body;
+    const { productId, quantity, size, sku } = req.body;
 
     if (!productId) {
       return res.status(400).json({ error: "Product ID is required" });
@@ -58,6 +58,7 @@ router.post("/add", authenticateUser, async (req, res) => {
     const existingItem = await ShoppingCart.findOne({
       userId: req.user.id,
       productId,
+      sku,
     });
 
     if (existingItem) {
@@ -94,6 +95,8 @@ router.post("/add", authenticateUser, async (req, res) => {
       quantity: quantity || 1,
       inStock: latestStock.quantity > 0,
       color: product.color,
+      size,
+      sku,
     });
 
     await newItem.save();
@@ -270,7 +273,11 @@ router.post("/merge", authenticateUser, async (req, res) => {
       }
 
       // ❗ 4. Шукаємо товар у кошику юзера
-      const existing = await ShoppingCart.findOne({ userId, productId });
+      const existing = await ShoppingCart.findOne({
+        userId,
+        productId,
+        sku: item.sku || null,
+      });
 
       if (existing) {
         // Оновлюємо кількість
@@ -286,6 +293,8 @@ router.post("/merge", authenticateUser, async (req, res) => {
           productId,
           name: latestStock.productName || product.name,
           photoUrl: product.photoUrl,
+          size: item.size || null,
+          sku: item.sku || null,
           price:
             latestStock.lastRetailPrice ??
             latestStock.unitSalePrice ??

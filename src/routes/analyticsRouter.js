@@ -1,16 +1,22 @@
 const express = require("express");
 const Analytics = require("../schemas/Analytics");
+const authenticateOptional = require("../middleware/authenticateOptional");
 const router = express.Router();
 
-router.post("/visit", async (req, res) => {
+router.post("/visit", authenticateOptional, async (req, res) => {
   try {
+    // 🔥 1. Якщо адмін — не рахуємо
+    if (req.user && req.user.role === "admin") {
+      return res.json({ success: true, skipped: true });
+    }
+
     const { page } = req.body;
 
     if (!page) {
       return res.status(400).json({ error: "Page is required" });
     }
 
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const today = new Date().toISOString().slice(0, 10);
 
     const record = await Analytics.findOne({ page, date: today });
 

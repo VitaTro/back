@@ -134,8 +134,8 @@ router.post("/", authenticateUser, async (req, res) => {
         quantity: item.quantity,
         price: unitPrice,
         photoUrl: product?.photoUrl || "",
-        size: item.size || null, // ← додано
-        sku: item.sku || null, // ← додано
+        size: item.size || null,
+        sku: item.sku || null,
       });
     }
 

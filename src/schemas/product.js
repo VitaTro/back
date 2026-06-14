@@ -124,13 +124,6 @@ const productSchema = new mongoose.Schema(
       required: false,
       description: "Склад виробу: бісер, нитка, камені тощо",
     },
-    variants: [
-      {
-        size: { type: String, required: false },
-        stock: { type: Number, default: 0 },
-        variantIndex: { type: String, required: false },
-      },
-    ],
 
     hasExtension: {
       type: Boolean,

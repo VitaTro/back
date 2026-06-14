@@ -20,7 +20,7 @@ router.get("/", authenticateUser, async (req, res) => {
 
 router.post("/add", authenticateUser, async (req, res) => {
   try {
-    const { productId, quantity } = req.body;
+    const { productId, quantity, size, sku } = req.body;
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ error: "Product not found" });
@@ -40,7 +40,11 @@ router.post("/add", authenticateUser, async (req, res) => {
         .status(404)
         .json({ error: "No stock data found for this product" });
     }
-    const exists = await Wishlist.findOne({ userId: req.user.id, productId });
+    const exists = await Wishlist.findOne({
+      userId: req.user.id,
+      productId,
+      sku,
+    });
     if (exists) {
       return res.status(400).json({ error: "Product is already in wishlist" });
     }
@@ -119,10 +123,12 @@ router.post("/move-to-cart/:id", authenticateUser, async (req, res) => {
     if (latestStock.quantity < 1) {
       return res.status(400).json({ error: "Product is out of stock" });
     }
-
+    const { size, sku } = req.body;
     const newCartItem = new ShoppingCart({
       userId: req.user.id,
       productId: wishlistItem.productId,
+      size,
+      sku,
       name: latestStock.productName,
       photoUrl: wishlistItem.photoUrl,
       price: latestStock.price,
@@ -134,6 +140,7 @@ router.post("/move-to-cart/:id", authenticateUser, async (req, res) => {
     const existsInCart = await ShoppingCart.findOne({
       userId: req.user.id,
       productId: wishlistItem.productId,
+      sku,
     });
     if (existsInCart) {
       existsInCart.quantity += 1;

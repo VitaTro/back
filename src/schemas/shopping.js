@@ -23,6 +23,8 @@ const shoppingCartSchema = new mongoose.Schema({
   color: { type: String },
   addedAt: { type: Date, default: Date.now },
   productIndex: { type: String },
+  size: { type: String },
+  sku: { type: String },
 });
 
 const ShoppingCart = mongoose.model("ShoppingCart", shoppingCartSchema);
