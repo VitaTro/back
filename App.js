@@ -36,6 +36,9 @@ const InvoiceArchiveRouter = require("./src/routes/admin/invoiceArchiveRouter");
 const PlatformOrdersRouter = require("./src/routes/orders/platformOrdersRouter");
 const PlatformSalesRouter = require("./src/routes/sales/platformSalesRouter");
 const AnalyticsRouter = require("./src/routes/analyticsRouter");
+const MaterialsRouter = require("./src/routes/materials/materialsRouter");
+const StockMaterialsRouter = require("./src/routes/materials/stockMaterialsRouter");
+const HandmadeRouter = require("./src/routes/materials/handmadeRouter");
 const cookieParser = require("cookie-parser");
 const app = express();
 app.enable("trust proxy");
@@ -115,11 +118,15 @@ app.use("/api/admin/stock/movement", StockMovementRouter);
 app.use("/api/admin/finance/overview", FinanceOverviewRouter);
 app.use("/api/admin/finance/expense", ExpenseRouter);
 app.use("/api/admin/finance/settings", FinanceSettingsRouter);
+app.use("/api/admin/materials", MaterialsRouter);
+app.use("/api/admin/materials/stock", StockMaterialsRouter);
+app.use("/api/admin/handmade", HandmadeRouter);
 app.use("/api/public", PublicRouter);
 app.use("/api/allegro", AllegroRouter);
 app.use("/api/admin/reporting", ReportingRouter);
 app.use("/api/admin/invoices", InvoiceArchiveRouter);
 app.use("/api/analytics", AnalyticsRouter);
+
 // app.post("/upload", upload.single("photo"), (req, res) => {
 //   try {
 //     if (!req.file) {

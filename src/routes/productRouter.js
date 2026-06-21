@@ -11,6 +11,21 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch products" });
   }
 });
+router.get("/popular", async (req, res) => {
+  try {
+    const popularProducts = await Product.find({})
+      .sort({ popularity: -1 })
+      .limit(10);
+
+    if (popularProducts.length === 0) {
+      return res.status(404).json({ message: "No popular products found" });
+    }
+
+    res.json({ products: popularProducts });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch popular products" });
+  }
+});
 
 router.get("/:id", async (req, res) => {
   try {
@@ -126,22 +141,6 @@ router.delete("/:id", async (req, res) => {
     res.send({ message: "Product deleted successfully" });
   } catch (error) {
     res.status(500).send(error);
-  }
-});
-
-router.get("/popular", async (req, res) => {
-  try {
-    const popularProducts = await Product.find({})
-      .sort({ popularity: -1 })
-      .limit(10);
-
-    if (popularProducts.length === 0) {
-      return res.status(404).json({ message: "No popular products found" });
-    }
-
-    res.json({ products: popularProducts });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch popular products" });
   }
 });
 
