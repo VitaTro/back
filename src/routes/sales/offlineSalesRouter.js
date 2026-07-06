@@ -423,7 +423,31 @@ router.patch("/reserve/:id/complete", authenticateAdmin, async (req, res) => {
     reservation.reservationExpiresAt = null;
 
     await reservation.save();
+    for (const item of reservation.products) {
+      await StockMovement.create({
+        productId: item.productId,
+        productIndex: item.index,
+        productName: item.name,
+        quantity: item.quantity,
+        type: "sale",
+        unitSalePrice: item.price,
+        price: item.price,
+        saleSource: "OfflineReservation",
+        relatedSaleId: reservation._id,
+        date: new Date(), // ← ДАТА НАТИСКАННЯ КНОПКИ
+        note: "Reservation completed manually",
+      });
 
+      // 🔥 Оновлюємо склад товару
+      const productDoc = await Product.findById(item.productId);
+      if (productDoc) {
+        const stockCount = await calculateStock(item.index);
+        productDoc.quantity = stockCount;
+        productDoc.currentStock = stockCount;
+        productDoc.inStock = stockCount > 0;
+        await productDoc.save();
+      }
+    }
     res.status(200).json({
       message: "✅ Reservation converted to completed sale",
       reservation,
