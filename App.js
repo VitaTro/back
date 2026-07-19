@@ -181,7 +181,7 @@ app.post("/upload", upload.single("photo"), async (req, res) => {
   }
 });
 app.get("/sitemap.xml", (req, res) => {
-  res.sendFile(path.join(__dirname, "sitemap.xml"));
+  res.sendFile(path.join(__dirname, "../sitemap.xml"));
 });
 
 module.exports = app;
