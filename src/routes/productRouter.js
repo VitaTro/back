@@ -18,7 +18,7 @@ router.get("/popular", async (req, res) => {
       visible: true,
     })
       .sort({ popularity: -1 })
-      .limit(60);
+      .limit(120);
 
     res.json(products);
   } catch (err) {
