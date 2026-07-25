@@ -143,5 +143,15 @@ router.delete("/:id", async (req, res) => {
     res.status(500).send(error);
   }
 });
+router.post("/:id/view", async (req, res) => {
+  try {
+    await Product.findByIdAndUpdate(req.params.id, {
+      $inc: { popularity: 1 },
+    });
+    res.sendStatus(200);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to record view" });
+  }
+});
 
 module.exports = router;

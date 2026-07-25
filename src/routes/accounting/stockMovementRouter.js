@@ -92,6 +92,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
     if (["sale", "writeOff", "externalSale"].includes(type)) {
       product.quantity -= quantity;
+      product.popularity += quantity * 5;
     }
 
     product.inStock = product.quantity > 0;
@@ -176,6 +177,11 @@ router.post("/bulk", authenticateAdmin, async (req, res) => {
         product.quantity += quantity;
       } else if (["sale", "writeOff", "externalSale"].includes(type)) {
         product.quantity -= quantity;
+      }
+      // ⭐ Додаємо популярність за продаж
+      if (["sale", "externalSale"].includes(type)) {
+        const popularityBoost = Math.max(1, quantity * 5);
+        product.popularity += popularityBoost;
       }
 
       product.currentStock = product.quantity;

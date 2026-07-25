@@ -67,7 +67,7 @@ router.post("/add", authenticateUser, async (req, res) => {
 
     await newItem.save();
     await Product.findByIdAndUpdate(productId, {
-      $inc: { popularity: 1 },
+      $inc: { popularity: 3 },
     });
     res.status(201).json({ message: "Item added to wishlist", item: newItem });
   } catch (error) {
