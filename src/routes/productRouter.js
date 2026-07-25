@@ -13,16 +13,15 @@ router.get("/", async (req, res) => {
 });
 router.get("/popular", async (req, res) => {
   try {
-    const popularProducts = await Product.find({})
+    const products = await Product.find({
+      inStock: true,
+      visible: true,
+    })
       .sort({ popularity: -1 })
-      .limit(10);
+      .limit(60);
 
-    if (popularProducts.length === 0) {
-      return res.status(404).json({ message: "No popular products found" });
-    }
-
-    res.json({ products: popularProducts });
-  } catch (error) {
+    res.json(products);
+  } catch (err) {
     res.status(500).json({ error: "Failed to fetch popular products" });
   }
 });
