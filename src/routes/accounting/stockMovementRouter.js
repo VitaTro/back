@@ -175,8 +175,11 @@ router.post("/bulk", authenticateAdmin, async (req, res) => {
 
       if (["purchase", "restock", "return"].includes(type)) {
         product.quantity += quantity;
-      } else if (["sale", "writeOff", "externalSale"].includes(type)) {
+      } else if (
+        ["sale", "writeOff", "externalSale", "reserve"].includes(type)
+      ) {
         product.quantity -= quantity;
+        product.popularity += quantity * 5;
       }
       // ⭐ Додаємо популярність за продаж
       if (["sale", "externalSale"].includes(type)) {
