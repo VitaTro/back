@@ -38,8 +38,13 @@ router.get("/:id", async (req, res) => {
       productId: product._id,
     }).sort({ date: -1 });
 
+    const productObj = product.toObject();
+
+    // ❗ Прибираємо розміри зі stock = 0
+    productObj.variants = productObj.variants.filter((v) => v.stock > 0);
+    productObj.inStock = productObj.variants.length > 0;
     res.json({
-      ...product.toObject(),
+      ...productObj,
       availableQuantity: latestStock?.quantity ?? 0,
     });
   } catch (error) {

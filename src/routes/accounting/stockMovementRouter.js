@@ -94,10 +94,20 @@ router.post("/", authenticateAdmin, async (req, res) => {
       product.quantity -= quantity;
       product.popularity += quantity * 5;
     }
+    if (["sale", "writeOff", "externalSale"].includes(type) && size) {
+      const variant = product.variants.find((v) => v.size === size);
+      if (variant) {
+        variant.stock -= quantity;
+      }
+    }
 
-    product.inStock = product.quantity > 0;
-    product.currentStock = product.quantity; // якщо таке поле додаєш у схему
+    if (product.variants.length > 0) {
+      product.inStock = product.variants.some((v) => v.stock > 0);
+    } else {
+      product.inStock = product.quantity > 0;
+    }
 
+    product.currentStock = product.quantity;
     if (price) {
       product.lastRetailPrice = price; // якщо таке поле є
     }
@@ -181,6 +191,22 @@ router.post("/bulk", authenticateAdmin, async (req, res) => {
         product.quantity -= quantity;
         product.popularity += quantity * 5;
       }
+
+      if (
+        ["sale", "writeOff", "externalSale", "reserve"].includes(type) &&
+        size
+      ) {
+        const variant = product.variants.find((v) => v.size === size);
+        if (variant) {
+          variant.stock -= quantity;
+        }
+      }
+      if (product.variants.length > 0) {
+        product.inStock = product.variants.some((v) => v.stock > 0);
+      } else {
+        product.inStock = product.quantity > 0;
+      }
+
       // ⭐ Додаємо популярність за продаж
       if (["sale", "externalSale"].includes(type)) {
         const popularityBoost = Math.max(1, quantity * 5);
@@ -188,7 +214,7 @@ router.post("/bulk", authenticateAdmin, async (req, res) => {
       }
 
       product.currentStock = product.quantity;
-      product.inStock = product.quantity > 0;
+      // product.inStock = product.quantity > 0;
 
       if (price !== undefined) product.lastRetailPrice = price;
       if (size) {
