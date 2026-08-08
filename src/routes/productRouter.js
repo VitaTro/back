@@ -41,8 +41,12 @@ router.get("/:id", async (req, res) => {
     const productObj = product.toObject();
 
     // ❗ Прибираємо розміри зі stock = 0
-    productObj.variants = productObj.variants.filter((v) => v.stock > 0);
-    productObj.inStock = productObj.variants.length > 0;
+    const visibleVariants = productObj.variants.filter((v) => v.stock > 0);
+
+    productObj.inStock = visibleVariants.length > 0 || productObj.quantity > 0;
+
+    productObj.variants = visibleVariants;
+
     res.json({
       ...productObj,
       availableQuantity: latestStock?.quantity ?? 0,
