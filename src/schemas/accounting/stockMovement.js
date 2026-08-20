@@ -58,6 +58,10 @@ const stockMovementSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  variantIndex: {
+    type: String,
+    default: null,
+  },
 
   price: {
     type: Number, // Рекомендована ціна продажу

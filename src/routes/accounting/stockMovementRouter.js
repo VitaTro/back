@@ -35,6 +35,14 @@ router.post("/", authenticateAdmin, async (req, res) => {
     let finalUnitPrice = unitSalePrice;
     let discount = 0;
     let discountPercent = 0;
+    let variantIndex = null;
+
+    if (product.variants?.length > 0 && size) {
+      const variant = product.variants.find((v) => v.size === size);
+      if (variant) {
+        variantIndex = variant.variantIndex;
+      }
+    }
 
     if (["sale", "externalSale"].includes(type) && relatedSaleId) {
       const saleModel =
@@ -69,6 +77,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       price,
       quantity,
       size,
+      variantIndex,
       date: date || new Date(),
       unitPurchasePrice: ["purchase", "restock"].includes(type)
         ? unitPurchasePrice
