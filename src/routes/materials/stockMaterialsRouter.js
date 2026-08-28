@@ -14,6 +14,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       materialName,
       type,
       quantity,
+      usedUnit, // додано
       unitPurchasePrice,
       note,
       date,
@@ -31,17 +32,62 @@ router.post("/", authenticateAdmin, async (req, res) => {
       return res.status(404).json({ error: "Material not found" });
     }
 
-    // Перевірка залишку
-    if (["use", "writeOff"].includes(type) && material.quantity < quantity) {
-      return res.status(400).json({ error: "Not enough material in stock" });
+    // ======================================================
+    // ➤ КОНВЕРТАЦІЯ ОДИНИЦЬ
+    // ======================================================
+    let deductQty = quantity; // кількість, яку реально списуємо зі складу
+
+    if (["use", "writeOff"].includes(type)) {
+      if (!usedUnit) {
+        return res
+          .status(400)
+          .json({ error: "usedUnit is required for use/writeOff" });
+      }
+
+      // 1) Однакові одиниці
+      if (material.unit === usedUnit) {
+        deductQty = quantity;
+      }
+
+      // 2) Бісер: pcs → grams
+      else if (material.unit === "grams" && usedUnit === "pcs") {
+        if (!material.piecesPerGram) {
+          return res.status(400).json({
+            error: `Material ${material.name} missing piecesPerGram`,
+          });
+        }
+        deductQty = quantity / material.piecesPerGram;
+      }
+
+      // 3) Нитка: pcs → meters
+      else if (material.unit === "meters" && usedUnit === "pcs") {
+        if (!material.piecesPerMeter) {
+          return res.status(400).json({
+            error: `Material ${material.name} missing piecesPerMeter`,
+          });
+        }
+        deductQty = quantity / material.piecesPerMeter;
+      } else {
+        return res.status(400).json({
+          error: `Cannot convert ${usedUnit} to ${material.unit}`,
+        });
+      }
+
+      // Перевірка залишку
+      if (material.quantity < deductQty) {
+        return res.status(400).json({ error: "Not enough material in stock" });
+      }
     }
 
-    // Створюємо рух
+    // ======================================================
+    // ➤ СТВОРЮЄМО РУХ
+    // ======================================================
     const movement = new StockMaterials({
       materialId,
       materialName,
       type,
-      quantity,
+      quantity: deductQty, // записуємо реальну кількість
+      usedUnit: usedUnit || material.unit, // одиниця використання
       unitPurchasePrice: ["purchase", "restock"].includes(type)
         ? unitPurchasePrice
         : undefined,
@@ -49,18 +95,20 @@ router.post("/", authenticateAdmin, async (req, res) => {
       note,
       color: color || material.color,
       size: size || material.size,
-      unit: unit || material.unit,
+      unit: material.unit, // одиниця складу
     });
 
     await movement.save();
 
-    // Оновлюємо склад
+    // ======================================================
+    // ➤ ОНОВЛЮЄМО СКЛАД
+    // ======================================================
     if (["purchase", "restock", "return"].includes(type)) {
-      material.quantity += quantity;
+      material.quantity += quantity; // тут quantity = реальна одиниця складу
     }
 
     if (["use", "writeOff"].includes(type)) {
-      material.quantity -= quantity;
+      material.quantity -= deductQty;
     }
 
     await material.save();
@@ -91,6 +139,7 @@ router.post("/bulk", authenticateAdmin, async (req, res) => {
         materialName,
         type,
         quantity,
+        usedUnit,
         unitPurchasePrice,
         date,
         note,
@@ -105,22 +154,51 @@ router.post("/bulk", authenticateAdmin, async (req, res) => {
         continue;
       }
 
-      if (["use", "writeOff"].includes(type) && material.quantity < quantity) {
-        results.push({ error: "Not enough stock", materialId });
-        continue;
+      let deductQty = quantity;
+
+      if (["use", "writeOff"].includes(type)) {
+        if (!usedUnit) {
+          results.push({ error: "usedUnit required", materialId });
+          continue;
+        }
+
+        if (material.unit === usedUnit) {
+          deductQty = quantity;
+        } else if (material.unit === "grams" && usedUnit === "pcs") {
+          if (!material.piecesPerGram) {
+            results.push({ error: "Missing piecesPerGram", materialId });
+            continue;
+          }
+          deductQty = quantity / material.piecesPerGram;
+        } else if (material.unit === "meters" && usedUnit === "pcs") {
+          if (!material.piecesPerMeter) {
+            results.push({ error: "Missing piecesPerMeter", materialId });
+            continue;
+          }
+          deductQty = quantity / material.piecesPerMeter;
+        } else {
+          results.push({ error: "Cannot convert units", materialId });
+          continue;
+        }
+
+        if (material.quantity < deductQty) {
+          results.push({ error: "Not enough stock", materialId });
+          continue;
+        }
       }
 
       const movement = new StockMaterials({
         materialId,
         materialName,
         type,
-        quantity,
+        quantity: deductQty,
+        usedUnit: usedUnit || material.unit,
         unitPurchasePrice,
         date: date || new Date(),
         note,
         color: color || material.color,
         size: size || material.size,
-        unit: unit || material.unit,
+        unit: material.unit,
       });
 
       await movement.save();
@@ -128,7 +206,7 @@ router.post("/bulk", authenticateAdmin, async (req, res) => {
       if (["purchase", "restock", "return"].includes(type)) {
         material.quantity += quantity;
       } else if (["use", "writeOff"].includes(type)) {
-        material.quantity -= quantity;
+        material.quantity -= deductQty;
       }
 
       await material.save();
@@ -190,7 +268,8 @@ router.get("/material/:materialId", async (req, res) => {
 // ======================================================
 router.put("/:id", authenticateAdmin, async (req, res) => {
   try {
-    const { type, quantity, date, unitPurchasePrice, note } = req.body;
+    const { type, quantity, usedUnit, date, unitPurchasePrice, note } =
+      req.body;
 
     const movement = await StockMaterials.findById(req.params.id);
     if (!movement) {
@@ -199,6 +278,7 @@ router.put("/:id", authenticateAdmin, async (req, res) => {
 
     if (type) movement.type = type;
     if (quantity) movement.quantity = quantity;
+    if (usedUnit) movement.usedUnit = usedUnit;
     if (date) movement.date = date;
     if (unitPurchasePrice !== undefined)
       movement.unitPurchasePrice = unitPurchasePrice;

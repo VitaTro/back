@@ -48,6 +48,11 @@ const handmadeProductSchema = new mongoose.Schema({
         enum: ["pcs", "meters", "grams"],
         required: true,
       },
+      usedUnit: {
+        type: String,
+        enum: ["pcs", "meters", "grams"],
+        required: true,
+      },
     },
   ],
 

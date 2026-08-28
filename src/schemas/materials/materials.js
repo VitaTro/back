@@ -8,7 +8,7 @@ const materialSchema = new mongoose.Schema({
 
   category: {
     type: String,
-    enum: ["beads", "crystals", "thread", "macrame", "findings", "other"],
+    enum: ["thread", "hardware", "beads", "stones", "other"],
     required: true,
   },
 
@@ -52,6 +52,15 @@ const materialSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
+  },
+  piecesPerGram: {
+    type: Number,
+    required: false, // тільки для бісеру
+  },
+
+  piecesPerMeter: {
+    type: Number,
+    required: false, // тільки для ниток/льоски
   },
 });
 

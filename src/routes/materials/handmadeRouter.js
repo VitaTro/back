@@ -76,7 +76,7 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Перевірка назви (варіант ФА)
+    // Назва має збігатися
     if (name !== handmade.name) {
       return res.status(400).json({
         error:
@@ -84,7 +84,9 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
       });
     }
 
-    // Перевірка залишків
+    // ======================================================
+    // ➤ ПЕРЕВІРКА ЗАЛИШКІВ З КОНВЕРТАЦІЄЮ
+    // ======================================================
     for (const item of handmade.materialsUsed) {
       const material = await Material.findById(item.materialId);
 
@@ -94,27 +96,64 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
         });
       }
 
-      if (material.quantity < item.quantity) {
+      let deductQty = 0;
+
+      if (material.unit === item.usedUnit) {
+        deductQty = item.quantity;
+      } else if (material.unit === "grams" && item.usedUnit === "pcs") {
+        if (!material.piecesPerGram) {
+          return res.status(400).json({
+            error: `Material ${material.name} missing piecesPerGram`,
+          });
+        }
+        deductQty = item.quantity / material.piecesPerGram;
+      } else if (material.unit === "meters" && item.usedUnit === "pcs") {
+        if (!material.piecesPerMeter) {
+          return res.status(400).json({
+            error: `Material ${material.name} missing piecesPerMeter`,
+          });
+        }
+        deductQty = item.quantity / material.piecesPerMeter;
+      } else {
+        return res.status(400).json({
+          error: `Cannot convert ${item.usedUnit} to ${material.unit}`,
+        });
+      }
+
+      if (material.quantity < deductQty) {
         return res.status(400).json({
           error: `Not enough material: ${material.name}`,
         });
       }
     }
 
-    // Списання матеріалів
+    // ======================================================
+    // ➤ СПИСАННЯ МАТЕРІАЛІВ
+    // ======================================================
     for (const item of handmade.materialsUsed) {
       const material = await Material.findById(item.materialId);
 
-      // Оновлюємо склад
-      material.quantity -= item.quantity;
+      let deductQty = 0;
+
+      if (material.unit === item.usedUnit) {
+        deductQty = item.quantity;
+      } else if (material.unit === "grams" && item.usedUnit === "pcs") {
+        deductQty = item.quantity / material.piecesPerGram;
+      } else if (material.unit === "meters" && item.usedUnit === "pcs") {
+        deductQty = item.quantity / material.piecesPerMeter;
+      }
+
+      // Списання
+      material.quantity -= deductQty;
       await material.save();
 
-      // Записуємо рух
+      // Запис руху
       await StockMaterials.create({
         materialId: material._id,
         materialName: material.name,
         type: "use",
-        quantity: item.quantity,
+        quantity: deductQty,
+        usedUnit: item.usedUnit,
         unitPurchasePrice: material.purchasePrice?.value || 0,
         color: material.color,
         size: material.size,
@@ -123,7 +162,9 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
       });
     }
 
-    // Створюємо Product (переносимо тільки materialsUsed + totalCost)
+    // ======================================================
+    // ➤ СТВОРЕННЯ ГОТОВОГО ПРОДУКТУ
+    // ======================================================
     const product = new Product({
       name,
       category: "handmade",
@@ -148,7 +189,6 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
 
     await product.save();
 
-    // Прив’язуємо product до handmade
     handmade.linkedProductId = product._id;
     await handmade.save();
 

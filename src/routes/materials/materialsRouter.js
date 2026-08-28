@@ -55,6 +55,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
       size: data.size || null,
       unit: data.unit,
       quantity: data.quantity || 0,
+      piecesPerGram: data.piecesPerGram || null,
+      piecesPerMeter: data.piecesPerMeter || null,
+
       purchasePrice: {
         value: data.purchasePrice?.value || 0,
         currency: data.purchasePrice?.currency || "PLN",
