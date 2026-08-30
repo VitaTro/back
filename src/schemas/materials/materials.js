@@ -62,6 +62,10 @@ const materialSchema = new mongoose.Schema({
     type: Number,
     required: false, // тільки для ниток/льоски
   },
+  purchaseDate: {
+    type: Date,
+    required: false,
+  },
 });
 
 module.exports = mongoose.model("Material", materialSchema);
