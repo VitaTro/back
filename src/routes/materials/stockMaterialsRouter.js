@@ -3,7 +3,18 @@ const router = express.Router();
 const StockMaterials = require("../../schemas/materials/stockMaterials");
 const Material = require("../../schemas/materials/materials");
 const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
-
+// ======================================================
+// ➤ ВСІ РУХИ
+// ======================================================
+router.get("/", async (req, res) => {
+  try {
+    const movements = await StockMaterials.find().sort({ date: -1 });
+    res.json(movements);
+  } catch (error) {
+    console.error("❌ Error fetching all movements:", error);
+    res.status(500).json({ error: "Failed to fetch movements" });
+  }
+});
 // ======================================================
 // ➤ ДОДАТИ РУХ МАТЕРІАЛУ
 // ======================================================
@@ -32,9 +43,6 @@ router.post("/", authenticateAdmin, async (req, res) => {
       return res.status(404).json({ error: "Material not found" });
     }
 
-    // ======================================================
-    // ➤ КОНВЕРТАЦІЯ ОДИНИЦЬ
-    // ======================================================
     let deductQty = quantity; // кількість, яку реально списуємо зі складу
 
     if (["use", "writeOff"].includes(type)) {
@@ -79,9 +87,6 @@ router.post("/", authenticateAdmin, async (req, res) => {
       }
     }
 
-    // ======================================================
-    // ➤ СТВОРЮЄМО РУХ
-    // ======================================================
     const movement = new StockMaterials({
       materialId,
       materialName,
@@ -100,9 +105,6 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
     await movement.save();
 
-    // ======================================================
-    // ➤ ОНОВЛЮЄМО СКЛАД
-    // ======================================================
     if (["purchase", "restock", "return"].includes(type)) {
       material.quantity += quantity; // тут quantity = реальна одиниця складу
     }
@@ -221,9 +223,6 @@ router.post("/bulk", authenticateAdmin, async (req, res) => {
   }
 });
 
-// ======================================================
-// ➤ ІСТОРІЯ ПО МАТЕРІАЛУ
-// ======================================================
 router.get("/material/:materialId", async (req, res) => {
   try {
     const { materialId } = req.params;
@@ -292,9 +291,6 @@ router.put("/:id", authenticateAdmin, async (req, res) => {
   }
 });
 
-// ======================================================
-// ➤ ВИДАЛИТИ РУХ
-// ======================================================
 router.delete("/:id", authenticateAdmin, async (req, res) => {
   try {
     const movement = await StockMaterials.findById(req.params.id);
@@ -307,19 +303,6 @@ router.delete("/:id", authenticateAdmin, async (req, res) => {
   } catch (err) {
     console.error("❌ Error deleting movement:", err);
     res.status(500).json({ error: "Failed to delete movement" });
-  }
-});
-
-// ======================================================
-// ➤ ВСІ РУХИ
-// ======================================================
-router.get("/", async (req, res) => {
-  try {
-    const movements = await StockMaterials.find().sort({ date: -1 });
-    res.json(movements);
-  } catch (error) {
-    console.error("❌ Error fetching all movements:", error);
-    res.status(500).json({ error: "Failed to fetch movements" });
   }
 });
 

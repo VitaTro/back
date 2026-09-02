@@ -17,27 +17,6 @@ router.get("/", async (req, res) => {
 });
 
 // ===============================
-// GET MATERIAL BY ID
-// ===============================
-router.get("/:id", async (req, res) => {
-  try {
-    const material = await Material.findById(req.params.id);
-
-    if (!material) {
-      return res.status(404).json({ message: "Material not found" });
-    }
-
-    res.json(material);
-  } catch (error) {
-    console.error("❌ Failed to fetch material:", error);
-    res.status(500).json({
-      message: "Failed to fetch material",
-      error: error.message,
-    });
-  }
-});
-
-// ===============================
 // CREATE MATERIAL
 // ===============================
 router.post("/", authenticateAdmin, async (req, res) => {
@@ -102,7 +81,26 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
     res.status(500).send(error);
   }
 });
+// ===============================
+// GET MATERIAL BY ID
+// ===============================
+router.get("/:id", async (req, res) => {
+  try {
+    const material = await Material.findById(req.params.id);
 
+    if (!material) {
+      return res.status(404).json({ message: "Material not found" });
+    }
+
+    res.json(material);
+  } catch (error) {
+    console.error("❌ Failed to fetch material:", error);
+    res.status(500).json({
+      message: "Failed to fetch material",
+      error: error.message,
+    });
+  }
+});
 // ===============================
 // DELETE MATERIAL
 // ===============================
