@@ -35,7 +35,6 @@ const handmadeProductSchema = new mongoose.Schema({
     required: false,
   },
 
-  // 🔥 ГОЛОВНЕ: використані матеріали
   materialsUsed: [
     {
       materialId: {
@@ -43,20 +42,18 @@ const handmadeProductSchema = new mongoose.Schema({
         ref: "Material",
         required: true,
       },
-      quantity: {
-        type: Number,
-        required: true,
-      },
-      unit: {
-        type: String,
-        enum: ["pcs", "meters", "grams"],
-        required: true,
-      },
+      quantity: { type: Number, required: true },
+      unit: { type: String, enum: ["pcs", "meters", "grams"], required: true },
       usedUnit: {
         type: String,
         enum: ["pcs", "meters", "grams"],
         required: true,
       },
+      name: { type: String },
+      purchasePrice: { type: Number },
+      materialTotalQty: { type: Number },
+      pricePerUnit: { type: Number },
+      costForThisMaterial: { type: Number },
     },
   ],
 
