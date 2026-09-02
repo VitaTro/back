@@ -31,8 +31,11 @@ router.post("/", authenticateAdmin, async (req, res) => {
         });
       }
 
-      const price = material.purchasePrice?.value || 0;
-      totalCost += price * item.quantity;
+      const totalMaterialQty = material.quantity || 1;
+      const pricePerUnit =
+        (material.purchasePrice?.value || 0) / totalMaterialQty;
+
+      totalCost += pricePerUnit * item.quantity;
     }
 
     const handmade = new HandmadeProduct({
