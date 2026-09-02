@@ -30,6 +30,10 @@ const handmadeProductSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  videoUrl: {
+    type: String,
+    required: false,
+  },
 
   // 🔥 ГОЛОВНЕ: використані матеріали
   materialsUsed: [
