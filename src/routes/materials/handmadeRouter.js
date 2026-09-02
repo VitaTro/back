@@ -22,6 +22,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
     // Розрахунок собівартості
     let totalCost = 0;
+    let enrichedMaterials = [];
 
     for (const item of materialsUsed) {
       const material = await Material.findById(item.materialId);
@@ -34,10 +35,20 @@ router.post("/", authenticateAdmin, async (req, res) => {
       const totalMaterialQty = material.quantity || 1;
       const pricePerUnit =
         (material.purchasePrice?.value || 0) / totalMaterialQty;
+      const costForThisMaterial = pricePerUnit * item.quantity;
 
-      totalCost += pricePerUnit * item.quantity;
+      totalCost += costForThisMaterial;
+
+      // ✔ Збагачений запис
+      enrichedMaterials.push({
+        ...item,
+        name: material.name,
+        purchasePrice: material.purchasePrice?.value || 0,
+        materialTotalQty: material.quantity,
+        pricePerUnit,
+        costForThisMaterial,
+      });
     }
-
     const handmade = new HandmadeProduct({
       name,
       description,
@@ -45,7 +56,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       length,
       width,
       color,
-      materialsUsed,
+      materialsUsed: enrichedMaterials,
       totalCost,
       createdAt: Date.now(),
     });
