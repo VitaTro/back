@@ -13,8 +13,16 @@ const { authenticateAdmin } = require("../../middleware/authenticateAdmin");
 // ======================================================
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
-    const { name, description, photos, length, width, color, materialsUsed } =
-      req.body;
+    const {
+      name,
+      description,
+      photos,
+      length,
+      width,
+      color,
+      materialsUsed,
+      videoUrl,
+    } = req.body;
 
     if (!name || !materialsUsed || materialsUsed.length === 0) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -56,6 +64,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       length,
       width,
       color,
+      videoUrl,
       materialsUsed: enrichedMaterials,
       totalCost,
       createdAt: Date.now(),
