@@ -205,6 +205,7 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
       width: req.body.width || null,
       length: req.body.length || null,
       color: req.body.color || null,
+      currentStock: 1,
       quantity: 1,
       index: index || null,
       materials: handmade.materialsUsed
