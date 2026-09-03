@@ -196,7 +196,7 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
       purchasePrice: {
         value: handmade.totalCost,
         currency: "PLN",
-        exchangeRateToPLN: null,
+        exchangeRateToPLN: 1,
       },
       description: req.body.description || "",
       photoUrl: req.body.photoUrl || "",
