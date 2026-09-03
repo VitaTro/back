@@ -196,6 +196,7 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
       purchasePrice: {
         value: handmade.totalCost,
         currency: "PLN",
+        exchangeRateToPLN: null,
       },
       description: req.body.description || "",
       photoUrl: req.body.photoUrl || "",
@@ -206,7 +207,10 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
       color: req.body.color || null,
       quantity: 1,
       index: index || null,
-      materials: handmade.materialsUsed,
+      materials: handmade.materialsUsed
+        .map((m) => `${m.quantity} ${m.usedUnit} ${m.name}`)
+        .join(", "),
+
       createdAt: Date.now(),
     });
 
