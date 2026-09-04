@@ -191,8 +191,9 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
     const product = new Product({
       name,
       category: "handmade",
-      subcategory: "handmade",
+      subcategory: handmade.subcategory,
       price,
+      lastRetailPrice: price,
       purchasePrice: {
         value: handmade.totalCost,
         currency: "PLN",

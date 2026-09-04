@@ -10,6 +10,11 @@ const handmadeProductSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+subcategory: {
+  type: String,
+  enum: ["macrame", "beads", "pearls", "thread-weaving", "mixed", "wire"],
+  required: true,
+},
 
   photos: {
     type: [String],
