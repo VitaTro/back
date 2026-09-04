@@ -38,6 +38,7 @@ router.get("/:id", authenticateAdmin, async (req, res) => {
 });
 
 // 🔹 POST: Створити нове офлайн-замовлення
+// // 🔹 POST: Створити нове офлайн-замовлення
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
     const {
@@ -58,52 +59,88 @@ router.post("/", authenticateAdmin, async (req, res) => {
     const enrichedProducts = [];
     let totalAmount = 0;
 
+    // 🔥 Головний цикл обробки товарів
     for (const item of products) {
-      const lastMovement = await StockMovement.findOne({
-        productId: item.productId,
-        type: { $in: ["sale", "purchase"] },
-      }).sort({ date: -1 });
+      const productDoc = await Product.findById(item.productId);
 
-      if (
-        !lastMovement ||
-        !lastMovement.productIndex ||
-        !lastMovement.productName
-      ) {
-        throw new Error(
-          `❌ No stock movement found for product ${item.productId}`,
-        );
+      if (!productDoc) {
+        throw new Error(`❌ Product not found: ${item.productId}`);
       }
 
-      const stockLevel = await calculateStock(lastMovement.productIndex);
-      if (stockLevel < item.quantity) {
-        return res.status(400).json({
-          error: `Insufficient stock for ${lastMovement.productName}`,
-        });
+      const isHandmade = productDoc.category === "handmade";
+
+      let unitPrice;
+      let index;
+      let name;
+
+      if (isHandmade) {
+        // 🔥 Handmade: беремо все з Product
+        unitPrice = Number(productDoc.lastRetailPrice ?? productDoc.price ?? 0);
+        index = productDoc.index;
+        name = productDoc.name;
+
+        // 🔥 Перевірка складу handmade
+        if (productDoc.currentStock < item.quantity) {
+          return res.status(400).json({
+            error: `Insufficient stock for ${productDoc.name}`,
+          });
+        }
+
+      } else {
+        // 🔥 Звичайний товар: логіка через StockMovement
+        const lastMovement = await StockMovement.findOne({
+          productId: item.productId,
+          type: { $in: ["sale", "purchase"] },
+        }).sort({ date: -1 });
+
+        if (
+          !lastMovement ||
+          !lastMovement.productIndex ||
+          !lastMovement.productName
+        ) {
+          throw new Error(
+            `❌ No stock movement found for product ${item.productId}`
+          );
+        }
+
+        const stockLevel = await calculateStock(lastMovement.productIndex);
+        if (stockLevel < item.quantity) {
+          return res.status(400).json({
+            error: `Insufficient stock for ${lastMovement.productName}`,
+          });
+        }
+
+        unitPrice =
+          lastMovement.unitSalePrice ||
+          lastMovement.price ||
+          productDoc.lastRetailPrice ||
+          lastMovement.unitPurchasePrice ||
+          0;
+
+        index = lastMovement.productIndex;
+        name = lastMovement.productName;
       }
 
-      const unitPrice =
-        lastMovement.unitSalePrice ||
-        lastMovement.price ||
-        productData?.lastRetailPrice ||
-        lastMovement.unitPurchasePrice ||
-        0;
-
-      totalAmount += unitPrice * item.quantity;
-
-      const productVisual = await Product.findById(item.productId);
-
+      // 🔥 Додаємо товар у enrichedProducts
       enrichedProducts.push({
         productId: item.productId,
-        index: lastMovement?.productIndex || item.index,
-        name: lastMovement?.productName || item.name,
-        photoUrl: productVisual?.photoUrl || "",
+        index,
+        name,
+        photoUrl: productDoc.photoUrl || "",
         quantity: item.quantity,
         price: unitPrice,
         size: item.size || null,
         sku: item.sku || null,
       });
+
+      // 🔥 Рахуємо суму
+      totalAmount += unitPrice * item.quantity;
     }
+
+    // 🔥 Знижка
     const { discount, discountPercent, final } = calculateDiscount(totalAmount);
+
+    // 🔥 Створюємо замовлення
     const order = await OfflineOrder.create({
       products: enrichedProducts,
       totalPrice: totalAmount,
@@ -120,7 +157,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
         buyerNIP,
       }),
     });
+
     res.status(201).json({ message: "Offline order created", order });
+
   } catch (error) {
     console.error("🔥 Error creating offline order:", error);
     res
@@ -153,6 +192,284 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
   }
 });
 // 🔹 POST: Створити РЕЗЕРВАЦІЮ товару
+// router.post("/reserve", authenticateAdmin, async (req, res) => {
+//   try {
+//     const { products, reservationExpiresAt, notes } = req.body;
+
+//     if (!products || !products.length) {
+//       return res.status(400).json({ error: "Products are required" });
+//     }
+
+//     if (!reservationExpiresAt) {
+//       return res
+//         .status(400)
+//         .json({ error: "Reservation expiration date required" });
+//     }
+
+//     const enrichedProducts = [];
+//     let totalAmount = 0;
+
+//     for (const item of products) {
+//       const lastMovement = await StockMovement.findOne({
+//         productId: item.productId,
+//         type: { $in: ["sale", "purchase"] },
+//       }).sort({ date: -1 });
+
+//       if (!lastMovement) {
+//         return res.status(400).json({
+//           error: `No stock movement found for product ${item.productId}`,
+//         });
+//       }
+
+//       const stockLevel = await calculateStock(lastMovement.productIndex);
+//       if (stockLevel < item.quantity) {
+//         return res.status(400).json({
+//           error: `Insufficient stock for ${lastMovement.productName}`,
+//         });
+//       }
+
+//       const productDoc = await Product.findById(item.productId);
+
+//       const unitPrice =
+//         productDoc?.lastRetailPrice ||
+//         lastMovement.unitSalePrice ||
+//         lastMovement.price ||
+//         lastMovement.unitPurchasePrice ||
+//         0;
+
+//       totalAmount += unitPrice * item.quantity;
+
+//       enrichedProducts.push({
+//         productId: item.productId,
+//         index: lastMovement.productIndex,
+//         name: lastMovement.productName,
+//         photoUrl: productDoc?.photoUrl || "",
+//         quantity: item.quantity,
+//         price: unitPrice,
+//         size: item.size || null,
+//         sku: item.sku || null,
+//       });
+
+//       // 🔥 Знімаємо товар зі складу (резерв = sale)
+//       await StockMovement.create({
+//         productId: item.productId,
+//         productIndex: lastMovement.productIndex,
+//         productName: lastMovement.productName,
+//         quantity: item.quantity,
+//         type: "sale",
+//         // unitPurchasePrice: unitPrice,
+//         price: unitPrice,
+//         saleSource: "OfflineSale",
+//         unitSalePrice: unitPrice,
+//         date: new Date(),
+//         note: "Reservation created",
+//       });
+
+//       // 🔥 Оновлюємо кількість у Product
+//       const stockCount = await calculateStock(lastMovement.productIndex);
+//       productDoc.quantity = stockCount;
+//       productDoc.currentStock = stockCount;
+//       productDoc.inStock = stockCount > 0;
+//       await productDoc.save();
+//     }
+
+//     // 🔥 Створюємо резерв як OfflineSale
+//     const reservation = await OfflineSale.create({
+//       isReservation: true,
+//       status: "reserved",
+//       reservationExpiresAt,
+//       products: enrichedProducts,
+//       totalAmount,
+//       finalPrice: totalAmount,
+//       paymentMethod: "cash",
+//       notes,
+//     });
+
+//     res.status(201).json({
+//       message: "✅ Reservation created",
+//       reservation,
+//     });
+//   } catch (error) {
+//     console.error("🔥 Error creating reservation:", error);
+//     res.status(500).json({
+//       error: error.message || "Failed to create reservation",
+//     });
+//   }
+// });
+// // 🔹 PATCH: Завершити резерв (клієнт оплатив)
+// router.patch("/reserve/:id/complete", authenticateAdmin, async (req, res) => {
+//   try {
+//     const { paymentMethod } = req.body;
+
+//     const validMethods = ["BLIK", "bank_transfer", "terminal", "cash"];
+//     if (!validMethods.includes(paymentMethod)) {
+//       return res.status(400).json({ error: "Invalid payment method" });
+//     }
+
+//     const reservation = await OfflineSale.findById(req.params.id);
+
+//     if (!reservation) {
+//       return res.status(404).json({ error: "Reservation not found" });
+//     }
+
+//     if (!reservation.isReservation || reservation.status !== "reserved") {
+//       return res.status(400).json({ error: "This sale is not a reservation" });
+//     }
+
+//     // 🔥 Перетворюємо резерв на продаж
+//     reservation.status = "completed";
+//     reservation.paymentMethod = paymentMethod;
+//     reservation.saleDate = new Date();
+//     reservation.isReservation = false;
+//     reservation.reservationExpiresAt = null;
+
+//     await reservation.save();
+
+//     res.status(200).json({
+//       message: "✅ Reservation converted to completed sale",
+//       reservation,
+//     });
+//   } catch (error) {
+//     console.error("🔥 Error completing reservation:", error);
+//     res.status(500).json({ error: "Failed to complete reservation" });
+//   }
+// });
+
+ // 🔹 PATCH: Продовжити резерв
+ router.patch("/reserve/:id/extend", authenticateAdmin, async (req, res) => {
+   try {
+     const { newDate } = req.body;
+     if (!newDate) {
+       return res.status(400).json({ error: "New reservation date required" });
+    }
+
+     const reservation = await OfflineSale.findById(req.params.id);
+     if (!reservation) {
+       return res.status(404).json({ error: "Reservation not found" });
+     }
+
+    if (!reservation.isReservation || reservation.status !== "reserved") {
+      return res
+         .status(400)
+         .json({ error: "This sale is not an active reservation" });
+     }
+
+     // 🔥 Продовжуємо резерв
+     reservation.reservationExpiresAt = newDate;
+     await reservation.save();
+
+     res.status(200).json({
+       message: "✅ Reservation extended",
+       reservation,
+     });
+   } catch (error) {
+     console.error("🔥 Error extending reservation:", error);
+     res.status(500).json({ error: "Failed to extend reservation" });
+   }
+ });
+ router.get("/reserve", authenticateAdmin, async (req, res) => {
+  const reservations = await OfflineSale.find({ isReservation: true }).sort({
+    createdAt: -1,
+  });
+  res.json(reservations);
+});
+
+// router.delete("/reserve/:id", authenticateAdmin, async (req, res) => {
+//   try {
+//     const reservation = await OfflineSale.findById(req.params.id);
+
+//     if (!reservation) {
+//       return res.status(404).json({ error: "Reservation not found" });
+//     }
+
+//     if (!reservation.isReservation || reservation.status !== "reserved") {
+//       return res
+//         .status(400)
+//         .json({ error: "This sale is not an active reservation" });
+//     }
+
+//     // 🔥 Повертаємо товар на склад
+//     for (const item of reservation.products) {
+//       await StockMovement.create({
+//         productId: item.productId,
+//         productIndex: item.index,
+//         productName: item.name,
+//         quantity: item.quantity,
+//         type: "restock",
+//         unitPurchasePrice: item.price,
+//         price: item.price,
+//         saleSource: "OfflineSale",
+//         date: new Date(),
+//         note: "Reservation cancelled — stock restored",
+//       });
+
+//       // Оновлюємо кількість у Product
+//       const productDoc = await Product.findById(item.productId);
+//       const stockCount = await calculateStock(item.index);
+//       productDoc.quantity = stockCount;
+//       productDoc.currentStock = stockCount;
+//       productDoc.inStock = stockCount > 0;
+//       await productDoc.save();
+//     }
+
+//     await reservation.deleteOne();
+
+//     res.status(200).json({ message: "Reservation deleted" });
+//   } catch (error) {
+//     console.error("🔥 Error deleting reservation:", error);
+//     res.status(500).json({ error: "Failed to delete reservation" });
+//   }
+// });
+
+router.delete("/reserve/:id", authenticateAdmin, async (req, res) => {
+  try {
+    const reservation = await OfflineSale.findById(req.params.id);
+
+    if (!reservation || !reservation.isReservation || reservation.status !== "reserved") {
+      return res.status(400).json({ error: "This sale is not an active reservation" });
+    }
+
+    for (const item of reservation.products) {
+      const productDoc = await Product.findById(item.productId);
+
+      if (productDoc.category === "handmade") {
+        // 🟢 Handmade: повернення через Product
+        productDoc.currentStock += item.quantity;
+        productDoc.quantity = productDoc.currentStock;
+        productDoc.inStock = productDoc.currentStock > 0;
+        await productDoc.save();
+
+      } else {
+        // 🔵 Звичайний товар: повернення через StockMovement
+        await StockMovement.create({
+          productId: item.productId,
+          productIndex: item.index,
+          productName: item.name,
+          quantity: item.quantity,
+          type: "return",
+          unitPurchasePrice: item.price,
+          price: item.price,
+          saleSource: "OfflineReservation",
+          date: new Date(),
+          note: "Reservation cancelled — stock restored",
+        });
+
+        const stockCount = await calculateStock(item.index);
+        productDoc.currentStock = stockCount;
+        productDoc.quantity = stockCount;
+        productDoc.inStock = stockCount > 0;
+        await productDoc.save();
+      }
+    }
+
+    await reservation.deleteOne();
+
+    res.status(200).json({ message: "Reservation deleted" });
+
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete reservation" });
+  }
+});
 router.post("/reserve", authenticateAdmin, async (req, res) => {
   try {
     const { products, reservationExpiresAt, notes } = req.body;
@@ -162,79 +479,103 @@ router.post("/reserve", authenticateAdmin, async (req, res) => {
     }
 
     if (!reservationExpiresAt) {
-      return res
-        .status(400)
-        .json({ error: "Reservation expiration date required" });
+      return res.status(400).json({ error: "Reservation expiration date required" });
     }
 
     const enrichedProducts = [];
     let totalAmount = 0;
 
     for (const item of products) {
-      const lastMovement = await StockMovement.findOne({
-        productId: item.productId,
-        type: { $in: ["sale", "purchase"] },
-      }).sort({ date: -1 });
-
-      if (!lastMovement) {
-        return res.status(400).json({
-          error: `No stock movement found for product ${item.productId}`,
-        });
-      }
-
-      const stockLevel = await calculateStock(lastMovement.productIndex);
-      if (stockLevel < item.quantity) {
-        return res.status(400).json({
-          error: `Insufficient stock for ${lastMovement.productName}`,
-        });
-      }
-
       const productDoc = await Product.findById(item.productId);
 
-      const unitPrice =
-        productDoc?.lastRetailPrice ||
-        lastMovement.unitSalePrice ||
-        lastMovement.price ||
-        lastMovement.unitPurchasePrice ||
-        0;
+      if (!productDoc) {
+        return res.status(400).json({ error: `Product not found: ${item.productId}` });
+      }
 
-      totalAmount += unitPrice * item.quantity;
+      const isHandmade = productDoc.category === "handmade";
+
+      let index = productDoc.index;
+      let name = productDoc.name;
+      let unitPrice = productDoc.lastRetailPrice ?? productDoc.price ?? 0;
+
+      if (isHandmade) {
+        // 🟢 Handmade: перевірка складу
+        if (productDoc.currentStock < item.quantity) {
+          return res.status(400).json({
+            error: `Insufficient stock for ${productDoc.name}`,
+          });
+        }
+
+        // 🟢 Handmade: списання складу
+        productDoc.currentStock -= item.quantity;
+        productDoc.quantity = productDoc.currentStock;
+        productDoc.inStock = productDoc.currentStock > 0;
+        await productDoc.save();
+
+      } else {
+        // 🔵 Звичайний товар: перевірка через StockMovement
+        const lastMovement = await StockMovement.findOne({
+          productId: item.productId,
+          type: { $in: ["sale", "purchase"] },
+        }).sort({ date: -1 });
+
+        if (!lastMovement) {
+          return res.status(400).json({
+            error: `No stock movement found for product ${item.productId}`,
+          });
+        }
+
+        const stockLevel = await calculateStock(lastMovement.productIndex);
+        if (stockLevel < item.quantity) {
+          return res.status(400).json({
+            error: `Insufficient stock for ${lastMovement.productName}`,
+          });
+        }
+
+        index = lastMovement.productIndex;
+        name = lastMovement.productName;
+        unitPrice =
+          productDoc.lastRetailPrice ||
+          lastMovement.unitSalePrice ||
+          lastMovement.price ||
+          lastMovement.unitPurchasePrice ||
+          0;
+
+        // 🔵 Звичайний товар: створюємо рух резерву
+        await StockMovement.create({
+          productId: item.productId,
+          productIndex: index,
+          productName: name,
+          quantity: item.quantity,
+          type: "reserve",
+          unitSalePrice: unitPrice,
+          price: unitPrice,
+          saleSource: "OfflineReservation",
+          date: new Date(),
+          note: "Reservation created",
+        });
+
+        const stockCount = await calculateStock(index);
+        productDoc.currentStock = stockCount;
+        productDoc.quantity = stockCount;
+        productDoc.inStock = stockCount > 0;
+        await productDoc.save();
+      }
 
       enrichedProducts.push({
         productId: item.productId,
-        index: lastMovement.productIndex,
-        name: lastMovement.productName,
-        photoUrl: productDoc?.photoUrl || "",
+        index,
+        name,
+        photoUrl: productDoc.photoUrl || "",
         quantity: item.quantity,
         price: unitPrice,
         size: item.size || null,
         sku: item.sku || null,
       });
 
-      // 🔥 Знімаємо товар зі складу (резерв = sale)
-      await StockMovement.create({
-        productId: item.productId,
-        productIndex: lastMovement.productIndex,
-        productName: lastMovement.productName,
-        quantity: item.quantity,
-        type: "sale",
-        // unitPurchasePrice: unitPrice,
-        price: unitPrice,
-        saleSource: "OfflineSale",
-        unitSalePrice: unitPrice,
-        date: new Date(),
-        note: "Reservation created",
-      });
-
-      // 🔥 Оновлюємо кількість у Product
-      const stockCount = await calculateStock(lastMovement.productIndex);
-      productDoc.quantity = stockCount;
-      productDoc.currentStock = stockCount;
-      productDoc.inStock = stockCount > 0;
-      await productDoc.save();
+      totalAmount += unitPrice * item.quantity;
     }
 
-    // 🔥 Створюємо резерв як OfflineSale
     const reservation = await OfflineSale.create({
       isReservation: true,
       status: "reserved",
@@ -247,17 +588,16 @@ router.post("/reserve", authenticateAdmin, async (req, res) => {
     });
 
     res.status(201).json({
-      message: "✅ Reservation created",
+      message: "Reservation created",
       reservation,
     });
+
   } catch (error) {
     console.error("🔥 Error creating reservation:", error);
-    res.status(500).json({
-      error: error.message || "Failed to create reservation",
-    });
+    res.status(500).json({ error: error.message || "Failed to create reservation" });
   }
 });
-// 🔹 PATCH: Завершити резерв (клієнт оплатив)
+
 router.patch("/reserve/:id/complete", authenticateAdmin, async (req, res) => {
   try {
     const { paymentMethod } = req.body;
@@ -269,15 +609,10 @@ router.patch("/reserve/:id/complete", authenticateAdmin, async (req, res) => {
 
     const reservation = await OfflineSale.findById(req.params.id);
 
-    if (!reservation) {
-      return res.status(404).json({ error: "Reservation not found" });
+    if (!reservation || !reservation.isReservation || reservation.status !== "reserved") {
+      return res.status(400).json({ error: "This sale is not an active reservation" });
     }
 
-    if (!reservation.isReservation || reservation.status !== "reserved") {
-      return res.status(400).json({ error: "This sale is not a reservation" });
-    }
-
-    // 🔥 Перетворюємо резерв на продаж
     reservation.status = "completed";
     reservation.paymentMethod = paymentMethod;
     reservation.saleDate = new Date();
@@ -287,98 +622,61 @@ router.patch("/reserve/:id/complete", authenticateAdmin, async (req, res) => {
     await reservation.save();
 
     res.status(200).json({
-      message: "✅ Reservation converted to completed sale",
+      message: "Reservation converted to completed sale",
       reservation,
     });
+
   } catch (error) {
-    console.error("🔥 Error completing reservation:", error);
     res.status(500).json({ error: "Failed to complete reservation" });
   }
-});
-// 🔹 PATCH: Продовжити резерв
-router.patch("/reserve/:id/extend", authenticateAdmin, async (req, res) => {
-  try {
-    const { newDate } = req.body;
-
-    if (!newDate) {
-      return res.status(400).json({ error: "New reservation date required" });
-    }
-
-    const reservation = await OfflineSale.findById(req.params.id);
-
-    if (!reservation) {
-      return res.status(404).json({ error: "Reservation not found" });
-    }
-
-    if (!reservation.isReservation || reservation.status !== "reserved") {
-      return res
-        .status(400)
-        .json({ error: "This sale is not an active reservation" });
-    }
-
-    // 🔥 Продовжуємо резерв
-    reservation.reservationExpiresAt = newDate;
-    await reservation.save();
-
-    res.status(200).json({
-      message: "✅ Reservation extended",
-      reservation,
-    });
-  } catch (error) {
-    console.error("🔥 Error extending reservation:", error);
-    res.status(500).json({ error: "Failed to extend reservation" });
-  }
-});
-router.get("/reserve", authenticateAdmin, async (req, res) => {
-  const reservations = await OfflineSale.find({ isReservation: true }).sort({
-    createdAt: -1,
-  });
-  res.json(reservations);
 });
 
 router.delete("/reserve/:id", authenticateAdmin, async (req, res) => {
   try {
     const reservation = await OfflineSale.findById(req.params.id);
 
-    if (!reservation) {
-      return res.status(404).json({ error: "Reservation not found" });
+    if (!reservation || !reservation.isReservation || reservation.status !== "reserved") {
+      return res.status(400).json({ error: "This sale is not an active reservation" });
     }
 
-    if (!reservation.isReservation || reservation.status !== "reserved") {
-      return res
-        .status(400)
-        .json({ error: "This sale is not an active reservation" });
-    }
-
-    // 🔥 Повертаємо товар на склад
     for (const item of reservation.products) {
-      await StockMovement.create({
-        productId: item.productId,
-        productIndex: item.index,
-        productName: item.name,
-        quantity: item.quantity,
-        type: "restock",
-        unitPurchasePrice: item.price,
-        price: item.price,
-        saleSource: "OfflineSale",
-        date: new Date(),
-        note: "Reservation cancelled — stock restored",
-      });
-
-      // Оновлюємо кількість у Product
       const productDoc = await Product.findById(item.productId);
-      const stockCount = await calculateStock(item.index);
-      productDoc.quantity = stockCount;
-      productDoc.currentStock = stockCount;
-      productDoc.inStock = stockCount > 0;
-      await productDoc.save();
+
+      if (productDoc.category === "handmade") {
+        // 🟢 Handmade: повернення через Product
+        productDoc.currentStock += item.quantity;
+        productDoc.quantity = productDoc.currentStock;
+        productDoc.inStock = productDoc.currentStock > 0;
+        await productDoc.save();
+
+      } else {
+        // 🔵 Звичайний товар: повернення через StockMovement
+        await StockMovement.create({
+          productId: item.productId,
+          productIndex: item.index,
+          productName: item.name,
+          quantity: item.quantity,
+          type: "return",
+          unitPurchasePrice: item.price,
+          price: item.price,
+          saleSource: "OfflineReservation",
+          date: new Date(),
+          note: "Reservation cancelled — stock restored",
+        });
+
+        const stockCount = await calculateStock(item.index);
+        productDoc.currentStock = stockCount;
+        productDoc.quantity = stockCount;
+        productDoc.inStock = stockCount > 0;
+        await productDoc.save();
+      }
     }
 
     await reservation.deleteOne();
 
     res.status(200).json({ message: "Reservation deleted" });
+
   } catch (error) {
-    console.error("🔥 Error deleting reservation:", error);
     res.status(500).json({ error: "Failed to delete reservation" });
   }
 });

@@ -52,6 +52,77 @@ router.get("/:id", authenticateAdmin, async (req, res) => {
 });
 
 // ✅ Створити нове онлайн-замовлення
+// router.post("/", authenticateAdmin, async (req, res) => {
+//   try {
+//     const { userId, products, paymentMethod, deliveryType, deliveryAddress } =
+//       req.body;
+
+//     const enrichedProducts = [];
+//     let totalPrice = 0;
+//     for (const item of products) {
+//       const lastMovement = await StockMovement.findOne({
+//         productId: item.productId,
+//         type: { $in: ["sale", "purchase"] },
+//       }).sort({ date: -1 });
+
+//       if (
+//         !lastMovement ||
+//         !lastMovement.productIndex ||
+//         !lastMovement.productName
+//       ) {
+//         return res
+//           .status(400)
+//           .json({ error: `❌ Немає руху товару ${item.productId}` });
+//       }
+//       const stockLevel = await calculateStock(lastMovement.productIndex);
+//       if (stockLevel < item.quantity) {
+//         return res.status(400).json({
+//           error: `🚫 Недостатньо залишку для ${lastMovement.productName}`,
+//         });
+//       }
+
+//       const unitPrice =
+//         lastMovement.unitSalePrice || lastMovement.unitPurchasePrice || 0;
+//       totalPrice += unitPrice * item.quantity;
+
+//       const visualProduct = await Product.findById(item.productId);
+
+//       enrichedProducts.push({
+//         productId: item.productId,
+//         index: lastMovement.productIndex,
+//         name: lastMovement.productName,
+//         quantity: item.quantity,
+//         price: unitPrice,
+//         photoUrl: visualProduct?.photoUrl || "",
+//         size: item.size || null,
+//         sku: item.sku || null,
+//       });
+//     }
+//     const { discount, discountPercent, final } = calculateDiscount(totalPrice);
+//     const newOrder = new OnlineOrder({
+//       userId,
+//       products: enrichedProducts,
+//       totalQuantity: enrichedProducts.reduce((sum, p) => sum + p.quantity, 0),
+//       totalPrice,
+//       discount,
+//       discountPercent,
+//       finalPrice: final,
+//       paymentStatus: "unpaid",
+//       paymentMethod,
+//       deliveryType: deliveryType || "courier",
+//       deliveryAddress,
+//       status: "new",
+//     });
+
+//     await newOrder.save();
+//     res
+//       .status(201)
+//       .json({ message: "Order created successfully!", onlineOrder: newOrder });
+//   } catch (error) {
+//     res.status(500).json({ error: "Failed to create order" });
+//   }
+// });
+// ✅ Створити нове онлайн-замовлення
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
     const { userId, products, paymentMethod, deliveryType, deliveryAddress } =
@@ -59,46 +130,88 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
     const enrichedProducts = [];
     let totalPrice = 0;
-    for (const item of products) {
-      const lastMovement = await StockMovement.findOne({
-        productId: item.productId,
-        type: { $in: ["sale", "purchase"] },
-      }).sort({ date: -1 });
 
-      if (
-        !lastMovement ||
-        !lastMovement.productIndex ||
-        !lastMovement.productName
-      ) {
-        return res
-          .status(400)
-          .json({ error: `❌ Немає руху товару ${item.productId}` });
-      }
-      const stockLevel = await calculateStock(lastMovement.productIndex);
-      if (stockLevel < item.quantity) {
+    for (const item of products) {
+      const productDoc = await Product.findById(item.productId);
+
+      if (!productDoc) {
         return res.status(400).json({
-          error: `🚫 Недостатньо залишку для ${lastMovement.productName}`,
+          error: `❌ Товар не знайдено: ${item.productId}`,
         });
       }
 
-      const unitPrice =
-        lastMovement.unitSalePrice || lastMovement.unitPurchasePrice || 0;
-      totalPrice += unitPrice * item.quantity;
+      const isHandmade = productDoc.category === "handmade";
 
-      const visualProduct = await Product.findById(item.productId);
+      let unitPrice;
+      let index;
+      let name;
 
+      if (isHandmade) {
+        // 🔥 Handmade: беремо все з Product
+        unitPrice = Number(productDoc.lastRetailPrice ?? productDoc.price ?? 0);
+        index = productDoc.index;
+        name = productDoc.name;
+
+        // 🔥 Перевірка складу handmade
+        if (productDoc.currentStock < item.quantity) {
+          return res.status(400).json({
+            error: `🚫 Недостатньо залишку для ${productDoc.name}`,
+          });
+        }
+
+      } else {
+        // 🔥 Звичайний товар: логіка через StockMovement
+        const lastMovement = await StockMovement.findOne({
+          productId: item.productId,
+          type: { $in: ["sale", "purchase"] },
+        }).sort({ date: -1 });
+
+        if (
+          !lastMovement ||
+          !lastMovement.productIndex ||
+          !lastMovement.productName
+        ) {
+          return res.status(400).json({
+            error: `❌ Немає руху товару ${item.productId}`,
+          });
+        }
+
+        const stockLevel = await calculateStock(lastMovement.productIndex);
+        if (stockLevel < item.quantity) {
+          return res.status(400).json({
+            error: `🚫 Недостатньо залишку для ${lastMovement.productName}`,
+          });
+        }
+
+        unitPrice =
+          lastMovement.unitSalePrice ||
+          lastMovement.unitPurchasePrice ||
+          productDoc.lastRetailPrice ||
+          0;
+
+        index = lastMovement.productIndex;
+        name = lastMovement.productName;
+      }
+
+      // 🔥 Додаємо товар у enrichedProducts
       enrichedProducts.push({
         productId: item.productId,
-        index: lastMovement.productIndex,
-        name: lastMovement.productName,
+        index,
+        name,
         quantity: item.quantity,
         price: unitPrice,
-        photoUrl: visualProduct?.photoUrl || "",
+        photoUrl: productDoc.photoUrl || "",
         size: item.size || null,
         sku: item.sku || null,
       });
+
+      totalPrice += unitPrice * item.quantity;
     }
+
+    // 🔥 Знижка
     const { discount, discountPercent, final } = calculateDiscount(totalPrice);
+
+    // 🔥 Створюємо замовлення
     const newOrder = new OnlineOrder({
       userId,
       products: enrichedProducts,
@@ -115,10 +228,13 @@ router.post("/", authenticateAdmin, async (req, res) => {
     });
 
     await newOrder.save();
-    res
-      .status(201)
-      .json({ message: "Order created successfully!", onlineOrder: newOrder });
+
+    res.status(201).json({
+      message: "Order created successfully!",
+      onlineOrder: newOrder,
+    });
   } catch (error) {
+    console.error("🔥 Error creating online order:", error);
     res.status(500).json({ error: "Failed to create order" });
   }
 });
@@ -153,6 +269,71 @@ router.patch("/:id/status", authenticateAdmin, async (req, res) => {
 });
 
 // ✅ Конвертувати замовлення у продаж
+// router.put("/:id/sale", authenticateAdmin, async (req, res) => {
+//   try {
+//     const order = await OnlineOrder.findById(req.params.id);
+//     if (!order) {
+//       return res.status(404).json({ error: "Order not found" });
+//     }
+
+//     if (order.status !== "completed") {
+//       return res
+//         .status(400)
+//         .json({ error: "Order must be completed before converting to sale" });
+//     }
+
+//     // ⛓️ Перевіряємо чи всі продукти мають `index` і `name`
+//     const enrichedProducts = [];
+//     for (const item of order.products) {
+//       const product = await Product.findById(item.productId);
+//       if (!product || !product.index) continue;
+//       await Product.findByIdAndUpdate(item.productId, {
+//         $inc: { popularity: 5 },
+//       });
+
+//       enrichedProducts.push({
+//         index: product.index,
+//         name: product.name,
+//         quantity: item.quantity,
+//         price: item.price,
+//         size: item.size || null,
+//         sku: item.sku || null,
+//       });
+//     }
+
+//     // ✅ Створюємо запис продажу
+//     const newSale = await OnlineSale.create({
+//       orderId: order._id,
+//       totalAmount: order.finalPrice,
+//       products: enrichedProducts,
+//       userId: order.userId,
+//       paymentMethod: order.paymentMethod,
+//       saleDate: new Date(),
+//     });
+
+//     // 📦 Створюємо рухи на складі
+//     await handleSaleStockByIndex(newSale, "OnlineSale");
+
+//     // 💰 Оновлюємо фінансову аналітику
+//     await FinanceOverview.updateOne(
+//       {},
+//       { $inc: { totalRevenue: order.totalPrice } },
+//     );
+
+//     // 🔄 Оновлюємо статус замовлення
+//     order.status = "sold";
+//     await order.save();
+
+//     res
+//       .status(200)
+//       .json({ message: "Sale processed successfully!", sale: newSale });
+//   } catch (error) {
+//     console.error("🔥 Error processing sale:", error);
+//     res.status(500).json({ error: "Failed to process sale" });
+//   }
+// });
+
+// ✅ Конвертувати онлайн-замовлення у продаж
 router.put("/:id/sale", authenticateAdmin, async (req, res) => {
   try {
     const order = await OnlineOrder.findById(req.params.id);
@@ -161,34 +342,84 @@ router.put("/:id/sale", authenticateAdmin, async (req, res) => {
     }
 
     if (order.status !== "completed") {
-      return res
-        .status(400)
-        .json({ error: "Order must be completed before converting to sale" });
+      return res.status(400).json({
+        error: "Order must be completed before converting to sale",
+      });
     }
 
-    // ⛓️ Перевіряємо чи всі продукти мають `index` і `name`
     const enrichedProducts = [];
+    let totalAmount = 0;
+
     for (const item of order.products) {
-      const product = await Product.findById(item.productId);
-      if (!product || !product.index) continue;
-      await Product.findByIdAndUpdate(item.productId, {
-        $inc: { popularity: 5 },
-      });
+      const productDoc = await Product.findById(item.productId);
+
+      if (!productDoc) {
+        throw new Error(`❌ Product not found: ${item.productId}`);
+      }
+
+      const isHandmade = productDoc.category === "handmade";
+
+      let index = item.index;
+      let name = item.name;
+      let unitPrice = item.price;
+
+      if (isHandmade) {
+        // 🔥 Handmade: перевіряємо склад тільки через Product
+        if (productDoc.currentStock < item.quantity) {
+          return res.status(400).json({
+            error: `Недостатньо ${productDoc.name} на складі`,
+          });
+        }
+
+      } else {
+        // 🔥 Звичайний товар: перевіряємо через StockMovement
+        const lastMovement = await StockMovement.findOne({
+          productId: item.productId,
+          type: { $in: ["sale", "purchase"] },
+        }).sort({ date: -1 });
+
+        if (!lastMovement) {
+          throw new Error(
+            `❌ Немає даних зі складу для товару ${item.productId}`
+          );
+        }
+
+        const stockLevel = await calculateStock(lastMovement.productIndex);
+        if (stockLevel < item.quantity) {
+          return res.status(400).json({
+            error: `Недостатньо ${lastMovement.productName} на складі`,
+          });
+        }
+
+        index = lastMovement.productIndex;
+        name = lastMovement.productName;
+        unitPrice =
+          lastMovement.unitSalePrice ||
+          productDoc.lastRetailPrice ||
+          lastMovement.price ||
+          lastMovement.unitPurchasePrice ||
+          item.price ||
+          0;
+      }
 
       enrichedProducts.push({
-        index: product.index,
-        name: product.name,
+        productId: item.productId,
+        index,
+        name,
         quantity: item.quantity,
-        price: item.price,
+        price: unitPrice,
+        photoUrl: productDoc.photoUrl || "",
         size: item.size || null,
         sku: item.sku || null,
       });
+
+      totalAmount += unitPrice * item.quantity;
     }
 
-    // ✅ Створюємо запис продажу
+    // 🔥 Створюємо запис продажу
     const newSale = await OnlineSale.create({
       orderId: order._id,
-      totalAmount: order.finalPrice,
+      totalAmount,
       products: enrichedProducts,
       userId: order.userId,
       paymentMethod: order.paymentMethod,
@@ -196,21 +427,56 @@ router.put("/:id/sale", authenticateAdmin, async (req, res) => {
     });
 
     // 📦 Створюємо рухи на складі
-    await handleSaleStockByIndex(newSale, "OnlineSale");
+    for (const product of enrichedProducts) {
+      const productDoc = await Product.findById(product.productId);
 
-    // 💰 Оновлюємо фінансову аналітику
+      if (productDoc.category === "handmade") {
+        // 🔥 Handmade: списуємо склад через Product
+        productDoc.currentStock -= product.quantity;
+        productDoc.quantity = productDoc.currentStock;
+        productDoc.inStock = productDoc.currentStock > 0;
+        await productDoc.save();
+
+      } else {
+        // 🔥 Звичайний товар: створюємо StockMovement
+        await StockMovement.create({
+          productId: product.productId,
+          productIndex: product.index,
+          productName: product.name,
+          quantity: product.quantity,
+          type: "sale",
+          unitSalePrice: product.price,
+          price: product.price,
+          relatedSaleId: newSale._id,
+          saleSource: "OnlineSale",
+          date: newSale.saleDate,
+          note: "Списання при онлайн-продажу",
+        });
+
+        const stockCount = await calculateStock(product.index);
+        productDoc.currentStock = stockCount;
+        productDoc.quantity = stockCount;
+        productDoc.inStock = stockCount > 0;
+        await productDoc.save();
+      }
+    }
+
+    // 💰 Оновлюємо фінанси
     await FinanceOverview.updateOne(
       {},
-      { $inc: { totalRevenue: order.totalPrice } },
+      { $inc: { totalRevenue: totalAmount } },
+      { upsert: true }
     );
 
     // 🔄 Оновлюємо статус замовлення
     order.status = "sold";
     await order.save();
 
-    res
-      .status(200)
-      .json({ message: "Sale processed successfully!", sale: newSale });
+    res.status(200).json({
+      message: "Sale processed successfully!",
+      sale: newSale,
+    });
+
   } catch (error) {
     console.error("🔥 Error processing sale:", error);
     res.status(500).json({ error: "Failed to process sale" });
@@ -218,9 +484,50 @@ router.put("/:id/sale", authenticateAdmin, async (req, res) => {
 });
 
 // ✅ Оформити повернення товару
+// router.put("/:id/return", authenticateAdmin, async (req, res) => {
+//   try {
+//     const { returnedProducts, refundAmount, updatedBy } = req.body;
+//     if (!returnedProducts || returnedProducts.length === 0) {
+//       return res.status(400).json({ error: "No returned products specified" });
+//     }
+
+//     const onlineOrder = await OnlineOrder.findById(req.params.id);
+//     if (!onlineOrder) {
+//       return res.status(404).json({ error: "Order not found" });
+//     }
+
+//     onlineOrder.status = "cancelled";
+//     onlineOrder.statusHistory.push({ status: "cancelled", updatedBy });
+//     await onlineOrder.save();
+
+//     for (const returned of returnedProducts) {
+//       const product = await Product.findById(returned.productId);
+//       if (!product || !product.index) continue;
+
+//       await StockMovement.create({
+//         productIndex: product.index,
+//         productName: product.name,
+//         type: "return",
+//         quantity: returned.quantity,
+//         unitPurchasePrice: product.purchasePrice.value || 0,
+//         date: new Date(),
+//         note: `Повернення з замовлення ${req.params.id}`,
+//       });
+//     }
+
+//     res
+//       .status(200)
+//       .json({ message: "Return processed successfully", onlineOrder });
+//   } catch (error) {
+//     console.error("🧨 Error processing return:", error);
+//     res.status(500).json({ error: "Failed to process return" });
+//   }
+// });
+// ✅ Оформити повернення товару
 router.put("/:id/return", authenticateAdmin, async (req, res) => {
   try {
     const { returnedProducts, refundAmount, updatedBy } = req.body;
+
     if (!returnedProducts || returnedProducts.length === 0) {
       return res.status(400).json({ error: "No returned products specified" });
     }
@@ -230,28 +537,53 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
+    // 🔥 Оновлюємо статус замовлення
     onlineOrder.status = "cancelled";
     onlineOrder.statusHistory.push({ status: "cancelled", updatedBy });
     await onlineOrder.save();
 
+    // 🔥 Обробка кожного поверненого товару
     for (const returned of returnedProducts) {
-      const product = await Product.findById(returned.productId);
-      if (!product || !product.index) continue;
+      const productDoc = await Product.findById(returned.productId);
 
-      await StockMovement.create({
-        productIndex: product.index,
-        productName: product.name,
-        type: "return",
-        quantity: returned.quantity,
-        unitPurchasePrice: product.purchasePrice.value || 0,
-        date: new Date(),
-        note: `Повернення з замовлення ${req.params.id}`,
-      });
+      if (!productDoc) continue;
+
+      const isHandmade = productDoc.category === "handmade";
+
+      if (isHandmade) {
+        // 🟢 Handmade: повернення через Product
+        productDoc.currentStock += returned.quantity;
+        productDoc.quantity = productDoc.currentStock;
+        productDoc.inStock = productDoc.currentStock > 0;
+        await productDoc.save();
+
+      } else {
+        // 🔵 Звичайний товар: повернення через StockMovement
+        await StockMovement.create({
+          productId: returned.productId,
+          productIndex: productDoc.index,
+          productName: productDoc.name,
+          type: "return",
+          quantity: returned.quantity,
+          unitPurchasePrice: productDoc.purchasePrice?.value || 0,
+          date: new Date(),
+          note: `Повернення з замовлення ${req.params.id}`,
+        });
+
+        // 🔄 Оновлюємо склад
+        const stockCount = await calculateStock(productDoc.index);
+        productDoc.currentStock = stockCount;
+        productDoc.quantity = stockCount;
+        productDoc.inStock = stockCount > 0;
+        await productDoc.save();
+      }
     }
 
-    res
-      .status(200)
-      .json({ message: "Return processed successfully", onlineOrder });
+    res.status(200).json({
+      message: "Return processed successfully",
+      onlineOrder,
+    });
+
   } catch (error) {
     console.error("🧨 Error processing return:", error);
     res.status(500).json({ error: "Failed to process return" });
