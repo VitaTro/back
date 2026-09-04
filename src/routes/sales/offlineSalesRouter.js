@@ -32,69 +32,50 @@ router.get("/", authenticateAdmin, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch offline sales" });
   }
 });
-// 🔹 POST: Створити нове офлайн-замовлення
+
+/* ============================================================
+   📌 POST — Створити офлайн‑ПРОДАЖ (з offlineOrder)
+============================================================ */
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
-    const {
-      products,
-      paymentMethod,
-      buyerType,
-      buyerName,
-      buyerAddress,
-      buyerNIP,
-      saleDate,
-    } = req.body;
+    const { orderId, saleDate } = req.body;
 
-    const validMethods = ["BLIK", "bank_transfer", "terminal", "cash"];
-    if (!validMethods.includes(paymentMethod)) {
-      return res.status(400).json({ error: "Invalid payment method" });
+    const order = await OfflineOrder.findById(orderId);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    if (order.status !== "pending") {
+      return res.status(400).json({ error: "Order already completed or cancelled" });
     }
 
     const enrichedProducts = [];
     let totalAmount = 0;
 
-    // 🔥 Головний цикл обробки товарів
-    for (const item of products) {
+    for (const item of order.products) {
       const productDoc = await Product.findById(item.productId);
-
       if (!productDoc) {
-        throw new Error(`❌ Product not found: ${item.productId}`);
+        throw new Error(`Product not found: ${item.productId}`);
       }
 
       const isHandmade = productDoc.category === "handmade";
 
-      let unitPrice;
-      let index;
-      let name;
+      let index = productDoc.index;
+      let name = productDoc.name;
+      let unitPrice = item.price;
 
       if (isHandmade) {
-        // 🔥 Handmade: беремо все з Product
-        unitPrice = Number(productDoc.lastRetailPrice ?? productDoc.price ?? 0);
-        index = productDoc.index;
-        name = productDoc.name;
-
-        // 🔥 Перевірка складу handmade
         if (productDoc.currentStock < item.quantity) {
           return res.status(400).json({
             error: `Insufficient stock for ${productDoc.name}`,
           });
         }
-
       } else {
-        // 🔥 Звичайний товар: логіка через StockMovement
         const lastMovement = await StockMovement.findOne({
           productId: item.productId,
           type: { $in: ["sale", "purchase"] },
         }).sort({ date: -1 });
 
-        if (
-          !lastMovement ||
-          !lastMovement.productIndex ||
-          !lastMovement.productName
-        ) {
-          throw new Error(
-            `❌ No stock movement found for product ${item.productId}`
-          );
+        if (!lastMovement) {
+          throw new Error(`No stock movement found for product ${item.productId}`);
         }
 
         const stockLevel = await calculateStock(lastMovement.productIndex);
@@ -104,64 +85,104 @@ router.post("/", authenticateAdmin, async (req, res) => {
           });
         }
 
-        unitPrice =
-          lastMovement.unitSalePrice ||
-          lastMovement.price ||
-          productDoc.lastRetailPrice ||
-          lastMovement.unitPurchasePrice ||
-          0;
-
         index = lastMovement.productIndex;
         name = lastMovement.productName;
+        unitPrice =
+          lastMovement.unitSalePrice ||
+          productDoc.lastRetailPrice ||
+          lastMovement.price ||
+          lastMovement.unitPurchasePrice ||
+          item.price ||
+          0;
       }
 
-      // 🔥 Додаємо товар у enrichedProducts
       enrichedProducts.push({
         productId: item.productId,
         index,
         name,
-        photoUrl: productDoc.photoUrl || "",
         quantity: item.quantity,
         price: unitPrice,
+        photoUrl: productDoc.photoUrl || "",
         size: item.size || null,
         sku: item.sku || null,
       });
 
-      // 🔥 Рахуємо суму
       totalAmount += unitPrice * item.quantity;
     }
 
-    // 🔥 Знижка
-    const { discount, discountPercent, final } = calculateDiscount(totalAmount);
+    const { discount, discountPercent, final } = order.discount
+      ? {
+          discount: order.discount,
+          discountPercent: order.discountPercent,
+          final: order.finalPrice,
+        }
+      : calculateDiscount(totalAmount);
 
-    // 🔥 Створюємо замовлення
-    const order = await OfflineOrder.create({
+    const sale = await OfflineSale.create({
+      orderId,
       products: enrichedProducts,
-      totalPrice: totalAmount,
+      totalAmount,
       discount,
       discountPercent,
       finalPrice: final,
-      paymentMethod,
-      status: "pending",
-      buyerType,
-      saleDate,
-      ...(buyerType === "przedsiębiorca" && {
-        buyerName,
-        buyerAddress,
-        buyerNIP,
+      paymentMethod: order.paymentMethod,
+      buyerType: order.buyerType,
+      ...(order.buyerType === "przedsiębiorca" && {
+        buyerName: order.buyerName,
+        buyerAddress: order.buyerAddress,
+        buyerNIP: order.buyerNIP,
       }),
+      status: "completed",
+      saleDate: saleDate || new Date(),
     });
 
-    res.status(201).json({ message: "Offline order created", order });
+    for (const product of enrichedProducts) {
+      const productDoc = await Product.findById(product.productId);
+
+      if (productDoc.category === "handmade") {
+        productDoc.currentStock -= product.quantity;
+        productDoc.quantity = productDoc.currentStock;
+        productDoc.inStock = productDoc.currentStock > 0;
+        await productDoc.save();
+      } else {
+        await StockMovement.create({
+          productId: product.productId,
+          productIndex: product.index,
+          productName: product.name,
+          quantity: product.quantity,
+          type: "sale",
+          unitSalePrice: product.price,
+          price: product.price,
+          relatedSaleId: sale._id,
+          saleSource: "OfflineSale",
+          date: sale.saleDate,
+          note: "Списання при продажу",
+        });
+
+        const stockCount = await calculateStock(product.index);
+        productDoc.quantity = stockCount;
+        productDoc.currentStock = stockCount;
+        productDoc.inStock = stockCount > 0;
+        await productDoc.save();
+      }
+    }
+
+    await FinanceOverview.updateOne(
+      {},
+      { $inc: { totalRevenue: final }, $push: { completedSales: sale._id } },
+      { upsert: true }
+    );
+
+    order.status = "completed";
+    await order.save();
+
+    res.status(201).json({ message: "Sale completed", sale });
 
   } catch (error) {
-    console.error("🔥 Error creating offline order:", error);
-    res
-      .status(500)
-      .json({ error: error.message || "Не вдалося створити замовлення" });
+     console.error("🔥 Error creating offline order:", error);
+    res.status(500).json({ error: error.message || "Sale processing error" });
   }
 });
-
 // router.post("/", authenticateAdmin, async (req, res) => {
 //   try {
 //     const { orderId, saleDate } = req.body;
@@ -333,75 +354,81 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
     }
 
     const sale = await OfflineSale.findById(req.params.id);
-    if (!sale) return res.status(404).json({ error: "Offline sale not found" });
+    if (!sale) return res.status(404).json({ error: "Sale not found" });
 
     sale.status = status;
     await sale.save();
 
-    res
-      .status(200)
-      .json({ message: "Offline sale updated successfully", sale });
+    res.status(200).json({ message: "Sale updated", sale });
   } catch (error) {
-    console.error("🔥 Error updating offline sale:", error);
-    res.status(500).json({ error: "Failed to update offline sale" });
+     console.error("🔥 Error creating offline order:", error);
+    res.status(500).json({ error: "Failed to update sale" });
   }
 });
 
 router.put("/:id/return", authenticateAdmin, async (req, res) => {
   try {
     const { refundAmount } = req.body;
-    if (refundAmount < 0) {
-      return res
-        .status(400)
-        .json({ error: "Refund amount cannot be negative" });
-    }
 
     const sale = await OfflineSale.findById(req.params.id);
     if (!sale) return res.status(404).json({ error: "Sale not found" });
-    if (sale.status === "returned")
-      return res.status(400).json({ error: "Sale already returned" });
 
-    for (const item of sale.products) {
-      // 📦 Склад бачить повернення
-      await StockMovement.create({
-        productId: item.productId,
-        productIndex: item.index,
-        productName: item.name,
-        quantity: item.quantity,
-        type: "return",
-        unitPurchasePrice: item.price, // або item.unitPurchasePrice якщо є
-        price: item.price,
-        relatedSaleId: sale._id,
-        saleSource: "OfflineSale",
-        date: new Date(),
-        note: "Повернення товару після продажу",
-      });
+    if (sale.status === "returned") {
+      return res.status(400).json({ error: "Sale already returned" });
     }
 
-    // 💰 Оновлення фінансів
+    let totalRefund = 0;
+
+    for (const item of sale.products) {
+      const productDoc = await Product.findById(item.productId);
+
+      if (productDoc.category === "handmade") {
+        productDoc.currentStock += item.quantity;
+        productDoc.quantity = productDoc.currentStock;
+        productDoc.inStock = productDoc.currentStock > 0;
+        await productDoc.save();
+      } else {
+        await StockMovement.create({
+          productId: item.productId,
+          productIndex: item.index,
+          productName: item.name,
+          quantity: item.quantity,
+          type: "return",
+          unitPurchasePrice: item.price,
+          price: item.price,
+          relatedSaleId: sale._id,
+          saleSource: "OfflineSale",
+          date: new Date(),
+          note: "Повернення товару після продажу",
+        });
+
+        const stockCount = await calculateStock(item.index);
+        productDoc.currentStock = stockCount;
+        productDoc.quantity = stockCount;
+        productDoc.inStock = stockCount > 0;
+        await productDoc.save();
+      }
+
+      totalRefund += item.quantity * item.price;
+    }
+
     await FinanceOverview.updateOne(
       {},
-      {
-        $inc: {
-          totalRevenue: -Math.min(
-            refundAmount,
-            sale.finalPrice || sale.totalAmount,
-          ),
-        },
-      },
+      { $inc: { totalRevenue: -totalRefund } }
     );
 
-    // 🌀 Статус продажу
     sale.status = "returned";
     sale.refundAmount = refundAmount;
     await sale.save();
 
-    res.status(200).json({ message: "Повернення завершено", sale });
+    res.status(200).json({ message: "Return processed", sale });
+
   } catch (error) {
-    console.error("🔥 Return processing error:", error);
-    res.status(500).json({ error: "Не вдалося обробити повернення" });
+     console.error("🔥 Error creating offline order:", error);
+    res.status(500).json({ error: "Failed to process return" });
   }
 });
+
 router.get("/reserve", authenticateAdmin, async (req, res) => {
   try {
     const reservations = await OfflineSale.find({ status: "reserved" }).sort({
