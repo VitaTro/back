@@ -45,9 +45,10 @@ router.post("/", authenticateAdmin, async (req, res) => {
       materialsUsed,
       repairPrice,
       totalCost,
+      profit: repairPrice - totalCost,
+
       createdAt: Date.now(),
     });
-
     await repair.save();
 
     res.status(201).json(repair);

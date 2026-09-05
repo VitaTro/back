@@ -19,6 +19,10 @@ const RepairSchema = new mongoose.Schema({
 
   repairPrice: { type: Number, required: true }, // скільки ти береш за ремонт
   totalCost: { type: Number, default: 0 }, // собівартість матеріалів
+profit: {
+  type: Number,
+  default: 0,
+},
 
   createdAt: { type: Date, default: Date.now },
 });
