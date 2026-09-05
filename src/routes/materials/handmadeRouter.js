@@ -22,6 +22,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       color,
       materialsUsed,
       videoUrl,
+      subcategory,
     } = req.body;
 
     if (!name || !materialsUsed || materialsUsed.length === 0) {
@@ -65,6 +66,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       width,
       color,
       videoUrl,
+      subcategory,
       materialsUsed: enrichedMaterials,
       totalCost,
       createdAt: Date.now(),
