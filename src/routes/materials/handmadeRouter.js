@@ -56,6 +56,8 @@ router.post("/", authenticateAdmin, async (req, res) => {
         materialTotalQty: material.quantity,
         pricePerUnit,
         costForThisMaterial,
+        photo: material.photoUrl,
+
       });
     }
     const handmade = new HandmadeProduct({
