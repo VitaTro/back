@@ -10,11 +10,11 @@ const handmadeProductSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
-subcategory: {
-  type: String,
-  enum: ["macrame", "beads", "pearls", "thread-weaving", "mixed", "wire"],
-  required: true,
-},
+  subcategory: {
+    type: String,
+    enum: ["macrame", "beads", "pearls", "thread-weaving", "mixed", "wire"],
+    required: true,
+  },
 
   photos: {
     type: [String],
@@ -74,12 +74,12 @@ subcategory: {
     default: Date.now,
   },
 
-  // 🔗 Чи створений з цього Product
-  linkedProductId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Product",
-    default: null,
-  },
+  // // 🔗 Чи створений з цього Product
+  // linkedProductId: {
+  //   type: mongoose.Schema.Types.ObjectId,
+  //   ref: "Product",
+  //   default: null,
+  // },
 });
 
 module.exports = mongoose.model("HandmadeProduct", handmadeProductSchema);

@@ -57,7 +57,6 @@ router.post("/", authenticateAdmin, async (req, res) => {
         pricePerUnit,
         costForThisMaterial,
         photo: material.photoUrl,
-
       });
     }
     const handmade = new HandmadeProduct({
@@ -89,92 +88,205 @@ router.post("/", authenticateAdmin, async (req, res) => {
 // ======================================================
 // ➤ СТВОРИТИ PRODUCT З HANDMADE (СПИСАННЯ МАТЕРІАЛІВ)
 // ======================================================
+// router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
+//   try {
+//     const handmade = await HandmadeProduct.findById(req.params.id);
+
+//     if (!handmade) {
+//       return res.status(404).json({ error: "Handmade card not found" });
+//     }
+
+//     const { name, price, index } = req.body;
+
+//     if (!name || !price) {
+//       return res.status(400).json({ error: "Missing required fields" });
+//     }
+
+//     // Назва має збігатися
+//     if (name !== handmade.name) {
+//       return res.status(400).json({
+//         error:
+//           "Product name must match handmade card name to perform material deduction",
+//       });
+//     }
+
+//     // ======================================================
+//     // ➤ ПЕРЕВІРКА ЗАЛИШКІВ З КОНВЕРТАЦІЄЮ
+//     // ======================================================
+//     for (const item of handmade.materialsUsed) {
+//       const material = await Material.findById(item.materialId);
+
+//       if (!material) {
+//         return res.status(404).json({
+//           error: `Material not found: ${item.materialId}`,
+//         });
+//       }
+
+//       let deductQty = 0;
+
+//       if (material.unit === item.usedUnit) {
+//         deductQty = item.quantity;
+//       } else if (material.unit === "grams" && item.usedUnit === "pcs") {
+//         if (!material.piecesPerGram) {
+//           return res.status(400).json({
+//             error: `Material ${material.name} missing piecesPerGram`,
+//           });
+//         }
+//         deductQty = item.quantity / material.piecesPerGram;
+//       } else if (material.unit === "meters" && item.usedUnit === "pcs") {
+//         if (!material.piecesPerMeter) {
+//           return res.status(400).json({
+//             error: `Material ${material.name} missing piecesPerMeter`,
+//           });
+//         }
+//         deductQty = item.quantity / material.piecesPerMeter;
+//       } else {
+//         return res.status(400).json({
+//           error: `Cannot convert ${item.usedUnit} to ${material.unit}`,
+//         });
+//       }
+
+//       if (material.quantity < deductQty) {
+//         return res.status(400).json({
+//           error: `Not enough material: ${material.name}`,
+//         });
+//       }
+//     }
+
+//     // ======================================================
+//     // ➤ СПИСАННЯ МАТЕРІАЛІВ
+//     // ======================================================
+//     for (const item of handmade.materialsUsed) {
+//       const material = await Material.findById(item.materialId);
+
+//       let deductQty = 0;
+
+//       if (material.unit === item.usedUnit) {
+//         deductQty = item.quantity;
+//       } else if (material.unit === "grams" && item.usedUnit === "pcs") {
+//         deductQty = item.quantity / material.piecesPerGram;
+//       } else if (material.unit === "meters" && item.usedUnit === "pcs") {
+//         deductQty = item.quantity / material.piecesPerMeter;
+//       }
+
+//       // Списання
+//       material.quantity -= deductQty;
+//       await material.save();
+
+//       // Запис руху
+//       await StockMaterials.create({
+//         materialId: material._id,
+//         materialName: material.name,
+//         type: "use",
+//         quantity: deductQty,
+//         usedUnit: item.usedUnit,
+//         unitPurchasePrice: material.purchasePrice?.value || 0,
+//         color: material.color,
+//         size: material.size,
+//         unit: material.unit,
+//         note: `Used for handmade product: ${handmade.name}`,
+//       });
+//     }
+
+//     // ======================================================
+//     // ➤ СТВОРЕННЯ ГОТОВОГО ПРОДУКТУ
+//     // ======================================================
+//     const product = new Product({
+//       name,
+//       category: "handmade",
+//       subcategory: handmade.subcategory,
+//       price,
+//       lastRetailPrice: price,
+//       purchasePrice: {
+//         value: handmade.totalCost,
+//         currency: "PLN",
+//         exchangeRateToPLN: 1,
+//       },
+//       description: req.body.description || "",
+//       photoUrl: req.body.photoUrl || "",
+//       additionalPhotos: req.body.additionalPhotos || [],
+//       size: req.body.size || null,
+//       width: req.body.width || null,
+//       length: req.body.length || null,
+//       color: req.body.color || null,
+//       currentStock: 1,
+//       quantity: 1,
+//       index: index || null,
+//       materials: handmade.materialsUsed
+//         .map((m) => `${m.quantity} ${m.usedUnit} ${m.name}`)
+//         .join(", "),
+
+//       createdAt: Date.now(),
+//     });
+
+//     await product.save();
+
+//     // handmade.linkedProductId = product._id;
+//     // await handmade.save();
+
+//     res.status(201).json({
+//       message: "Product created and materials deducted",
+//       product,
+//     });
+//   } catch (error) {
+//     console.error("❌ Error creating product from handmade:", error);
+//     res.status(500).json({
+//       error: "Failed to create product from handmade",
+//       details: error.message,
+//     });
+//   }
+// });
 router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
   try {
     const handmade = await HandmadeProduct.findById(req.params.id);
-
-    if (!handmade) {
+    if (!handmade)
       return res.status(404).json({ error: "Handmade card not found" });
-    }
 
-    const { name, price, index } = req.body;
+    const { name, price, index, quantityToProduce } = req.body;
+    const qty = Number(quantityToProduce) || 1;
 
-    if (!name || !price) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    // Назва має збігатися
     if (name !== handmade.name) {
-      return res.status(400).json({
-        error:
-          "Product name must match handmade card name to perform material deduction",
-      });
+      return res
+        .status(400)
+        .json({ error: "Product name must match handmade card name" });
     }
 
-    // ======================================================
-    // ➤ ПЕРЕВІРКА ЗАЛИШКІВ З КОНВЕРТАЦІЄЮ
-    // ======================================================
+    // Перевірка залишків
     for (const item of handmade.materialsUsed) {
       const material = await Material.findById(item.materialId);
-
-      if (!material) {
-        return res.status(404).json({
-          error: `Material not found: ${item.materialId}`,
-        });
-      }
-
       let deductQty = 0;
 
-      if (material.unit === item.usedUnit) {
-        deductQty = item.quantity;
-      } else if (material.unit === "grams" && item.usedUnit === "pcs") {
-        if (!material.piecesPerGram) {
-          return res.status(400).json({
-            error: `Material ${material.name} missing piecesPerGram`,
-          });
-        }
+      if (material.unit === item.usedUnit) deductQty = item.quantity;
+      else if (material.unit === "grams" && item.usedUnit === "pcs")
         deductQty = item.quantity / material.piecesPerGram;
-      } else if (material.unit === "meters" && item.usedUnit === "pcs") {
-        if (!material.piecesPerMeter) {
-          return res.status(400).json({
-            error: `Material ${material.name} missing piecesPerMeter`,
-          });
-        }
+      else if (material.unit === "meters" && item.usedUnit === "pcs")
         deductQty = item.quantity / material.piecesPerMeter;
-      } else {
-        return res.status(400).json({
-          error: `Cannot convert ${item.usedUnit} to ${material.unit}`,
-        });
-      }
+
+      deductQty *= qty;
 
       if (material.quantity < deductQty) {
-        return res.status(400).json({
-          error: `Not enough material: ${material.name}`,
-        });
+        return res
+          .status(400)
+          .json({ error: `Not enough material: ${material.name}` });
       }
     }
 
-    // ======================================================
-    // ➤ СПИСАННЯ МАТЕРІАЛІВ
-    // ======================================================
+    // Списання
     for (const item of handmade.materialsUsed) {
       const material = await Material.findById(item.materialId);
-
       let deductQty = 0;
 
-      if (material.unit === item.usedUnit) {
-        deductQty = item.quantity;
-      } else if (material.unit === "grams" && item.usedUnit === "pcs") {
+      if (material.unit === item.usedUnit) deductQty = item.quantity;
+      else if (material.unit === "grams" && item.usedUnit === "pcs")
         deductQty = item.quantity / material.piecesPerGram;
-      } else if (material.unit === "meters" && item.usedUnit === "pcs") {
+      else if (material.unit === "meters" && item.usedUnit === "pcs")
         deductQty = item.quantity / material.piecesPerMeter;
-      }
 
-      // Списання
+      deductQty *= qty;
+
       material.quantity -= deductQty;
       await material.save();
 
-      // Запис руху
       await StockMaterials.create({
         materialId: material._id,
         materialName: material.name,
@@ -189,9 +301,7 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
       });
     }
 
-    // ======================================================
-    // ➤ СТВОРЕННЯ ГОТОВОГО ПРОДУКТУ
-    // ======================================================
+    // Створення товару
     const product = new Product({
       name,
       category: "handmade",
@@ -199,7 +309,7 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
       price,
       lastRetailPrice: price,
       purchasePrice: {
-        value: handmade.totalCost,
+        value: handmade.totalCost * qty,
         currency: "PLN",
         exchangeRateToPLN: 1,
       },
@@ -210,31 +320,28 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
       width: req.body.width || null,
       length: req.body.length || null,
       color: req.body.color || null,
-      currentStock: 1,
-      quantity: 1,
-      index: index || null,
+      currentStock: qty,
+      quantity: qty,
+      index,
       materials: handmade.materialsUsed
         .map((m) => `${m.quantity} ${m.usedUnit} ${m.name}`)
         .join(", "),
-
       createdAt: Date.now(),
     });
 
     await product.save();
 
-    handmade.linkedProductId = product._id;
-    await handmade.save();
-
-    res.status(201).json({
-      message: "Product created and materials deducted",
-      product,
-    });
+    res
+      .status(201)
+      .json({ message: "Product created and materials deducted", product });
   } catch (error) {
     console.error("❌ Error creating product from handmade:", error);
-    res.status(500).json({
-      error: "Failed to create product from handmade",
-      details: error.message,
-    });
+    res
+      .status(500)
+      .json({
+        error: "Failed to create product from handmade",
+        details: error.message,
+      });
   }
 });
 
