@@ -44,7 +44,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
     if (!order) return res.status(404).json({ error: "Order not found" });
 
     if (order.status !== "pending") {
-      return res.status(400).json({ error: "Order already completed or cancelled" });
+      return res
+        .status(400)
+        .json({ error: "Order already completed or cancelled" });
     }
 
     const enrichedProducts = [];
@@ -75,7 +77,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
         }).sort({ date: -1 });
 
         if (!lastMovement) {
-          throw new Error(`No stock movement found for product ${item.productId}`);
+          throw new Error(
+            `No stock movement found for product ${item.productId}`,
+          );
         }
 
         const stockLevel = await calculateStock(lastMovement.productIndex);
@@ -157,6 +161,10 @@ router.post("/", authenticateAdmin, async (req, res) => {
           saleSource: "OfflineSale",
           date: sale.saleDate,
           note: "Списання при продажу",
+          size: product.size || null,
+          variantIndex: product.size
+            ? `${product.index}-${product.size}`
+            : null,
         });
 
         const stockCount = await calculateStock(product.index);
@@ -170,16 +178,15 @@ router.post("/", authenticateAdmin, async (req, res) => {
     await FinanceOverview.updateOne(
       {},
       { $inc: { totalRevenue: final }, $push: { completedSales: sale._id } },
-      { upsert: true }
+      { upsert: true },
     );
 
     order.status = "completed";
     await order.save();
 
     res.status(201).json({ message: "Sale completed", sale });
-
   } catch (error) {
-     console.error("🔥 Error creating offline order:", error);
+    console.error("🔥 Error creating offline order:", error);
     res.status(500).json({ error: error.message || "Sale processing error" });
   }
 });
@@ -361,7 +368,7 @@ router.patch("/:id", authenticateAdmin, async (req, res) => {
 
     res.status(200).json({ message: "Sale updated", sale });
   } catch (error) {
-     console.error("🔥 Error creating offline order:", error);
+    console.error("🔥 Error creating offline order:", error);
     res.status(500).json({ error: "Failed to update sale" });
   }
 });
@@ -414,7 +421,7 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
 
     await FinanceOverview.updateOne(
       {},
-      { $inc: { totalRevenue: -totalRefund } }
+      { $inc: { totalRevenue: -totalRefund } },
     );
 
     sale.status = "returned";
@@ -422,9 +429,8 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
     await sale.save();
 
     res.status(200).json({ message: "Return processed", sale });
-
   } catch (error) {
-     console.error("🔥 Error creating offline order:", error);
+    console.error("🔥 Error creating offline order:", error);
     res.status(500).json({ error: "Failed to process return" });
   }
 });
