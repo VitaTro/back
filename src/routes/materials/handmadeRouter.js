@@ -236,6 +236,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
 //     });
 //   }
 // });
+
 router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
   try {
     const handmade = await HandmadeProduct.findById(req.params.id);
@@ -251,7 +252,8 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
         .json({ error: "Product name must match handmade card name" });
     }
 
-    // Перевірка залишків
+    // 1️⃣ ПЕРЕВІРКА ЗАЛИШКІВ
+
     for (const item of handmade.materialsUsed) {
       const material = await Material.findById(item.materialId);
       let deductQty = 0;
@@ -271,7 +273,8 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
       }
     }
 
-    // Списання
+    // 2️⃣ СПИСАННЯ МАТЕРІАЛІВ
+
     for (const item of handmade.materialsUsed) {
       const material = await Material.findById(item.materialId);
       let deductQty = 0;
@@ -301,7 +304,24 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
       });
     }
 
-    // Створення товару
+    // 3️⃣ ПЕРЕВІРКА ЧИ ТОВАР ВЖЕ ІСНУЄ
+
+    const existingProduct = await Product.findOne({ index });
+
+    if (existingProduct) {
+      existingProduct.currentStock += qty;
+      existingProduct.quantity += qty;
+
+      await existingProduct.save();
+
+      return res.status(200).json({
+        message: "Product updated (quantity increased)",
+        product: existingProduct,
+      });
+    }
+
+    // 4️⃣ СТВОРЕННЯ НОВОГО ТОВАРУ
+
     const product = new Product({
       name,
       category: "handmade",
@@ -331,23 +351,21 @@ router.post("/:id/create-product", authenticateAdmin, async (req, res) => {
 
     await product.save();
 
-    res
-      .status(201)
-      .json({ message: "Product created and materials deducted", product });
+    res.status(201).json({
+      message: "Product created and materials deducted",
+      product,
+    });
   } catch (error) {
     console.error("❌ Error creating product from handmade:", error);
-    res
-      .status(500)
-      .json({
-        error: "Failed to create product from handmade",
-        details: error.message,
-      });
+    res.status(500).json({
+      error: "Failed to create product from handmade",
+      details: error.message,
+    });
   }
 });
 
-// ======================================================
 // ➤ ОТРИМАТИ ВСІ HANDMADE КАРТКИ
-// ======================================================
+
 router.get("/", async (req, res) => {
   try {
     const cards = await HandmadeProduct.find().sort({ createdAt: -1 });
