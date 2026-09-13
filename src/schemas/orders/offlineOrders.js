@@ -28,6 +28,10 @@ const offlineOrderSchema = new mongoose.Schema(
     discount: { type: Number, default: 0 },
     discountPercent: { type: Number, default: 0 },
     finalPrice: { type: Number, required: true },
+    manualFinalPrice: {
+      type: Number,
+      default: null,
+    },
 
     // Метод оплати
     paymentMethod: {

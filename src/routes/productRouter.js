@@ -161,5 +161,32 @@ router.post("/:id/view", async (req, res) => {
     res.status(500).json({ error: "Failed to record view" });
   }
 });
+// поле знижок
+router.patch("/:id/discount", async (req, res) => {
+  try {
+    const { discount } = req.body;
+
+    // Валідація
+    if (typeof discount !== "number" || discount < 0 || discount > 90) {
+      return res
+        .status(400)
+        .json({ error: "Discount must be between 0 and 90" });
+    }
+
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { discount },
+      { new: true },
+    );
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update discount" });
+  }
+});
 
 module.exports = router;
