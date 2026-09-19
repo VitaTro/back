@@ -28,6 +28,7 @@ const wishlistSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  promoPrice: { type: Number, default: null },
   inStock: {
     type: Boolean,
     default: true,

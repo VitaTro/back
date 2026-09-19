@@ -77,6 +77,8 @@ router.post("/", async (req, res) => {
       category: data.category,
       subcategory: data.subcategory,
       price: data.price,
+      promoPrice: data.promoPrice ?? null,
+
       purchasePrice: {
         value: data.purchasePrice?.value || 0,
         currency: data.purchasePrice?.currency || "PLN",

@@ -17,10 +17,13 @@ router.get("/", authenticateUser, async (req, res) => {
         const latestStock = await StockMovement.findOne({
           productId: item.productId,
         }).sort({ date: -1 });
+        const product = await Product.findById(item.productId);
 
         return {
           ...item.toObject(),
           availableQuantity: latestStock?.quantity ?? 0,
+          promoPrice: product?.promoPrice ?? null,
+          finalPrice: (product?.promoPrice ?? item.price) * item.quantity,
         };
       }),
     );
@@ -99,6 +102,14 @@ router.post("/add", authenticateUser, async (req, res) => {
         },
       });
     }
+    let unitPrice =
+      product.lastRetailPrice ??
+      latestStock.unitSalePrice ??
+      latestStock.price ??
+      product.price ??
+      0;
+
+    unitPrice = product.promoPrice ?? unitPrice;
 
     // 5️⃣ Створюємо новий товар
     const newItem = new ShoppingCart({
@@ -106,7 +117,8 @@ router.post("/add", authenticateUser, async (req, res) => {
       productId,
       name: latestStock.productName,
       photoUrl: product.photoUrl,
-      price: latestStock.price,
+      price: unitPrice,
+      promoPrice: product.promoPrice ?? null,
       quantity: quantity || 1,
       inStock: latestStock.quantity > 0,
       color: product.color,
@@ -319,7 +331,9 @@ router.post("/move-to-wishlist/:id", authenticateUser, async (req, res) => {
       productId: cartItem.productId,
       name: latestStock.productName,
       photoUrl: cartItem.photoUrl,
-      price: unitPrice,
+      price: product.promoPrice ?? unitPrice,
+      promoPrice: product.promoPrice ?? null,
+
       inStock: latestStock.quantity > 0,
       addedAt: new Date(),
     });

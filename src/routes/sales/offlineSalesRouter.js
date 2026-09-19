@@ -33,9 +33,7 @@ router.get("/", authenticateAdmin, async (req, res) => {
   }
 });
 
-/* ============================================================
-   📌 POST — Створити офлайн‑ПРОДАЖ (з offlineOrder)
-============================================================ */
+/*📌 POST — Створити офлайн‑ПРОДАЖ (з offlineOrder)*/
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
     const { orderId, saleDate } = req.body;
@@ -106,6 +104,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         name,
         quantity: item.quantity,
         price: unitPrice,
+        promoPrice: item.promoPrice ?? null,
         photoUrl: productDoc.photoUrl || "",
         size: item.size || null,
         sku: item.sku || null,
@@ -506,6 +505,7 @@ router.post("/reserve", authenticateAdmin, async (req, res) => {
         photoUrl: productDoc?.photoUrl || "",
         quantity: item.quantity,
         price: unitPrice,
+        promoPrice: productDoc.promoPrice ?? null,
         size: item.size || null,
         sku: item.sku || null,
       });

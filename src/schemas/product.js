@@ -60,6 +60,7 @@ const productSchema = new mongoose.Schema(
     size: {
       type: String, // Залишаємо для старих типів розмірів
       required: false,
+      default: null,
     },
     width: {
       type: Number, // ширина в мм
@@ -145,6 +146,11 @@ const productSchema = new mongoose.Schema(
       default: 0,
       description: "Знижка на продукт (у відсотках)",
     },
+    promoPrice: {
+      type: Number,
+      default: null, // Ручна акційна ціна
+    },
+
     popularity: {
       type: Number,
       default: 0,
@@ -154,11 +160,12 @@ const productSchema = new mongoose.Schema(
   { collection: "products" },
 );
 productSchema.pre("save", function (next) {
-  if (this.variants && this.variants.length > 0) {
-    this.inStock = this.variants.some((v) => v.stock > 0);
-  } else {
-    this.inStock = this.quantity > 0;
+  const categoriesWithVariants = ["rings", "earrings", "pendants"];
+
+  if (!categoriesWithVariants.includes(this.category)) {
+    this.variants = [];
   }
+
   next();
 });
 
@@ -180,6 +187,9 @@ productSchema.index({ name: "text", description: "text" });
 productSchema.virtual("purchasePricePLN").get(function () {
   if (this.purchasePrice.currency === "PLN") return this.purchasePrice.value;
   return this.purchasePrice.value * this.purchasePrice.exchangeRateToPLN;
+});
+productSchema.virtual("finalPrice").get(function () {
+  return this.promoPrice ?? this.price;
 });
 const Product = mongoose.model("Product", productSchema);
 

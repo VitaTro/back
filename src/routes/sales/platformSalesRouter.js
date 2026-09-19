@@ -85,6 +85,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         quantity: item.quantity,
         unitPurchasePrice,
         price: unitPrice,
+        promoPrice: item.promoPrice ?? null,
         margin,
         manualPrice: order.manualPrice,
         photoUrl: productData?.photoUrl || "",

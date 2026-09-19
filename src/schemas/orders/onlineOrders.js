@@ -24,6 +24,7 @@ const onlineOrderSchema = new mongoose.Schema(
         photoUrl: { type: String, required: true },
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
+        promoPrice: { type: Number, default: null },
         color: { type: String },
         size: { type: String },
         sku: { type: String },

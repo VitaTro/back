@@ -19,6 +19,7 @@ const offlineOrderSchema = new mongoose.Schema(
         sku: { type: String },
 
         price: { type: Number, required: true },
+        promoPrice: { type: Number, default: null },
         color: { type: String }, // Робимо поле опціональним
       },
     ],

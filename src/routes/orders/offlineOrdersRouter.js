@@ -119,7 +119,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         index = lastMovement.productIndex;
         name = lastMovement.productName;
       }
-
+      unitPrice = productDoc.promoPrice ?? unitPrice;
       // 🔥 Додаємо товар у enrichedProducts
       enrichedProducts.push({
         productId: item.productId,
@@ -128,6 +128,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         photoUrl: productDoc.photoUrl || "",
         quantity: item.quantity,
         price: unitPrice,
+        promoPrice: productDoc.promoPrice ?? null,
         size: item.size || null,
         sku: item.sku || null,
       });
@@ -526,6 +527,7 @@ router.post("/reserve", authenticateAdmin, async (req, res) => {
 
       let index = productDoc.index;
       let name = productDoc.name;
+
       let unitPrice = productDoc.lastRetailPrice ?? productDoc.price ?? 0;
 
       if (isHandmade) {
@@ -598,6 +600,8 @@ router.post("/reserve", authenticateAdmin, async (req, res) => {
         photoUrl: productDoc.photoUrl || "",
         quantity: item.quantity,
         price: unitPrice,
+        promoPrice: productDoc.promoPrice ?? null,
+
         size: item.size || null,
         sku: item.sku || null,
       });

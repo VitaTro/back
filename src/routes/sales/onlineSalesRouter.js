@@ -127,9 +127,7 @@ router.get("/", authenticateAdmin, async (req, res) => {
 //   }
 // });
 
-/* ============================================================
-   📌 POST — Створити продаж вручну (createSale)
-============================================================ */
+/* 📌 POST — Створити продаж вручну (createSale) */
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
     const { onlineOrderId } = req.body;
@@ -170,7 +168,6 @@ router.post("/", authenticateAdmin, async (req, res) => {
             error: `Not enough stock for ${productDoc.name}`,
           });
         }
-
       } else {
         // 🔥 Звичайний товар: перевіряємо через StockMovement
         const lastMovement = await StockMovement.findOne({
@@ -209,6 +206,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         photoUrl: productDoc.photoUrl || "",
         quantity: item.quantity,
         salePrice: unitPrice,
+        promoPrice: item.promoPrice ?? null,
         size: item.size || null,
         sku: item.sku || null,
       });
@@ -238,7 +236,6 @@ router.post("/", authenticateAdmin, async (req, res) => {
         productDoc.quantity = productDoc.currentStock;
         productDoc.inStock = productDoc.currentStock > 0;
         await productDoc.save();
-
       } else {
         // 🔥 Звичайний товар: створюємо StockMovement
         await StockMovement.create({
@@ -281,7 +278,6 @@ router.post("/", authenticateAdmin, async (req, res) => {
       message: "Продаж успішно проведено!",
       sale: newSale,
     });
-
   } catch (error) {
     console.error("🔥 Error creating sale:", error);
     res.status(500).json({ error: "Failed to create sale" });
@@ -388,7 +384,7 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
 
     for (const returned of returnedProducts) {
       const productInSale = sale.products.find(
-        (p) => p.productId.toString() === returned.productId
+        (p) => p.productId.toString() === returned.productId,
       );
 
       if (!productInSale) continue;
@@ -410,7 +406,6 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
         productDoc.quantity = productDoc.currentStock;
         productDoc.inStock = productDoc.currentStock > 0;
         await productDoc.save();
-
       } else {
         // 🔵 Звичайний товар: повернення через StockMovement
         await StockMovement.create({
@@ -453,14 +448,13 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
     // 💰 Оновлюємо фінанси
     await FinanceOverview.updateOne(
       {},
-      { $inc: { totalRevenue: -totalRefund } }
+      { $inc: { totalRevenue: -totalRefund } },
     );
 
     res.status(200).json({
       message: "Return processed successfully",
       sale,
     });
-
   } catch (error) {
     console.error("🔥 Error processing return:", error);
     res.status(500).json({ error: "Failed to process return" });

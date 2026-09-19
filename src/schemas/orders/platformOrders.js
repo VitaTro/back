@@ -27,6 +27,7 @@ const platformOrderSchema = new mongoose.Schema(
         photoUrl: { type: String },
         quantity: { type: Number, required: true },
         price: { type: Number, required: true }, // Ручне введення ціни продажу
+        promoPrice: { type: Number, default: null },
         color: { type: String },
         size: { type: String },
         sku: { type: String },

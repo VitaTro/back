@@ -69,7 +69,32 @@ router.patch("/products/:id", authenticateAdmin, async (req, res) => {
     res.status(500).json({ error: "Failed to update product" });
   }
 });
+// акційна ціна
+router.patch("/:id/promo", async (req, res) => {
+  try {
+    const { promoPrice } = req.body;
 
+    if (
+      promoPrice !== null &&
+      (typeof promoPrice !== "number" || promoPrice < 0)
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Промоційна ціна має бути більше 0 або null" });
+    }
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { promoPrice },
+      { new: true },
+    );
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ error: "Не вдалось оновити промоційну ціну" });
+  }
+});
 // Маршрут для видалення продукту за ID
 router.delete("/products/:id", authenticateAdmin, async (req, res) => {
   try {

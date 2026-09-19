@@ -48,21 +48,28 @@ router.post("/add", authenticateUser, async (req, res) => {
     if (exists) {
       return res.status(400).json({ error: "Product is already in wishlist" });
     }
-    const unitPrice =
-      latestStock.lastRetailPrice ??
+    let unitPrice =
+      product.lastRetailPrice ??
       latestStock.unitSalePrice ??
       latestStock.price ??
+      product.price ??
       0;
+
+    // 🔥 override акційною ціною
+    unitPrice = product.promoPrice ?? unitPrice;
 
     const newItem = new Wishlist({
       userId: req.user.id,
       productId,
       name: latestStock.productName,
-      price: unitPrice,
+      price: product.promoPrice ?? unitPrice,
+      promoPrice: product.promoPrice ?? null,
       inStock: latestStock.quantity > 0,
       photoUrl: product.photoUrl,
       color: product.color || "default",
       quantity: quantity || 1,
+      size,
+      sku,
     });
 
     await newItem.save();
@@ -123,6 +130,16 @@ router.post("/move-to-cart/:id", authenticateUser, async (req, res) => {
     if (latestStock.quantity < 1) {
       return res.status(400).json({ error: "Product is out of stock" });
     }
+    const product = await Product.findById(wishlistItem.productId);
+    let unitPrice =
+      product.lastRetailPrice ??
+      latestStock.unitSalePrice ??
+      latestStock.price ??
+      product.price ??
+      latestStock.unitPurchasePrice ??
+      0;
+
+    unitPrice = product.promoPrice ?? unitPrice;
     const { size, sku } = req.body;
     const newCartItem = new ShoppingCart({
       userId: req.user.id,
@@ -131,7 +148,8 @@ router.post("/move-to-cart/:id", authenticateUser, async (req, res) => {
       sku,
       name: latestStock.productName,
       photoUrl: wishlistItem.photoUrl,
-      price: latestStock.price,
+      price: unitPrice,
+      promoPrice: product.promoPrice ?? null,
       quantity: 1,
       inStock: latestStock.quantity > 0,
       addedAt: new Date(),

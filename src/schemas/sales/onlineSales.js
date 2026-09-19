@@ -30,6 +30,7 @@ const onlineSaleSchema = new mongoose.Schema(
         color: { type: String },
         size: { type: String },
         sku: { type: String },
+        promoPrice: { type: Number, default: null },
       },
     ],
 

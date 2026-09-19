@@ -97,7 +97,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         productDoc?.lastRetailPrice ||
         lastMovement.unitPurchasePrice ||
         0;
-
+      unitPrice = productDoc.promoPrice ?? unitPrice;
       totalPrice += unitPrice * item.quantity;
 
       enrichedProducts.push({
@@ -106,6 +106,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
         name: lastMovement.productName,
         quantity: item.quantity,
         price: unitPrice,
+        promoPrice: productDoc.promoPrice ?? null,
         photoUrl: productDoc?.photoUrl || "",
         unitPurchasePrice: lastMovement.unitPurchasePrice || 0,
         margin: unitPrice - (lastMovement.unitPurchasePrice || 0),

@@ -11,6 +11,7 @@ const platformSaleSchema = new mongoose.Schema({
       price: Number,
       photoUrl: String,
       size: String,
+      promoPrice: { type: Number, default: null },
       sku: String,
     },
   ],

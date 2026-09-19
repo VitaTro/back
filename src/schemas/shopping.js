@@ -18,6 +18,8 @@ const shoppingCartSchema = new mongoose.Schema({
   name: { type: String, required: true },
   photoUrl: { type: String },
   price: { type: Number, required: true },
+  promoPrice: { type: Number, default: null },
+
   quantity: { type: Number, required: true, default: 1 },
   inStock: { type: Boolean, required: true },
   color: { type: String },

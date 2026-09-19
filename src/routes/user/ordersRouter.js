@@ -20,9 +20,8 @@ const { calculateStock } = require("../../services/calculateStock");
 const { createTpayTransaction } = require("../../services/tpayService");
 const onlineOrders = require("../../schemas/orders/onlineOrders");
 
-// ===============================
 // GET USER ORDERS
-// ===============================
+
 router.get("/", authenticateUser, async (req, res) => {
   try {
     const userOrders = await OnlineOrder.find({ userId: req.user.id })
@@ -38,9 +37,8 @@ router.get("/", authenticateUser, async (req, res) => {
   }
 });
 
-// ===============================
 // CREATE NEW ORDER (UPDATED FOR DELIVERY TYPES)
-// ===============================
+
 router.post("/", authenticateUser, async (req, res) => {
   try {
     const {
@@ -56,7 +54,7 @@ router.post("/", authenticateUser, async (req, res) => {
 
     // Validate products
     if (!products || products.length === 0) {
-      return res.status(400).json({ error: "Не передано товари" });
+      return res.status(400).json({ error: "Not products found" });
     }
 
     // Validate delivery type
@@ -105,13 +103,13 @@ router.post("/", authenticateUser, async (req, res) => {
       if (!lastMovement) {
         return res
           .status(400)
-          .json({ error: `Немає рухів по товару ${item.productId}` });
+          .json({ error: `No movement on the item ${item.productId}` });
       }
 
       const stockLevel = await calculateStock(lastMovement.productIndex);
       if (stockLevel < item.quantity) {
         return res.status(400).json({
-          error: `Недостатньо на складі: ${lastMovement.productName}`,
+          error: `Not enough in stock: ${lastMovement.productName}`,
         });
       }
 
@@ -124,7 +122,7 @@ router.post("/", authenticateUser, async (req, res) => {
         product?.price ??
         lastMovement.unitPurchasePrice ??
         0;
-
+      unitPrice = product?.promoPrice ?? unitPrice;
       totalPrice += unitPrice * item.quantity;
 
       enrichedProducts.push({
@@ -133,6 +131,7 @@ router.post("/", authenticateUser, async (req, res) => {
         name: lastMovement.productName,
         quantity: item.quantity,
         price: unitPrice,
+        promoPrice: product?.promoPrice ?? null,
         photoUrl: product?.photoUrl || "",
         size: item.size || null,
         sku: item.sku || null,
