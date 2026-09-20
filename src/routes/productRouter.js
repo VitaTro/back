@@ -190,5 +190,18 @@ router.patch("/:id/discount", async (req, res) => {
     res.status(500).json({ error: "Failed to update discount" });
   }
 });
+router.get("/promo", async (req, res) => {
+  try {
+    const promoProducts = await Product.find({
+      promoPrice: { $ne: null },
+      lastRetailPrice: { $exists: true },
+      photoUrl: { $exists: true },
+    }).sort({ updatedAt: -1 });
+
+    res.json(promoProducts);
+  } catch (error) {
+    res.status(500).json({ error: "Не вдалось отримати промо-товари" });
+  }
+});
 
 module.exports = router;
