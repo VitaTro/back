@@ -121,7 +121,19 @@ router.post("/", async (req, res) => {
     });
   }
 });
+router.get("/promo", async (req, res) => {
+  try {
+    const promoProducts = await Product.find({
+      promoPrice: { $ne: null },
+      lastRetailPrice: { $exists: true },
+      photoUrl: { $exists: true },
+    }).sort({ updatedAt: -1 });
 
+    res.json(promoProducts);
+  } catch (error) {
+    res.status(500).json({ error: "Не вдалось отримати промо-товари" });
+  }
+});
 router.patch("/:id", async (req, res) => {
   try {
     const updates = req.body;
@@ -188,19 +200,6 @@ router.patch("/:id/discount", async (req, res) => {
     res.json(product);
   } catch (error) {
     res.status(500).json({ error: "Failed to update discount" });
-  }
-});
-router.get("/promo", async (req, res) => {
-  try {
-    const promoProducts = await Product.find({
-      promoPrice: { $ne: null },
-      lastRetailPrice: { $exists: true },
-      photoUrl: { $exists: true },
-    }).sort({ updatedAt: -1 });
-
-    res.json(promoProducts);
-  } catch (error) {
-    res.status(500).json({ error: "Не вдалось отримати промо-товари" });
   }
 });
 
