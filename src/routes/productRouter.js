@@ -3,12 +3,17 @@ const router = express.Router();
 const Product = require("../schemas/product");
 const StockMovement = require("../schemas/accounting/stockMovement");
 
-router.get("/", async (req, res) => {
+router.get("/promo", async (req, res) => {
   try {
-    const products = await Product.find();
-    res.status(200).json(products);
+    const promoProducts = await Product.find({
+      promoPrice: { $ne: null },
+      lastRetailPrice: { $exists: true },
+      photoUrl: { $exists: true },
+    }).sort({ updatedAt: -1 });
+
+    res.json(promoProducts);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch products" });
+    res.status(500).json({ error: "Не вдалось отримати промо-товари" });
   }
 });
 router.get("/popular", async (req, res) => {
@@ -25,7 +30,14 @@ router.get("/popular", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch popular products" });
   }
 });
-
+router.get("/", async (req, res) => {
+  try {
+    const products = await Product.find();
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch products" });
+  }
+});
 router.get("/:id", async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -121,19 +133,7 @@ router.post("/", async (req, res) => {
     });
   }
 });
-router.get("/promo", async (req, res) => {
-  try {
-    const promoProducts = await Product.find({
-      promoPrice: { $ne: null },
-      lastRetailPrice: { $exists: true },
-      photoUrl: { $exists: true },
-    }).sort({ updatedAt: -1 });
 
-    res.json(promoProducts);
-  } catch (error) {
-    res.status(500).json({ error: "Не вдалось отримати промо-товари" });
-  }
-});
 router.patch("/:id", async (req, res) => {
   try {
     const updates = req.body;
