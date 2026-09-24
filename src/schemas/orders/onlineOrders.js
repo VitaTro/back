@@ -28,6 +28,8 @@ const onlineOrderSchema = new mongoose.Schema(
         color: { type: String },
         size: { type: String },
         sku: { type: String },
+        unitPurchasePrice: { type: Number, default: null },
+        margin: { type: Number, default: null },
       },
     ],
 
@@ -36,6 +38,10 @@ const onlineOrderSchema = new mongoose.Schema(
     shippingCost: { type: Number, required: true }, // доставка
     finalPrice: { type: Number, required: true }, // totalPrice + shippingCost
 
+    regularTotal: { type: Number, default: null },
+    promoTotal: { type: Number, default: null },
+    discount: { type: Number, default: null },
+    discountPercent: { type: Number, default: null },
     // 🟡 Доставка
     country: { type: String, required: true },
 

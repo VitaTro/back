@@ -129,6 +129,8 @@ router.post("/", authenticateAdmin, async (req, res) => {
       req.body;
 
     const enrichedProducts = [];
+    let regularTotal = 0;
+    let promoTotal = 0;
     let totalPrice = 0;
 
     for (const item of products) {
@@ -142,13 +144,19 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
       const isHandmade = productDoc.category === "handmade";
 
-      let unitPrice;
+      // let unitPrice;
+      // let index;
+      // let name;
+      let unitRegularPrice;
+      let unitPromoPrice = productDoc.promoPrice ?? null;
       let index;
       let name;
 
       if (isHandmade) {
         // 🔥 Handmade: беремо все з Product
-        unitPrice = Number(productDoc.lastRetailPrice ?? productDoc.price ?? 0);
+        unitRegularPrice = Number(
+          productDoc.lastRetailPrice ?? productDoc.price ?? 0,
+        );
         index = productDoc.index;
         name = productDoc.name;
 
@@ -182,34 +190,54 @@ router.post("/", authenticateAdmin, async (req, res) => {
           });
         }
 
-        unitPrice =
+        unitRegularPrice =
           lastMovement.unitSalePrice ||
           lastMovement.unitPurchasePrice ||
           productDoc.lastRetailPrice ||
           0;
-        unitPrice = productDoc.promoPrice ?? unitPrice;
+        // unitPrice = productDoc.promoPrice ?? unitPrice;
         index = lastMovement.productIndex;
         name = lastMovement.productName;
       }
+      const finalUnitPrice =
+        unitPromoPrice && unitPromoPrice < unitRegularPrice
+          ? unitPromoPrice
+          : unitRegularPrice;
 
+      // 🔥 Розрахунок totals
+      if (unitPromoPrice && unitPromoPrice < unitRegularPrice) {
+        promoTotal += unitPromoPrice * item.quantity;
+      } else {
+        regularTotal += unitRegularPrice * item.quantity;
+      }
+      totalPrice += finalUnitPrice * item.quantity;
       // 🔥 Додаємо товар у enrichedProducts
       enrichedProducts.push({
         productId: item.productId,
         index,
         name,
         quantity: item.quantity,
-        price: unitPrice,
-        promoPrice: productDoc.promoPrice ?? null,
+        price: finalUnitPrice,
+        promoPrice: unitPromoPrice,
         photoUrl: productDoc.photoUrl || "",
         size: item.size || null,
         sku: item.sku || null,
+        unitPurchasePrice: isHandmade
+          ? null
+          : (productDoc.purchasePrice?.value ?? null),
+        margin: isHandmade
+          ? null
+          : finalUnitPrice - (productDoc.purchasePrice?.value ?? 0),
       });
-
-      totalPrice += unitPrice * item.quantity;
     }
+    //   });
+
+    //   totalPrice += unitPrice * item.quantity;
+    // }
 
     // 🔥 Знижка
-    const { discount, discountPercent, final } = calculateDiscount(totalPrice);
+    const { discount, discountPercent, final } =
+      calculateDiscount(regularTotal);
 
     // 🔥 Створюємо замовлення
     const newOrder = new OnlineOrder({
@@ -219,7 +247,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
       totalPrice,
       discount,
       discountPercent,
-      finalPrice: final,
+      finalPrice: final + promoTotal,
+      regularTotal,
+      promoTotal,
       paymentStatus: "unpaid",
       paymentMethod,
       deliveryType: deliveryType || "courier",

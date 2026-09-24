@@ -12,6 +12,7 @@ const FinanceOverview = require("../../schemas/finance/financeOverview");
 
 const { calculateStock } = require("../../services/calculateStock");
 
+// 🔥 CREATE PLATFORM SALE (based on PlatformOrder)
 router.post("/", authenticateAdmin, async (req, res) => {
   try {
     const { orderId, saleDate } = req.body;
@@ -20,7 +21,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
     if (!order)
       return res.status(404).json({ error: "❌ Замовлення не знайдено" });
 
-    // 🛑 Перевірка: чи вже є продаж для цього замовлення
+    // 🛑 Перевірка: чи вже є продаж
     const existingSale = await PlatformSale.findOne({ orderId });
     if (existingSale)
       return res
@@ -32,9 +33,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
         .status(400)
         .json({ error: "Замовлення вже виконано або скасовано" });
 
-    let totalAmount = 0;
-    let totalCost = 0;
+    // 🔥 Ми НЕ рахуємо ціну заново — беремо з order
     const enrichedProducts = [];
+    let totalCost = 0;
 
     for (const item of order.products) {
       const lastMovement = await StockMovement.findOne({
@@ -59,23 +60,13 @@ router.post("/", authenticateAdmin, async (req, res) => {
         });
       }
 
-      const productData = await Product.findById(item.productId);
+      const productDoc = await Product.findById(item.productId);
 
-      // 💰 Ціна з замовлення, якщо manualPrice=true
       const unitPurchasePrice = lastMovement.unitPurchasePrice || 0;
-      const unitPrice =
-        typeof item.price === "number"
-          ? item.price
-          : (lastMovement.unitSalePrice ?? 0);
-      console.log("🧾 Ціна для продукту:", {
-        productId: item.productId,
-        itemPrice: item.price,
-        lastMovementPrice: lastMovement.unitSalePrice,
-        finalPrice: unitPrice,
-      });
+      const unitSalePrice = item.promoPrice ?? item.price;
 
-      const margin = unitPrice - unitPurchasePrice;
-      totalAmount += unitPrice * item.quantity;
+      const margin = unitSalePrice - unitPurchasePrice;
+
       totalCost += unitPurchasePrice * item.quantity;
 
       enrichedProducts.push({
@@ -84,36 +75,29 @@ router.post("/", authenticateAdmin, async (req, res) => {
         name: lastMovement.productName,
         quantity: item.quantity,
         unitPurchasePrice,
-        price: unitPrice,
+        price: unitSalePrice,
         promoPrice: item.promoPrice ?? null,
         margin,
-        manualPrice: order.manualPrice,
-        photoUrl: productData?.photoUrl || "",
+        manualPrice: item.manualPrice,
+        photoUrl: productDoc?.photoUrl || "",
         size: item.size || null,
         sku: item.sku || null,
       });
     }
 
-    const netProfit = totalAmount - totalCost;
-    let discount = 0;
-    let discountPercent = 0;
-    let final = 0;
+    // 🔥 Фінальна сума та знижка — БЕРЕМО З ORDER
+    const totalAmount = order.totalPrice;
+    const finalPrice = order.finalPrice;
+    const discount = order.discount;
+    const discountPercent = order.discountPercent;
 
-    if (order.discount) {
-      discount = order.discount;
-      discountPercent = order.discountPercent;
-      final = order.finalPrice;
-    } else {
-      const calculated = calculateDiscount(totalAmount);
-      discount = calculated.discount;
-      discountPercent = calculated.discountPercent;
-      final = calculated.final;
-    }
+    const netProfit = finalPrice - totalCost;
+
     const sale = await PlatformSale.create({
       orderId,
       products: enrichedProducts,
       totalAmount,
-      finalPrice: final,
+      finalPrice,
       discount,
       discountPercent,
       totalCost,
@@ -125,6 +109,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       client: order.client,
     });
 
+    // 🔥 Списання складу
     for (const product of enrichedProducts) {
       await StockMovement.create({
         productId: product.productId,
@@ -150,15 +135,17 @@ router.post("/", authenticateAdmin, async (req, res) => {
       }
     }
 
+    // 🔥 Оновлення фінансів
     await FinanceOverview.updateOne(
       {},
       {
-        $inc: { totalRevenue: final },
+        $inc: { totalRevenue: finalPrice },
         $push: { completedSales: sale._id },
       },
       { upsert: true },
     );
 
+    // 🔥 Оновлюємо статус замовлення
     order.status = "completed";
     await order.save();
 
@@ -171,59 +158,70 @@ router.post("/", authenticateAdmin, async (req, res) => {
   }
 });
 
+// 🔹 GET: всі продажі
 router.get("/", authenticateAdmin, async (req, res) => {
   try {
     const filter = req.query.status ? { status: req.query.status } : {};
     const sales = await PlatformSale.find(filter).sort({ saleDate: -1 });
     res.status(200).json({ sales });
   } catch (error) {
-    console.error("🔥 Error fetching platform sales:", error);
     res.status(500).json({ error: "Не вдалося отримати дані продажів" });
   }
 });
 
+// 🔹 GET: продаж за ID
 router.get("/:id", authenticateAdmin, async (req, res) => {
   try {
     const sale = await PlatformSale.findById(req.params.id);
     if (!sale) return res.status(404).json({ error: "❌ Продаж не знайдено" });
     res.status(200).json({ sale });
   } catch (error) {
-    console.error("🔥 Error fetching sale by ID:", error);
     res.status(500).json({ error: "Не вдалося отримати продаж" });
   }
 });
 
+// 🔹 PATCH: оновити статус
 router.patch("/:id", authenticateAdmin, async (req, res) => {
   try {
     const { status } = req.body;
     const validStatuses = ["pending", "completed", "cancelled", "returned"];
+
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: "Невірний статус" });
     }
+
     const sale = await PlatformSale.findById(req.params.id);
     if (!sale) return res.status(404).json({ error: "Продаж не знайдено" });
+
     sale.status = status;
     await sale.save();
+
     res.status(200).json({ message: "Статус оновлено", sale });
   } catch (error) {
-    console.error("🔥 Error updating platform sale:", error);
     res.status(500).json({ error: "Не вдалося оновити статус продажу" });
   }
 });
+
+// 🔹 PUT: повернення товару
 router.put("/:id/return", authenticateAdmin, async (req, res) => {
   try {
     const { refundAmount } = req.body;
+
     if (refundAmount < 0) {
       return res
         .status(400)
         .json({ error: "Сума повернення не може бути від’ємною" });
     }
+
     const sale = await PlatformSale.findById(req.params.id);
     if (!sale) return res.status(404).json({ error: "Продаж не знайдено" });
+
     if (sale.status === "returned")
       return res.status(400).json({ error: "Продаж вже повернуто" });
+
     for (const item of sale.products) {
       await StockMovement.create({
+        productId: item.productId,
         productIndex: item.index,
         productName: item.name,
         quantity: item.quantity,
@@ -235,6 +233,15 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
         date: new Date(),
         note: "Повернення товару після платформеного продажу",
       });
+
+      const productDoc = await Product.findById(item.productId);
+      if (productDoc) {
+        const updatedStock = await calculateStock(item.index);
+        productDoc.quantity = updatedStock;
+        productDoc.currentStock = updatedStock;
+        productDoc.inStock = updatedStock > 0;
+        await productDoc.save();
+      }
     }
 
     await FinanceOverview.updateOne(
@@ -248,7 +255,6 @@ router.put("/:id/return", authenticateAdmin, async (req, res) => {
 
     res.status(200).json({ message: "Повернення завершено", sale });
   } catch (error) {
-    console.error("🔥 Return processing error:", error);
     res.status(500).json({ error: "Не вдалося обробити повернення" });
   }
 });

@@ -64,7 +64,8 @@ router.post("/", authenticateAdmin, async (req, res) => {
     }
 
     const enrichedProducts = [];
-    let totalPrice = 0;
+    let regularTotal = 0;
+    let promoTotal = 0;
 
     for (const item of products) {
       const lastMovement = await StockMovement.findOne({
@@ -90,33 +91,63 @@ router.post("/", authenticateAdmin, async (req, res) => {
       }
 
       const productDoc = await Product.findById(item.productId);
-      const unitPrice =
-        item.price ||
-        lastMovement.unitSalePrice ||
-        lastMovement.price ||
-        productDoc?.lastRetailPrice ||
-        lastMovement.unitPurchasePrice ||
+      if (!productDoc) {
+        throw new Error(`❌ Product not found: ${item.productId}`);
+      }
+      // 🔥 Базова ціна (regular)
+      const baseRegularPrice =
+        item.price ??
+        lastMovement.unitSalePrice ??
+        lastMovement.price ??
+        productDoc.lastRetailPrice ??
+        lastMovement.unitPurchasePrice ??
         0;
-      unitPrice = productDoc.promoPrice ?? unitPrice;
-      totalPrice += unitPrice * item.quantity;
+
+      // 🔥 Акційна ціна (promo), якщо є
+      const promoPrice =
+        typeof productDoc.promoPrice === "number"
+          ? productDoc.promoPrice
+          : null;
+
+      // 🔥 Розрахунок сум
+      if (promoPrice && promoPrice > 0 && promoPrice < baseRegularPrice) {
+        promoTotal += promoPrice * item.quantity;
+        regularTotal += 0; // цей товар не входить у regularTotal
+      } else {
+        regularTotal += baseRegularPrice * item.quantity;
+      }
+
+      // const unitPrice =
+      //   item.price ||
+      //   lastMovement.unitSalePrice ||
+      //   lastMovement.price ||
+      //   productDoc?.lastRetailPrice ||
+      //   lastMovement.unitPurchasePrice ||
+      //   0;
+      // unitPrice = productDoc.promoPrice ?? unitPrice;
+      // totalPrice += unitPrice * item.quantity;
 
       enrichedProducts.push({
         productId: item.productId,
         index: lastMovement.productIndex,
         name: lastMovement.productName,
         quantity: item.quantity,
-        price: unitPrice,
-        promoPrice: productDoc.promoPrice ?? null,
-        photoUrl: productDoc?.photoUrl || "",
+        price: baseRegularPrice,
+        promoPrice: promoPrice,
+        photoUrl: productDoc.photoUrl || "",
         unitPurchasePrice: lastMovement.unitPurchasePrice || 0,
-        margin: unitPrice - (lastMovement.unitPurchasePrice || 0),
+        margin: baseRegularPrice - (lastMovement.unitPurchasePrice || 0),
         manualPrice: !!item.price,
-        color: item.color || productDoc?.color || "",
+        color: item.color || productDoc.color || "",
         size: item.size || null,
         sku: item.sku || null,
       });
     }
-    const { discount, discountPercent, final } = calculateDiscount(totalPrice);
+    const { discount, discountPercent, final } =
+      calculateDiscount(regularTotal);
+
+    const totalPrice = regularTotal + promoTotal;
+    const finalPrice = final + promoTotal;
 
     const order = await PlatformOrder.create({
       platform,
@@ -125,7 +156,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
       totalPrice,
       discount,
       discountPercent,
-      finalPrice: final,
+      finalPrice,
       paymentMethod,
       notes,
       client,

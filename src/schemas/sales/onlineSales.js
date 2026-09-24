@@ -31,13 +31,16 @@ const onlineSaleSchema = new mongoose.Schema(
         size: { type: String },
         sku: { type: String },
         promoPrice: { type: Number, default: null },
+        unitPurchasePrice: { type: Number, default: null },
+        margin: { type: Number, default: null },
       },
     ],
 
     totalAmount: { type: Number, required: true }, // сума товарів
     shippingCost: { type: Number, required: true }, // доставка
     finalPrice: { type: Number, required: true }, // totalAmount + shippingCost
-
+    totalCost: { type: Number, default: null },
+    netProfit: { type: Number, default: null },
     paymentMethod: {
       type: String,
       enum: ["tpay"],

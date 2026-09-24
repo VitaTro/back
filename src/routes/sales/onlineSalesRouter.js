@@ -145,6 +145,7 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
     const saleProducts = [];
     let totalAmount = 0;
+    let totalCost = 0;
 
     for (const item of order.products) {
       const productDoc = await Product.findById(item.productId);
@@ -159,7 +160,9 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
       let index = productDoc.index;
       let name = productDoc.name;
-      let unitPrice = item.price;
+      // let unitPrice = item.price;
+      let unitSalePrice = item.price;
+      let unitPurchasePrice = null;
 
       if (isHandmade) {
         // 🔥 Handmade: перевіряємо склад тільки через Product
@@ -190,14 +193,20 @@ router.post("/", authenticateAdmin, async (req, res) => {
 
         index = lastMovement.productIndex;
         name = lastMovement.productName;
-        unitPrice =
+
+        unitSalePrice =
           lastMovement.unitSalePrice ||
           productDoc.lastRetailPrice ||
           lastMovement.price ||
           lastMovement.unitPurchasePrice ||
           item.price ||
           0;
+
+        unitPurchasePrice = lastMovement.unitPurchasePrice || 0;
       }
+
+      const margin =
+        unitPurchasePrice !== null ? unitSalePrice - unitPurchasePrice : null;
 
       saleProducts.push({
         productId: item.productId,
@@ -205,14 +214,20 @@ router.post("/", authenticateAdmin, async (req, res) => {
         name,
         photoUrl: productDoc.photoUrl || "",
         quantity: item.quantity,
-        salePrice: unitPrice,
+        salePrice: unitSalePrice,
         promoPrice: item.promoPrice ?? null,
         size: item.size || null,
         sku: item.sku || null,
+
+        unitPurchasePrice,
+        margin,
       });
 
-      totalAmount += unitPrice * item.quantity;
+      totalAmount += unitSalePrice * item.quantity;
+      totalCost += unitPurchasePrice * item.quantity;
     }
+
+    const netProfit = totalAmount - totalCost;
 
     const newSale = await OnlineSale.create({
       userId: order.userId,
@@ -224,6 +239,8 @@ router.post("/", authenticateAdmin, async (req, res) => {
       paymentMethod: order.paymentMethod || "tpay",
       status: "completed",
       saleDate: new Date(),
+      totalCost,
+      netProfit,
     });
 
     // 📦 Списання складу
