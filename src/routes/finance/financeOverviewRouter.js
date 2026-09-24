@@ -131,7 +131,7 @@ router.get("/", authenticateAdmin, async (req, res) => {
 
     // 📦 Товари з низьким залишком
     const lowStockItems = await Product.find({ stock: { $lt: 2 } }).select(
-      "name stock photo index"
+      "name stock photo index",
     );
 
     // 🧾 Продажі
@@ -139,13 +139,13 @@ router.get("/", authenticateAdmin, async (req, res) => {
       status: "completed",
     })
       .select(
-        "products finalPrice discount discountPercent paymentMethod createdAt"
+        "products finalPrice discount discountPercent paymentMethod createdAt",
       )
       .lean();
 
     const completedSalesOnline = await OnlineSale.find({ status: "completed" })
       .select(
-        "products finalPrice discount discountPercent paymentMethod createdAt"
+        "products finalPrice discount discountPercent paymentMethod createdAt",
       )
       .lean();
 
@@ -153,7 +153,7 @@ router.get("/", authenticateAdmin, async (req, res) => {
       status: "completed",
     })
       .select(
-        "products finalPrice discount discountPercent paymentMethod createdAt saleDate"
+        "products finalPrice discount discountPercent paymentMethod createdAt saleDate",
       )
       .lean();
 
@@ -161,22 +161,28 @@ router.get("/", authenticateAdmin, async (req, res) => {
       ...completedSalesOffline.map((sale) => ({
         ...sale,
         source: "offline",
-        totalPrice: sale.finalPrice,
+        totalPrice: sale.finalPrice + (sale.discount || 0), // стара ціна
+        discount: sale.discount || 0,
+        discountPercent: sale.discountPercent || 0,
       })),
       ...completedSalesOnline.map((sale) => ({
         ...sale,
         source: "online",
-        totalPrice: sale.finalPrice,
+        totalPrice: sale.finalPrice + (sale.discount || 0), // стара ціна
+        discount: sale.discount || 0,
+        discountPercent: sale.discountPercent || 0,
       })),
       ...completedSalesPlatform.map((sale) => ({
         ...sale,
         source: "platform",
-        totalPrice: sale.finalPrice,
+        totalPrice: sale.finalPrice + (sale.discount || 0), // стара ціна
+        discount: sale.discount || 0,
+        discountPercent: sale.discountPercent || 0,
       })),
     ];
 
     const refundedSales = await OfflineSale.find({ status: "returned" }).select(
-      "products refundAmount paymentMethod createdAt"
+      "products refundAmount paymentMethod createdAt",
     );
 
     const financeSettings = (await FinanceSettings.findOne()) || {

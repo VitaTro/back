@@ -50,6 +50,9 @@ router.post("/", authenticateUser, async (req, res) => {
       deliveryAddress,
       country,
       notes,
+      buyerName,
+      buyerEmail,
+      buyerPhone,
     } = req.body;
 
     // Validate products
@@ -115,14 +118,17 @@ router.post("/", authenticateUser, async (req, res) => {
 
       const product = await Product.findById(item.productId);
 
-      const unitPrice =
+      let unitPrice =
         product?.lastRetailPrice ??
         lastMovement.unitSalePrice ??
         lastMovement.price ??
         product?.price ??
         lastMovement.unitPurchasePrice ??
         0;
+
+      // 🔥 Якщо є промо — беремо промо
       unitPrice = product?.promoPrice ?? unitPrice;
+
       totalPrice += unitPrice * item.quantity;
 
       enrichedProducts.push({
@@ -144,19 +150,37 @@ router.post("/", authenticateUser, async (req, res) => {
       (sum, item) => sum + item.quantity,
       0,
     );
-    const finalPrice = totalPrice + shippingCost;
+
+    // 🔥 Публічна прогресивна знижка
+    let discountPercent = 0;
+    let discount = 0;
+
+    if (totalPrice >= 1000) discountPercent = 7;
+    else if (totalPrice >= 500) discountPercent = 5;
+    else if (totalPrice >= 200) discountPercent = 2;
+
+    discount = Math.round((totalPrice * discountPercent) / 100);
+
+    // 🔥 Фінальна сума
+    const finalPrice = totalPrice - discount + shippingCost;
 
     // Create order
     const newOrder = new OnlineOrder({
       userId: req.user.id,
-      buyerName: req.body.buyerName,
-      buyerEmail: req.body.buyerEmail,
-      buyerPhone: req.body.buyerPhone,
+      buyerName,
+      buyerEmail,
+      buyerPhone,
+
       products: enrichedProducts,
       totalPrice,
       shippingCost,
       totalQuantity,
       finalPrice,
+
+      // 🔥 Додаємо знижку юзеру
+      discount,
+      discountPercent,
+
       paymentMethod: "tpay",
 
       deliveryType,
@@ -301,9 +325,7 @@ router.put("/:orderId/return", authenticateUser, async (req, res) => {
   }
 });
 
-// ===============================
 // CONFIRM RECEIVED
-// ===============================
 router.patch("/:id/received", authenticateUser, async (req, res) => {
   try {
     const order = await OnlineOrder.findOne({
@@ -335,9 +357,7 @@ router.patch("/:id/received", authenticateUser, async (req, res) => {
   }
 });
 
-// ===============================
 // PURCHASE HISTORY
-// ===============================
 router.get("/purchase-history", authenticateUser, async (req, res) => {
   try {
     const { startDate, endDate, status, page = 1, limit = 25 } = req.query;
@@ -358,10 +378,21 @@ router.get("/purchase-history", authenticateUser, async (req, res) => {
     const skip = (page - 1) * limit;
 
     const orders = await OnlineOrder.find(filter)
-      .populate("products.productId", "name photoUrl price")
+      .populate("products.productId", "name photoUrl price promoPrice")
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .lean();
+
+    // 🔥 Додаємо знижки у відповідь
+    const formattedOrders = orders.map((order) => ({
+      ...order,
+      totalPrice: order.totalPrice, // сума до знижки
+      discount: order.discount || 0, // сума знижки
+      discountPercent: order.discountPercent || 0,
+      finalPrice: order.finalPrice, // сума після знижки
+      shippingCost: order.shippingCost,
+    }));
 
     const totalOrders = await OnlineOrder.countDocuments(filter);
 
@@ -370,30 +401,40 @@ router.get("/purchase-history", authenticateUser, async (req, res) => {
       totalOrders,
       currentPage: parseInt(page),
       totalPages: Math.ceil(totalOrders / limit),
-      orders,
+      orders: formattedOrders,
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch purchase history" });
   }
 });
-// ===============================
+
 // GET SINGLE USER ORDER
-// ===============================
 router.get("/:id", authenticateUser, async (req, res) => {
   try {
     const order = await OnlineOrder.findOne({
       _id: req.params.id,
       userId: req.user.id,
     })
-      .populate("products.productId", "name photoUrl price")
+      .populate("products.productId", "name photoUrl price promoPrice")
       .populate("pickupPointId")
-      .populate("deliveryAddress");
+      .populate("deliveryAddress")
+      .lean();
 
     if (!order) {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    res.status(200).json({ order });
+    // 🔥 Додаємо знижки у відповідь
+    const formattedOrder = {
+      ...order,
+      totalPrice: order.totalPrice,
+      discount: order.discount || 0,
+      discountPercent: order.discountPercent || 0,
+      finalPrice: order.finalPrice,
+      shippingCost: order.shippingCost,
+    };
+
+    res.status(200).json({ order: formattedOrder });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch order" });
   }
